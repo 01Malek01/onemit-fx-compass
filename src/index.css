@@ -47,18 +47,18 @@
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
     background: hsl(var(--muted));
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--accent));
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -67,12 +67,12 @@
 
   /* Card styles */
   .fx-card {
-    @apply bg-card rounded-lg border border-border p-4 transition-all duration-200 hover:shadow-md;
+    @apply bg-card rounded-lg border border-border/50 shadow-lg transition-all duration-200 hover:border-border/80;
   }
 
   /* Dashboard grid layout */
   .dashboard-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
   }
 
   /* Data change indicators */
@@ -81,7 +81,7 @@
   }
 
   .indicator-down {
-    @apply text-danger animate-slide-in;
+    @apply text-success animate-slide-in;
   }
 
   .indicator-neutral {
@@ -90,7 +90,7 @@
 
   /* Loading skeleton */
   .skeleton-pulse {
-    @apply bg-secondary animate-pulse-subtle rounded;
+    @apply bg-secondary/50 animate-pulse-subtle rounded;
   }
 
   /* Compare rates styling */
@@ -104,7 +104,7 @@
 
   /* Glass card effect */
   .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border border-white/10;
+    @apply bg-card/80 backdrop-blur-sm border border-white/10 shadow-lg;
   }
 
   /* Currency card highlighting */
