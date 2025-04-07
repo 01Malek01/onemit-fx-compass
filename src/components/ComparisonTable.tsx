@@ -99,7 +99,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
             </TableHeader>
             <TableBody>
               <TableRow className="hover:bg-secondary/20">
-                <TableCell className="font-medium">OneRemit</TableCell>
+                <TableCell className="font-medium">Oneremit</TableCell>
                 <TableCell>{getBuyRateComparison()}</TableCell>
                 <TableCell>{getSellRateComparison()}</TableCell>
               </TableRow>

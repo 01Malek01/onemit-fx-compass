@@ -42,9 +42,9 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Fee constants (could be made configurable in future)
-  const USDT_TO_USD_FEE = 0.01; // 1%
-  const USD_TO_TARGET_FEE = 0.005; // 0.5%
+  // Updated fee constants with correct values
+  const USDT_TO_USD_FEE = 0.0015; // 0.15% as decimal
+  const USD_TO_TARGET_FEE = 0.005; // 0.5% as decimal
   
   // Load all data from APIs
   const loadAllData = async () => {
@@ -100,7 +100,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     
     const newCostPrices: CurrencyRates = {};
     
-    // Calculate USD cost price
+    // Calculate USD cost price with corrected formula
     const usdCostPrice = calculateCostPrice(
       usdtNgnRate,
       USDT_TO_USD_FEE,

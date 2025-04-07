@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CurrencyInputPanel from '@/components/dashboard/CurrencyInputPanel';
@@ -46,8 +45,8 @@ const DashboardContainer = () => {
     setOtherCurrenciesMargin(newOtherMargin);
   };
 
-  // Generate OneRemit rates based on cost prices
-  const getOneRemitRates = (currencyCode: string): { buy: number; sell: number } => {
+  // Generate Oneremit rates based on cost prices
+  const getOneremitRates = (currencyCode: string): { buy: number; sell: number } => {
     const costPrice = costPrices[currencyCode] || 0;
     
     // In a real scenario, buy/sell would be calculated based on spread
@@ -88,7 +87,7 @@ const DashboardContainer = () => {
       <h2 className="text-xl font-semibold mb-4">Market Comparison</h2>
       <MarketComparisonPanel 
         currencies={['USD', 'EUR', 'GBP', 'CAD']} 
-        oneremitRatesFn={getOneRemitRates}
+        oneremitRatesFn={getOneremitRates}
         vertoFxRates={vertoFxRates}
         isLoading={isLoading}
       />

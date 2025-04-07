@@ -16,16 +16,20 @@ export const formatCurrencyPair = (base: string, quote: string): string => {
   return `${base}/${quote}`;
 };
 
-// Calculate cost price based on the formula
+// Calculate cost price based on the corrected formula
 export const calculateCostPrice = (
   usdtNgnRate: number,
-  usdtToUsdFee: number,
+  usdtToUsdFee: number,  // Now representing a percentage like 0.15%
   currencyFxRate: number,
-  usdToTargetFee: number
+  usdToTargetFee: number  // Now representing a percentage like 0.5%
 ): number => {
   if (!usdtNgnRate || !currencyFxRate) return 0;
   
-  return (usdtNgnRate * (1 - usdtToUsdFee)) / currencyFxRate / (1 - usdToTargetFee);
+  // Add the USDT fee to the rate (e.g., 1582 + 0.15% = 1582 * 1.0015 = 1584.37)
+  const rateWithUsdtFee = usdtNgnRate * (1 + usdtToUsdFee);
+  
+  // Divide by currency FX rate and add the target fee
+  return rateWithUsdtFee / currencyFxRate / (1 - usdToTargetFee);
 };
 
 // Apply margin to cost price
