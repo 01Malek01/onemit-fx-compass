@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,22 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				success: {
+					DEFAULT: '#10B981',
+					foreground: '#ECFDF5'
+				},
+				warning: {
+					DEFAULT: '#F59E0B',
+					foreground: '#FFFBEB'
+				},
+				danger: {
+					DEFAULT: '#EF4444',
+					foreground: '#FEF2F2'
+				},
+				info: {
+					DEFAULT: '#3B82F6',
+					foreground: '#EFF6FF'
 				}
 			},
 			borderRadius: {
@@ -84,11 +101,36 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-subtle': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.8' }
+				},
+				'fade-in': {
+					from: { opacity: '0' },
+					to: { opacity: '1' }
+				},
+				'fade-out': {
+					from: { opacity: '1' },
+					to: { opacity: '0' }
+				},
+				'slide-in': {
+					from: { transform: 'translateX(-10px)', opacity: '0' },
+					to: { transform: 'translateX(0)', opacity: '1' }
+				},
+				'slide-up': {
+					from: { transform: 'translateY(10px)', opacity: '0' },
+					to: { transform: 'translateY(0)', opacity: '1' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
+				'fade-in': 'fade-in 0.3s ease-out',
+				'fade-out': 'fade-out 0.3s ease-out',
+				'slide-in': 'slide-in 0.3s ease-out',
+				'slide-up': 'slide-up 0.3s ease-out'
 			}
 		}
 	},
