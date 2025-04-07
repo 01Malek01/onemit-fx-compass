@@ -33,6 +33,9 @@
     --input: 217 19% 20%;
     --ring: 215 100% 60%;
     
+    --success: 142 69% 58%;
+    --danger: 0 84% 60%;
+    
     --radius: 0.5rem;
   }
 
@@ -67,7 +70,8 @@
 
   /* Card styles */
   .fx-card {
-    @apply bg-card rounded-lg border border-border/50 shadow-lg transition-all duration-200 hover:border-border/80;
+    @apply bg-card/60 backdrop-blur-sm rounded-lg border border-border/40 shadow-lg transition-all duration-300 hover:border-border/60;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(255, 255, 255, 0.07) inset;
   }
 
   /* Dashboard grid layout */
@@ -77,7 +81,7 @@
 
   /* Data change indicators */
   .indicator-up {
-    @apply text-success animate-slide-in;
+    @apply text-danger animate-slide-in;
   }
 
   .indicator-down {
@@ -102,13 +106,21 @@
     @apply text-danger font-medium;
   }
 
-  /* Glass card effect */
-  .glass-card {
-    @apply bg-card/80 backdrop-blur-sm border border-white/10 shadow-lg;
+  /* Animations */
+  @keyframes number-count {
+    from { opacity: 0.4; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Currency card highlighting */
-  .currency-card-highlight {
-    @apply ring-2 ring-primary/50;
+  .animate-count {
+    animation: number-count 0.4s ease-out forwards;
+  }
+
+  /* Currency flags */
+  .currency-flag {
+    @apply inline-flex mr-2 rounded-sm overflow-hidden;
+    width: 22px;
+    height: 15px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
   }
 }
