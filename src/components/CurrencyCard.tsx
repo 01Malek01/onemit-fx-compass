@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowDown, ArrowUp, Info } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import CurrencyFlag from './CurrencyFlag';
 
 interface CurrencyCardProps {
   currencyCode: string;
@@ -11,18 +12,6 @@ interface CurrencyCardProps {
   previousValue?: number;
   isLoading?: boolean;
 }
-
-// Helper function to get flag emoji
-const getFlagEmoji = (currencyCode: string): string => {
-  const flags: Record<string, string> = {
-    USD: '🇺🇸',
-    EUR: '🇪🇺',
-    GBP: '🇬🇧',
-    CAD: '🇨🇦',
-    NGN: '🇳🇬',
-  };
-  return flags[currencyCode] || '';
-};
 
 const CurrencyCard: React.FC<CurrencyCardProps> = ({
   currencyCode,
@@ -69,7 +58,7 @@ const CurrencyCard: React.FC<CurrencyCardProps> = ({
         <CardHeader className="pb-2 pt-4">
           <CardTitle className="text-base flex justify-between items-center">
             <div className="flex items-center">
-              <span className="mr-1.5" aria-hidden="true">{getFlagEmoji(currencyCode)}</span>
+              <CurrencyFlag currency={currencyCode} size="md" className="mr-1.5" />
               <span className="font-medium">NGN/{currencyCode}</span>
             </div>
             {getChangeIndicator()}

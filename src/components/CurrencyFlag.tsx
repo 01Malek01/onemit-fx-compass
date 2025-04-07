@@ -12,6 +12,7 @@ const CurrencyFlag: React.FC<CurrencyFlagProps> = ({
   size = 'md',
   className = '' 
 }) => {
+  // Extended currency flag mapping with more currencies
   const getEmojiFlag = (currencyCode: string): string => {
     const flags: Record<string, string> = {
       USD: '🇺🇸',
@@ -19,8 +20,23 @@ const CurrencyFlag: React.FC<CurrencyFlagProps> = ({
       GBP: '🇬🇧',
       CAD: '🇨🇦',
       NGN: '🇳🇬',
+      AUD: '🇦🇺',
+      JPY: '🇯🇵',
+      CNY: '🇨🇳',
+      CHF: '🇨🇭',
+      NZD: '🇳🇿',
+      INR: '🇮🇳',
+      BRL: '🇧🇷',
+      ZAR: '🇿🇦',
+      SGD: '🇸🇬',
+      HKD: '🇭🇰',
+      MXN: '🇲🇽',
+      RUB: '🇷🇺',
+      USDT: '💰', // Tether token
+      BTC: '₿',   // Bitcoin symbol
+      ETH: '⟠',   // Ethereum symbol
     };
-    return flags[currencyCode] || '';
+    return flags[currencyCode] || '🌐'; // Default to globe emoji if currency not found
   };
   
   const sizeClass = {
@@ -30,7 +46,12 @@ const CurrencyFlag: React.FC<CurrencyFlagProps> = ({
   };
 
   return (
-    <span className={`currency-flag ${sizeClass[size]} ${className}`} aria-hidden="true">
+    <span 
+      className={`currency-flag ${sizeClass[size]} ${className}`} 
+      aria-hidden="true"
+      role="img"
+      aria-label={`${currency} currency flag`}
+    >
       {getEmojiFlag(currency)}
     </span>
   );
