@@ -9,7 +9,105 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      currency_rates: {
+        Row: {
+          created_at: string | null
+          currency_code: string
+          id: string
+          is_active: boolean | null
+          rate: number
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency_code: string
+          id?: string
+          is_active?: boolean | null
+          rate: number
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency_code?: string
+          id?: string
+          is_active?: boolean | null
+          rate?: number
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      historical_rates: {
+        Row: {
+          currency_code: string
+          date: string | null
+          id: string
+          rate: number
+          usdt_ngn_rate: number
+        }
+        Insert: {
+          currency_code: string
+          date?: string | null
+          id?: string
+          rate: number
+          usdt_ngn_rate: number
+        }
+        Update: {
+          currency_code?: string
+          date?: string | null
+          id?: string
+          rate?: number
+          usdt_ngn_rate?: number
+        }
+        Relationships: []
+      }
+      margin_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          other_currencies_margin: number | null
+          updated_at: string | null
+          usd_margin: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          other_currencies_margin?: number | null
+          updated_at?: string | null
+          usd_margin?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          other_currencies_margin?: number | null
+          updated_at?: string | null
+          usd_margin?: number | null
+        }
+        Relationships: []
+      }
+      usdt_ngn_rates: {
+        Row: {
+          created_at: string | null
+          id: string
+          rate: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          rate: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          rate?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp } from 'lucide-react';
+import { fetchMarginSettings, updateMarginSettings } from '@/services/supabaseService';
 
 const DashboardContainer = () => {
   // Margins state
@@ -23,6 +24,17 @@ const DashboardContainer = () => {
   // Load initial data
   useEffect(() => {
     loadAllData();
+    
+    // Fetch margin settings from database
+    const getMarginSettings = async () => {
+      const settings = await fetchMarginSettings();
+      if (settings) {
+        setUsdMargin(settings.usd_margin);
+        setOtherCurrenciesMargin(settings.other_currencies_margin);
+      }
+    };
+    
+    getMarginSettings();
   }, []);
 
   // Recalculate cost prices when rates or margins change
@@ -46,6 +58,9 @@ const DashboardContainer = () => {
   const handleMarginUpdate = (newUsdMargin: number, newOtherMargin: number) => {
     setUsdMargin(newUsdMargin);
     setOtherCurrenciesMargin(newOtherMargin);
+    
+    // Save margins to database
+    updateMarginSettings(newUsdMargin, newOtherMargin);
   };
 
   // Generate Oneremit rates based on cost prices

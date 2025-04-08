@@ -3,10 +3,8 @@ import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 
 import { 
-  fetchUsdtNgnRate, 
   fetchFxRates, 
   fetchVertoFXRates,
-  updateUsdtNgnRate,
   CurrencyRates,
   VertoFXRates 
 } from '@/services/api';
@@ -14,6 +12,15 @@ import {
   calculateCostPrice, 
   applyMargin 
 } from '@/utils/currencyUtils';
+import {
+  fetchLatestUsdtNgnRate,
+  saveUsdtNgnRate,
+  fetchMarginSettings,
+  updateMarginSettings,
+  fetchCurrencyRates,
+  saveCurrencyRates,
+  saveHistoricalRates
+} from '@/services/supabaseService';
 
 export interface CurrencyDataState {
   usdtNgnRate: number;
@@ -46,22 +53,37 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   const USDT_TO_USD_FEE = 0.0015; // 0.15% as decimal
   const USD_TO_TARGET_FEE = 0.005; // 0.5% as decimal
   
-  // Load all data from APIs
+  // Load all data from APIs and database
   const loadAllData = async () => {
     setIsLoading(true);
     
     try {
-      // Fetch USDT/NGN rate
-      const usdtRate = await fetchUsdtNgnRate();
+      // Fetch USDT/NGN rate from database
+      const usdtRate = await fetchLatestUsdtNgnRate();
       setUsdtNgnRate(usdtRate);
       
-      // Fetch FX rates
-      const rates = await fetchFxRates();
+      // First try to get FX rates from database
+      let rates = await fetchCurrencyRates();
+      
+      // If no rates in DB, fetch from API and save to database
+      if (Object.keys(rates).length === 0) {
+        rates = await fetchFxRates();
+        if (Object.keys(rates).length > 0) {
+          await saveCurrencyRates(rates);
+        }
+      }
       setFxRates(rates);
       
-      // Fetch VertoFX rates
+      // Fetch VertoFX rates (these are always from API as they're comparison only)
       const vertoRates = await fetchVertoFXRates();
       setVertoFxRates(vertoRates);
+      
+      // Get margin settings from database
+      const marginSettings = await fetchMarginSettings();
+      if (marginSettings) {
+        // Save rates to historical table for analytics
+        await saveHistoricalRates(rates, usdtRate);
+      }
       
       setLastUpdated(new Date());
       toast.success("All rates updated successfully");
@@ -78,7 +100,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     setIsLoading(true);
     
     try {
-      const success = await updateUsdtNgnRate(rate);
+      const success = await saveUsdtNgnRate(rate);
       if (success) {
         setLastUpdated(new Date());
         toast.success("USDT/NGN rate updated successfully");
