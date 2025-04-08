@@ -2,25 +2,25 @@
 import { 
   fetchLatestUsdtNgnRate, 
   saveUsdtNgnRate,
-  UsdtNgnRate
+  type UsdtNgnRate
 } from './usdt-ngn-service';
 
 import { 
   fetchMarginSettings, 
   updateMarginSettings,
-  MarginSettings
+  type MarginSettings
 } from './margin-settings-service';
 
 import { 
   saveCurrencyRates, 
   fetchCurrencyRates,
-  CurrencyRate
+  type CurrencyRate
 } from './currency-rates-service';
 
 import { 
   saveHistoricalRates, 
   fetchHistoricalRates,
-  HistoricalRate
+  type HistoricalRate
 } from './historical-rates-service';
 
 // Re-export all service functions for backward compatibility
@@ -33,9 +33,8 @@ export {
   saveCurrencyRates,
   fetchCurrencyRates,
   saveHistoricalRates,
-  fetchHistoricalRates,
-  UsdtNgnRate,
-  MarginSettings,
-  CurrencyRate,
-  HistoricalRate
+  fetchHistoricalRates
 };
+
+// Re-export all types using 'export type'
+export type { UsdtNgnRate, MarginSettings, CurrencyRate, HistoricalRate };

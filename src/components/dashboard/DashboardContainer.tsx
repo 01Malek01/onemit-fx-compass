@@ -58,7 +58,9 @@ const DashboardContainer = () => {
 
   // Handle USDT/NGN rate update
   const handleUsdtRateUpdate = async () => {
-    await updateUsdtRate(usdtNgnRate);
+    if (usdtNgnRate > 0) {
+      await updateUsdtRate(usdtNgnRate);
+    }
   };
 
   // Handle margin updates

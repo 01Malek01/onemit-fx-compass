@@ -110,6 +110,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     try {
       const success = await saveUsdtNgnRate(rate);
       if (success) {
+        setUsdtNgnRate(rate); // Make sure to update local state
         setLastUpdated(new Date());
         toast.success("USDT/NGN rate updated successfully");
         
