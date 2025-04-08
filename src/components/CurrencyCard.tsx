@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowDown, ArrowUp, Info } from 'lucide-react';
+import { ArrowDown, ArrowUp, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import CurrencyFlag from './CurrencyFlag';
@@ -37,34 +37,46 @@ const CurrencyCard: React.FC<CurrencyCardProps> = ({
     const changePercent = Math.abs(((ngnValue - previousValue) / previousValue) * 100).toFixed(2);
     
     return (
-      <div className={`flex items-center text-xs font-medium ${isIncrease ? 'text-danger' : 'text-success'}`}
-           aria-label={`${isIncrease ? 'Increased' : 'Decreased'} by ${changePercent}%`}>
+      <div 
+        className={`flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
+          isIncrease ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+        }`}
+        aria-label={`${isIncrease ? 'Increased' : 'Decreased'} by ${changePercent}%`}
+      >
         {isIncrease ? (
-          <ArrowUp className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+          <TrendingUp className="h-3 w-3 mr-1" aria-hidden="true" />
         ) : (
-          <ArrowDown className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+          <TrendingDown className="h-3 w-3 mr-1" aria-hidden="true" />
         )}
         {changePercent}%
       </div>
     );
   };
 
-  const cardStyles = "fx-card relative transform transition-all duration-300 hover:translate-y-[-2px]";
-
   return (
     <TooltipProvider>
-      <Card className={`${cardStyles} ${isLoading ? 'opacity-70' : ''}`}>
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30"></div>
-        <CardHeader className="pb-2 pt-4">
+      <Card className={`fx-card relative overflow-hidden transition-all duration-300 hover:translate-y-[-2px] ${isLoading ? 'opacity-70' : ''}`}>
+        <div 
+          className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${
+            previousValue && ngnValue > previousValue 
+              ? 'from-danger/30 via-danger to-danger/30' 
+              : previousValue && ngnValue < previousValue
+                ? 'from-success/30 via-success to-success/30'
+                : 'from-primary/30 via-primary to-primary/30'
+          }`}
+        ></div>
+        
+        <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-base flex justify-between items-center">
-            <div className="flex items-center">
+            <div className="flex items-center gap-1.5">
               <CurrencyFlag currency={currencyCode} size="md" className="mr-1.5" />
               <span className="font-medium">NGN/{currencyCode}</span>
             </div>
             {getChangeIndicator()}
           </CardTitle>
         </CardHeader>
-        <CardContent className="pb-4">
+        
+        <CardContent className="p-4 pt-0">
           {isLoading ? (
             <div className="h-8 w-full skeleton-pulse"></div>
           ) : (
@@ -80,12 +92,12 @@ const CurrencyCard: React.FC<CurrencyCardProps> = ({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className="text-muted-foreground hover:text-foreground" aria-label="More information">
-                  <Info className="h-3.5 w-3.5" />
-                </button>
+                <div className="text-xs px-1.5 py-0.5 bg-muted/50 rounded text-muted-foreground">
+                  Info
+                </div>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Includes all fees and applied margin</p>
+              <TooltipContent side="bottom">
+                <p className="text-xs">Includes all fees and applied margin</p>
               </TooltipContent>
             </Tooltip>
           </div>

@@ -40,9 +40,9 @@ const CurrencyFlag: React.FC<CurrencyFlagProps> = ({
   };
   
   const sizeClass = {
-    sm: 'h-3 w-4',
-    md: 'h-4 w-6',
-    lg: 'h-5 w-7'
+    sm: 'h-4 w-5',
+    md: 'h-5 w-6',
+    lg: 'h-6 w-7'
   };
 
   const countryCode = getCountryCode(currency);
@@ -50,36 +50,50 @@ const CurrencyFlag: React.FC<CurrencyFlagProps> = ({
   // Special cases for crypto
   if (countryCode === 'BTC') {
     return (
-      <span 
-        className={`inline-flex items-center justify-center ${sizeClass[size]} rounded ${className}`} 
+      <div 
+        className={`inline-flex items-center justify-center ${sizeClass[size]} rounded ${className} bg-amber-600 text-white font-bold`} 
         aria-label={`${currency} currency symbol`}
       >
         ₿
-      </span>
+      </div>
     );
   }
   
   if (countryCode === 'ETH') {
     return (
-      <span 
-        className={`inline-flex items-center justify-center ${sizeClass[size]} rounded ${className}`} 
+      <div 
+        className={`inline-flex items-center justify-center ${sizeClass[size]} rounded ${className} bg-indigo-600 text-white font-bold`} 
         aria-label={`${currency} currency symbol`}
       >
-        ⟠
-      </span>
+        Ξ
+      </div>
     );
   }
 
-  // Use the country-flag-icons library via CDN
-  const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
-  
+  if (countryCode === 'EU') {
+    // Special handling for EUR flag
+    return (
+      <div className={`${sizeClass[size]} rounded overflow-hidden ${className} currency-flag`}>
+        <img 
+          src="https://flagcdn.com/w80/eu.png" 
+          alt="EUR flag"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+
+  // Use the country-flag-icons library via CDN for other flags
   return (
-    <img 
-      src={flagUrl}
-      alt={`${currency} currency flag`}
-      className={`currency-flag rounded-sm object-cover ${sizeClass[size]} ${className}`}
-      style={{ objectFit: 'cover' }}
-    />
+    <div className={`${sizeClass[size]} rounded overflow-hidden ${className} currency-flag`}>
+      <img 
+        src={`https://flagcdn.com/w80/${countryCode.toLowerCase()}.png`}
+        alt={`${currency} flag`}
+        className="w-full h-full object-cover"
+        loading="lazy"
+      />
+    </div>
   );
 };
 
