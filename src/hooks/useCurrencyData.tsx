@@ -119,6 +119,9 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
         if (marginSettings) {
           calculateAllCostPrices(marginSettings.usd_margin, marginSettings.other_currencies_margin);
         }
+        
+        // Also update historical rates when USDT rate is updated
+        await saveHistoricalRates(fxRates, rate);
       }
     } catch (error) {
       console.error("Error updating USDT/NGN rate:", error);

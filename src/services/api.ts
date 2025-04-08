@@ -46,6 +46,29 @@ const MOCK_VERTO_RATES: VertoFXRates = {
   },
 };
 
+/**
+ * Fetches the latest exchange rate for a given currency against USD using Free Currency API.
+ *
+ * @param {string} currency - The target currency code (e.g., "EUR", "GBP", "CAD").
+ * @returns {Promise<number>} - The exchange rate or throws an error.
+ */
+const getExchangeRate = async (currency: string): Promise<number> => {
+  try {
+    const url = `https://api.freecurrencyapi.com/v1/latest?apikey=${API_KEY}&currencies=${currency}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data && data.data && data.data[currency]) {
+      return data.data[currency];
+    } else {
+      throw new Error('Rate not found');
+    }
+  } catch (error) {
+    console.error("Error fetching exchange rate:", error);
+    throw error;
+  }
+};
+
 // Fetch USDT to NGN rate
 export const fetchUsdtNgnRate = async (): Promise<number> => {
   try {
@@ -76,13 +99,29 @@ export const updateUsdtNgnRate = async (rate: number): Promise<boolean> => {
 // Fetch FX rates from Free Currency API
 export const fetchFxRates = async (currencies: string[] = ["EUR", "GBP", "CAD"]): Promise<CurrencyRates> => {
   try {
-    // In production, this would be an actual API call to FreeCurrencyAPI
-    // const url = `https://api.freecurrencyapi.com/v1/latest?apikey=${API_KEY}&currencies=${currencies.join(",")}`;
-    // const response = await fetch(url);
-    // const data = await response.json();
-    // return data.data;
-
-    // Mock data for development
+    // In production environment, use the real API
+    if (process.env.NODE_ENV === 'production') {
+      const rates: CurrencyRates = {};
+      
+      // Fetch each currency rate individually 
+      for (const currency of currencies) {
+        try {
+          const rate = await getExchangeRate(currency);
+          rates[currency] = rate;
+        } catch (e) {
+          console.error(`Error fetching rate for ${currency}:`, e);
+        }
+      }
+      
+      // If USD is not included, add it as reference (1.0)
+      if (!rates.USD) {
+        rates.USD = 1.0;
+      }
+      
+      return rates;
+    } 
+    
+    // Use mock data for development
     return Promise.resolve(MOCK_FX_RATES);
   } catch (error) {
     toast.error("Failed to fetch FX rates");
