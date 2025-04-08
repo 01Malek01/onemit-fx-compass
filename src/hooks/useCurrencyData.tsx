@@ -12,15 +12,21 @@ import {
   calculateCostPrice, 
   applyMargin 
 } from '@/utils/currencyUtils';
-import {
-  fetchLatestUsdtNgnRate,
-  saveUsdtNgnRate,
-  fetchMarginSettings,
-  updateMarginSettings,
-  fetchCurrencyRates,
-  saveCurrencyRates,
-  saveHistoricalRates
-} from '@/services/supabaseService';
+import { 
+  fetchLatestUsdtNgnRate, 
+  saveUsdtNgnRate 
+} from '@/services/usdt-ngn-service';
+import { 
+  fetchMarginSettings, 
+  updateMarginSettings 
+} from '@/services/margin-settings-service';
+import { 
+  fetchCurrencyRates, 
+  saveCurrencyRates 
+} from '@/services/currency-rates-service';
+import { 
+  saveHistoricalRates 
+} from '@/services/historical-rates-service';
 
 export interface CurrencyDataState {
   usdtNgnRate: number;
@@ -60,7 +66,9 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     try {
       // Fetch USDT/NGN rate from database
       const usdtRate = await fetchLatestUsdtNgnRate();
-      setUsdtNgnRate(usdtRate);
+      if (usdtRate) {
+        setUsdtNgnRate(usdtRate);
+      }
       
       // First try to get FX rates from database
       let rates = await fetchCurrencyRates();
@@ -80,7 +88,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       
       // Get margin settings from database
       const marginSettings = await fetchMarginSettings();
-      if (marginSettings) {
+      if (marginSettings && usdtRate) {
         // Save rates to historical table for analytics
         await saveHistoricalRates(rates, usdtRate);
       }
@@ -104,6 +112,12 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       if (success) {
         setLastUpdated(new Date());
         toast.success("USDT/NGN rate updated successfully");
+        
+        // Trigger recalculation of cost prices after rate update
+        const marginSettings = await fetchMarginSettings();
+        if (marginSettings) {
+          calculateAllCostPrices(marginSettings.usd_margin, marginSettings.other_currencies_margin);
+        }
       }
     } catch (error) {
       console.error("Error updating USDT/NGN rate:", error);

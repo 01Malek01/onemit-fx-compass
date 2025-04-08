@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp } from 'lucide-react';
-import { fetchMarginSettings, updateMarginSettings } from '@/services/supabaseService';
+import { fetchMarginSettings, updateMarginSettings } from '@/services/margin-settings-service';
 
 const DashboardContainer = () => {
   // Margins state
@@ -23,44 +23,55 @@ const DashboardContainer = () => {
 
   // Load initial data
   useEffect(() => {
-    loadAllData();
-    
-    // Fetch margin settings from database
-    const getMarginSettings = async () => {
+    const initialize = async () => {
+      // Load all currency data
+      await loadAllData();
+      
+      // Fetch margin settings from database
       const settings = await fetchMarginSettings();
       if (settings) {
         setUsdMargin(settings.usd_margin);
         setOtherCurrenciesMargin(settings.other_currencies_margin);
+        
+        // Calculate cost prices with the loaded margins
+        calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
       }
     };
     
-    getMarginSettings();
+    initialize();
   }, []);
 
   // Recalculate cost prices when rates or margins change
   useEffect(() => {
-    if (usdtNgnRate) {
+    if (usdtNgnRate > 0) {
       calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
     }
   }, [usdtNgnRate, usdMargin, otherCurrenciesMargin]);
 
   // Handle refresh button click
-  const handleRefresh = () => {
-    loadAllData();
+  const handleRefresh = async () => {
+    await loadAllData();
+    
+    // After loading data, recalculate with current margins
+    calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
   };
 
   // Handle USDT/NGN rate update
-  const handleUsdtRateUpdate = () => {
-    updateUsdtRate(usdtNgnRate);
+  const handleUsdtRateUpdate = async () => {
+    await updateUsdtRate(usdtNgnRate);
   };
 
   // Handle margin updates
-  const handleMarginUpdate = (newUsdMargin: number, newOtherMargin: number) => {
+  const handleMarginUpdate = async (newUsdMargin: number, newOtherMargin: number) => {
+    // Update local state
     setUsdMargin(newUsdMargin);
     setOtherCurrenciesMargin(newOtherMargin);
     
     // Save margins to database
-    updateMarginSettings(newUsdMargin, newOtherMargin);
+    await updateMarginSettings(newUsdMargin, newOtherMargin);
+    
+    // Recalculate prices with new margins
+    calculateAllCostPrices(newUsdMargin, newOtherMargin);
   };
 
   // Generate Oneremit rates based on cost prices
