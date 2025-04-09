@@ -23,7 +23,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   isLoading,
   autoFocus = false
 }) => {
-  const [inputValue, setInputValue] = useState<string>(value.toString());
+  const [inputValue, setInputValue] = useState<string>(value ? value.toString() : '');
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
@@ -54,8 +54,12 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     setTimeout(() => setIsSaved(false), 2000);
   };
 
+  // Update the input value when the prop changes
   useEffect(() => {
-    setInputValue(value.toString());
+    if (value && value > 0 && value.toString() !== inputValue) {
+      console.log("CurrencyInput: Updating input value from props:", value);
+      setInputValue(value.toString());
+    }
   }, [value]);
 
   return (

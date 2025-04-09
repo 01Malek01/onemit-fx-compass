@@ -68,8 +68,10 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       const usdtRate = await fetchLatestUsdtNgnRate();
       console.log("Fetched USDT/NGN rate:", usdtRate);
       
-      if (usdtRate) {
+      if (usdtRate && usdtRate > 0) {
         setUsdtNgnRate(usdtRate);
+      } else {
+        console.warn("Received invalid USDT/NGN rate:", usdtRate);
       }
       
       // First try to get FX rates from database
@@ -130,7 +132,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   const updateUsdtRate = async (rate: number) => {
     console.log("Updating USDT/NGN rate:", rate);
     
-    if (!rate || rate <= 0) {
+    if (!rate || isNaN(rate) || rate <= 0) {
       toast.error("Please enter a valid rate");
       return;
     }
@@ -138,12 +140,14 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     setIsLoading(true);
     
     try {
+      // First update local state so UI shows the change immediately
+      setUsdtNgnRate(rate);
+      
       // Save the new rate to database
       const success = await saveUsdtNgnRate(rate);
       console.log("USDT/NGN rate saved:", success);
       
       if (success) {
-        setUsdtNgnRate(rate);
         setLastUpdated(new Date());
         
         // Fetch current FX rates if needed
@@ -169,6 +173,9 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
             marginSettings.usd_margin, 
             marginSettings.other_currencies_margin
           );
+        } else {
+          console.warn("Could not fetch margin settings, using defaults");
+          calculateAllCostPrices(2.5, 3.0); // Use default values if no settings found
         }
         
         // Update historical rates
@@ -180,6 +187,11 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       } else {
         console.error("Failed to save USDT/NGN rate");
         toast.error("Failed to update USDT/NGN rate");
+        // Revert the local state if save failed
+        const originalRate = await fetchLatestUsdtNgnRate();
+        if (originalRate && originalRate > 0) {
+          setUsdtNgnRate(originalRate);
+        }
       }
     } catch (error) {
       console.error("Error updating USDT/NGN rate:", error);

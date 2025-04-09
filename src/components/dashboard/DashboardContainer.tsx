@@ -30,11 +30,14 @@ const DashboardContainer = () => {
       // Fetch margin settings from database
       const settings = await fetchMarginSettings();
       if (settings) {
+        console.log("Initial margin settings loaded:", settings);
         setUsdMargin(settings.usd_margin);
         setOtherCurrenciesMargin(settings.other_currencies_margin);
         
         // Calculate cost prices with the loaded margins
         calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
+      } else {
+        console.warn("No margin settings found, using defaults");
       }
     };
     
@@ -44,6 +47,7 @@ const DashboardContainer = () => {
   // Recalculate cost prices when rates or margins change
   useEffect(() => {
     if (usdtNgnRate > 0) {
+      console.log("DashboardContainer: Recalculating with USDT rate:", usdtNgnRate);
       calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
     }
   }, [usdtNgnRate, usdMargin, otherCurrenciesMargin]);
@@ -58,22 +62,29 @@ const DashboardContainer = () => {
 
   // Handle USDT/NGN rate update
   const handleUsdtRateUpdate = async () => {
+    console.log("DashboardContainer: Handling USDT rate update with value:", usdtNgnRate);
     if (usdtNgnRate > 0) {
       await updateUsdtRate(usdtNgnRate);
+    } else {
+      console.warn("Attempted to update with invalid USDT rate:", usdtNgnRate);
     }
   };
 
   // Handle margin updates
   const handleMarginUpdate = async (newUsdMargin: number, newOtherMargin: number) => {
+    console.log("DashboardContainer: Updating margins:", { newUsdMargin, newOtherMargin });
     // Update local state
     setUsdMargin(newUsdMargin);
     setOtherCurrenciesMargin(newOtherMargin);
     
     // Save margins to database
-    await updateMarginSettings(newUsdMargin, newOtherMargin);
+    const success = await updateMarginSettings(newUsdMargin, newOtherMargin);
+    console.log("Margin update success:", success);
     
     // Recalculate prices with new margins
-    calculateAllCostPrices(newUsdMargin, newOtherMargin);
+    if (success) {
+      calculateAllCostPrices(newUsdMargin, newOtherMargin);
+    }
   };
 
   // Generate Oneremit rates based on cost prices
