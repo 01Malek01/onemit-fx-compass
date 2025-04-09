@@ -1,4 +1,3 @@
-
 // API service for fetching currency data
 
 import { toast } from "sonner";
@@ -156,12 +155,13 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
   }
 };
 
-// Calculate cost prices
+// Calculate cost prices - this function is now replaced by the more specific functions in currencyUtils.ts
+// Keeping it for backward compatibility
 export const calculateCostPrices = async (
   usdtNgnRate: number, 
   fxRates: CurrencyRates,
-  usdtToUsdFee: number = 0.0015, // Updated to 0.15%
-  usdToTargetFee: number = 0.005 // 0.5%
+  usdtToUsdFee: number = 0.001, // Updated to 0.10%
+  usdToTargetFee: number = 0.03 // 3% margin for compatibility
 ): Promise<CurrencyRates> => {
   try {
     console.log("Calculating cost prices with params:", {
@@ -173,14 +173,13 @@ export const calculateCostPrices = async (
     
     const costPrices: CurrencyRates = {};
     
-    // Calculate for USD with corrected formula
-    const usdRate = 1.0; // USD to USD rate is 1.0
-    costPrices.USD = usdtNgnRate * (1 + usdtToUsdFee) / usdRate / (1 - usdToTargetFee);
+    // Calculate for USD with USD formula
+    costPrices.USD = usdtNgnRate * (1 + usdToTargetFee); // Simplified for compatibility
     
-    // Calculate for other currencies with corrected formula
+    // Calculate for other currencies with new formula
     for (const [currency, rate] of Object.entries(fxRates)) {
       if (currency === "USD") continue;
-      costPrices[currency] = usdtNgnRate * (1 + usdtToUsdFee) / rate / (1 - usdToTargetFee);
+      costPrices[currency] = (usdtNgnRate * (1 - usdtToUsdFee)) / rate * (1 + usdToTargetFee);
     }
     
     console.log("Calculated cost prices:", costPrices);

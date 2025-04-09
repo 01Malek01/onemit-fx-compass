@@ -1,4 +1,3 @@
-
 // Currency formatting and calculation utilities
 
 // Format currency values
@@ -16,23 +15,38 @@ export const formatCurrencyPair = (base: string, quote: string): string => {
   return `${base}/${quote}`;
 };
 
-// Calculate cost price based on the corrected formula
-export const calculateCostPrice = (
+// Calculate USD cost price based on new formula: USD/NGN = USDT/NGN × (1 + USD_margin)
+export const calculateUsdPrice = (
   usdtNgnRate: number,
-  usdtToUsdFee: number,  // Now representing a percentage like 0.15%
-  currencyFxRate: number,
-  usdToTargetFee: number  // Now representing a percentage like 0.5%
+  usdMargin: number
+): number => {
+  if (!usdtNgnRate) return 0;
+  
+  // Convert margin from percentage to decimal (e.g., 1% -> 0.01)
+  const marginDecimal = usdMargin / 100;
+  
+  // Apply formula: USD/NGN = USDT/NGN × (1 + USD_margin)
+  return usdtNgnRate * (1 + marginDecimal);
+};
+
+// Calculate EUR, GBP, CAD cost price based on new formula:
+// TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
+export const calculateOtherCurrencyPrice = (
+  usdtNgnRate: number,
+  currencyFxRate: number, // This is TARGET/USD from API
+  otherCurrenciesMargin: number,
+  usdtToUsdFee: number = 0.001 // 0.10% as decimal
 ): number => {
   if (!usdtNgnRate || !currencyFxRate) return 0;
   
-  // Add the USDT fee to the rate (e.g., 1582 + 0.15% = 1582 * 1.0015 = 1584.37)
-  const rateWithUsdtFee = usdtNgnRate * (1 + usdtToUsdFee);
+  // Convert margin from percentage to decimal (e.g., 3% -> 0.03)
+  const marginDecimal = otherCurrenciesMargin / 100;
   
-  // Divide by currency FX rate and add the target fee
-  return rateWithUsdtFee / currencyFxRate / (1 - usdToTargetFee);
+  // Apply formula: TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
+  return (usdtNgnRate * (1 - usdtToUsdFee)) / currencyFxRate * (1 + marginDecimal);
 };
 
-// Apply margin to cost price
+// Apply margin to cost price - keeping this for backward compatibility
 export const applyMargin = (costPrice: number, marginPercent: number): number => {
   if (!costPrice) return 0;
   

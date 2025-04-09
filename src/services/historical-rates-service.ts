@@ -42,17 +42,20 @@ export const saveHistoricalRates = async (
     
     console.log("Preparing historical entries:", entries);
     
-    const { data, error } = await supabase
-      .from('historical_rates')
-      .insert(entries)
-      .select();
-    
-    if (error) {
-      console.error("Supabase error saving historical rates:", error);
-      throw error;
+    // Insert in batches to avoid payload size issues
+    for (let i = 0; i < entries.length; i += 10) {
+      const batch = entries.slice(i, i + 10);
+      const { error } = await supabase
+        .from('historical_rates')
+        .insert(batch);
+      
+      if (error) {
+        console.error(`Supabase error saving batch ${i} of historical rates:`, error);
+        // Continue with other batches even if one fails
+      }
     }
     
-    console.log("Historical rates saved successfully:", data);
+    console.log("Historical rates saved successfully");
     return true;
   } catch (error) {
     console.error("Error saving historical rates:", error);

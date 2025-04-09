@@ -25,61 +25,54 @@ export const saveCurrencyRates = async (rates: CurrencyRates): Promise<boolean> 
 
     console.log("Attempting to save currency rates:", rates);
 
-    // First fetch existing rates to determine whether to insert or update
-    const { data: existingRates, error: fetchError } = await supabase
-      .from('currency_rates')
-      .select('currency_code');
-    
-    if (fetchError) {
-      console.error("Error fetching existing currency rates:", fetchError);
-      throw fetchError;
-    }
-    
-    const existingCurrencies = new Set();
-    if (existingRates) {
-      existingRates.forEach(rate => existingCurrencies.add(rate.currency_code));
-    }
-    
-    console.log("Existing currencies:", Array.from(existingCurrencies));
-    
     // Process each rate individually to avoid constraint issues
     for (const [currency_code, rate] of Object.entries(rates)) {
       try {
-        if (existingCurrencies.has(currency_code)) {
+        // Check if rate already exists
+        const { data: existingRates, error: fetchError } = await supabase
+          .from('currency_rates')
+          .select('id')
+          .eq('currency_code', currency_code)
+          .limit(1);
+        
+        if (fetchError) {
+          console.error(`Error checking if ${currency_code} exists:`, fetchError);
+          continue;
+        }
+        
+        const currentDate = new Date().toISOString();
+        
+        if (existingRates && existingRates.length > 0) {
           // Update existing rate
           console.log(`Updating rate for ${currency_code}:`, rate);
-          const { error } = await supabase
+          const { error: updateError } = await supabase
             .from('currency_rates')
             .update({ 
               rate, 
-              updated_at: new Date().toISOString(),
+              updated_at: currentDate,
               source: 'api'
             })
             .eq('currency_code', currency_code);
             
-          if (error) {
-            console.error(`Error updating rate for ${currency_code}:`, error);
-            // Continue with other rates even if one fails
-            continue;
+          if (updateError) {
+            console.error(`Error updating rate for ${currency_code}:`, updateError);
           }
         } else {
           // Insert new rate
           console.log(`Inserting rate for ${currency_code}:`, rate);
-          const { error } = await supabase
+          const { error: insertError } = await supabase
             .from('currency_rates')
             .insert([{ 
               currency_code, 
               rate, 
               source: 'api',
               is_active: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              created_at: currentDate,
+              updated_at: currentDate
             }]);
             
-          if (error) {
-            console.error(`Error inserting rate for ${currency_code}:`, error);
-            // Continue with other rates even if one fails
-            continue;
+          if (insertError) {
+            console.error(`Error inserting rate for ${currency_code}:`, insertError);
           }
         }
       } catch (innerError) {
@@ -89,7 +82,6 @@ export const saveCurrencyRates = async (rates: CurrencyRates): Promise<boolean> 
     }
     
     console.log("Currency rates update completed");
-    toast.success("Currency rates updated successfully");
     return true;
   } catch (error) {
     console.error("Error saving currency rates:", error);

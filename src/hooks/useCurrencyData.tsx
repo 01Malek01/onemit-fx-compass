@@ -9,8 +9,8 @@ import {
   VertoFXRates 
 } from '@/services/api';
 import { 
-  calculateCostPrice, 
-  applyMargin 
+  calculateUsdPrice,
+  calculateOtherCurrencyPrice
 } from '@/utils/currencyUtils';
 import { 
   fetchLatestUsdtNgnRate, 
@@ -55,9 +55,8 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Updated fee constants with correct values
-  const USDT_TO_USD_FEE = 0.0015; // 0.15% as decimal
-  const USD_TO_TARGET_FEE = 0.005; // 0.5% as decimal
+  // Updated fee constant with correct value (0.10%)
+  const USDT_TO_USD_FEE = 0.001; // 0.10% as decimal
   
   // Load all data from APIs and database
   const loadAllData = async () => {
@@ -176,6 +175,8 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
         if (Object.keys(currentRates).length > 0) {
           await saveHistoricalRates(currentRates, rate);
         }
+
+        toast.success("Rate updated and prices recalculated");
       } else {
         console.error("Failed to save USDT/NGN rate");
         toast.error("Failed to update USDT/NGN rate");
@@ -188,7 +189,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     }
   };
 
-  // Calculate all cost prices
+  // Calculate all cost prices using the new formulas
   const calculateAllCostPrices = (usdMargin: number, otherCurrenciesMargin: number) => {
     console.log("Calculating cost prices with margins:", { usdMargin, otherCurrenciesMargin });
     console.log("Using USDT/NGN rate:", usdtNgnRate);
@@ -209,40 +210,33 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     
     const newCostPrices: CurrencyRates = {};
     
-    // Calculate USD cost price with corrected formula
-    const usdCostPrice = calculateCostPrice(
-      usdtNgnRate,
-      USDT_TO_USD_FEE,
-      1, // USD/USD is 1
-      USD_TO_TARGET_FEE
-    );
+    // Calculate USD price using new formula: USD/NGN = USDT/NGN × (1 + USD_margin)
+    newCostPrices.USD = calculateUsdPrice(usdtNgnRate, usdMargin);
     
-    // Apply margin to USD
-    newCostPrices.USD = applyMargin(usdCostPrice, usdMargin);
     console.log("USD cost price calculated:", { 
-      base: usdCostPrice, 
-      withMargin: newCostPrices.USD,
-      margin: usdMargin
+      usdtNgnRate: usdtNgnRate,
+      usdMargin: usdMargin,
+      result: newCostPrices.USD
     });
     
-    // Calculate other currencies
+    // Calculate other currencies using new formula:
+    // TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
     for (const [currency, rate] of Object.entries(fxRates)) {
       if (currency === "USD") continue;
       
-      const costPrice = calculateCostPrice(
+      newCostPrices[currency] = calculateOtherCurrencyPrice(
         usdtNgnRate,
-        USDT_TO_USD_FEE,
         rate,
-        USD_TO_TARGET_FEE
+        otherCurrenciesMargin,
+        USDT_TO_USD_FEE
       );
       
-      // Apply margin to other currencies
-      newCostPrices[currency] = applyMargin(costPrice, otherCurrenciesMargin);
       console.log(`${currency} cost price calculated:`, { 
-        base: costPrice, 
-        withMargin: newCostPrices[currency],
-        fxRate: rate,
-        margin: otherCurrenciesMargin
+        usdtNgnRate: usdtNgnRate,
+        currencyFxRate: rate,
+        otherCurrenciesMargin: otherCurrenciesMargin,
+        usdtToUsdFee: USDT_TO_USD_FEE,
+        result: newCostPrices[currency]
       });
     }
     
