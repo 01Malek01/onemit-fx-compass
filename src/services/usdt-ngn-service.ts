@@ -20,8 +20,12 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
       .order('created_at', { ascending: false })
       .limit(1);
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error fetching USDT/NGN rate:", error);
+      throw error;
+    }
     
+    console.log("Fetched USDT/NGN rate:", data);
     return data && data.length > 0 ? data[0].rate : 0;
   } catch (error) {
     console.error("Error fetching USDT/NGN rate:", error);
@@ -33,17 +37,28 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
 // Update or insert USDT/NGN rate
 export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
   try {
+    if (!rate || rate <= 0) {
+      throw new Error("Invalid rate value");
+    }
+
+    console.log("Saving USDT/NGN rate:", rate);
+    
     // Always insert a new rate to maintain history
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('usdt_ngn_rates')
       .insert([{ 
         rate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }]);
+      }])
+      .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error saving USDT/NGN rate:", error);
+      throw error;
+    }
     
+    console.log("USDT/NGN rate saved successfully:", data);
     toast.success("USDT/NGN rate updated successfully");
     return true;
   } catch (error) {

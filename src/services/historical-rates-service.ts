@@ -19,18 +19,40 @@ export const saveHistoricalRates = async (
   usdtNgnRate: number
 ): Promise<boolean> => {
   try {
+    if (!currencyRates || Object.keys(currencyRates).length === 0) {
+      console.warn("No currency rates provided for historical data");
+      return false;
+    }
+
+    if (!usdtNgnRate || usdtNgnRate <= 0) {
+      console.warn("Invalid USDT/NGN rate for historical data:", usdtNgnRate);
+      return false;
+    }
+
+    console.log("Saving historical rates with USDT/NGN rate:", usdtNgnRate);
+    console.log("Currency rates for historical data:", currencyRates);
+
+    const currentDate = new Date().toISOString();
     const entries = Object.entries(currencyRates).map(([currency_code, rate]) => ({
       currency_code,
       rate,
-      usdt_ngn_rate: usdtNgnRate
+      usdt_ngn_rate: usdtNgnRate,
+      date: currentDate
     }));
     
-    const { error } = await supabase
+    console.log("Preparing historical entries:", entries);
+    
+    const { data, error } = await supabase
       .from('historical_rates')
-      .insert(entries);
+      .insert(entries)
+      .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error saving historical rates:", error);
+      throw error;
+    }
     
+    console.log("Historical rates saved successfully:", data);
     return true;
   } catch (error) {
     console.error("Error saving historical rates:", error);
@@ -44,6 +66,8 @@ export const fetchHistoricalRates = async (
   limit: number = 30
 ): Promise<HistoricalRate[]> => {
   try {
+    console.log(`Fetching historical rates for ${currencyCode}, limit: ${limit}`);
+    
     const { data, error } = await supabase
       .from('historical_rates')
       .select('*')
@@ -51,8 +75,12 @@ export const fetchHistoricalRates = async (
       .order('date', { ascending: false })
       .limit(limit);
     
-    if (error) throw error;
+    if (error) {
+      console.error(`Supabase error fetching historical rates for ${currencyCode}:`, error);
+      throw error;
+    }
     
+    console.log(`Fetched ${data?.length || 0} historical rates for ${currencyCode}`);
     return data || [];
   } catch (error) {
     console.error(`Error fetching historical rates for ${currencyCode}:`, error);

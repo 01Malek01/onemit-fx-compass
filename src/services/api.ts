@@ -52,16 +52,24 @@ const MOCK_VERTO_RATES: VertoFXRates = {
  * @param {string} currency - The target currency code (e.g., "EUR", "GBP", "CAD").
  * @returns {Promise<number>} - The exchange rate or throws an error.
  */
-const getExchangeRate = async (currency: string): Promise<number> => {
+export const getExchangeRate = async (currency: string): Promise<number> => {
   try {
+    console.log(`Fetching exchange rate for ${currency} using Free Currency API`);
     const url = `https://api.freecurrencyapi.com/v1/latest?apikey=${API_KEY}&currencies=${currency}`;
     const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`API returned status ${response.status}`);
+    }
+    
     const data = await response.json();
     
     if (data && data.data && data.data[currency]) {
+      console.log(`Received rate for ${currency}:`, data.data[currency]);
       return data.data[currency];
     } else {
-      throw new Error('Rate not found');
+      console.error('Rate not found in API response:', data);
+      throw new Error('Rate not found in API response');
     }
   } catch (error) {
     console.error("Error fetching exchange rate:", error);
@@ -74,6 +82,7 @@ export const fetchUsdtNgnRate = async (): Promise<number> => {
   try {
     // Mock API call for development
     // In production, this would be an actual API call
+    console.log("Fetching mock USDT/NGN rate");
     return Promise.resolve(1450);
   } catch (error) {
     toast.error("Failed to fetch USDT/NGN rate");
@@ -99,6 +108,7 @@ export const updateUsdtNgnRate = async (rate: number): Promise<boolean> => {
 // Fetch FX rates from Free Currency API
 export const fetchFxRates = async (currencies: string[] = ["EUR", "GBP", "CAD"]): Promise<CurrencyRates> => {
   try {
+    console.log("Fetching FX rates for currencies:", currencies);
     // In production environment, use the real API
     if (process.env.NODE_ENV === 'production') {
       const rates: CurrencyRates = {};
@@ -118,10 +128,12 @@ export const fetchFxRates = async (currencies: string[] = ["EUR", "GBP", "CAD"])
         rates.USD = 1.0;
       }
       
+      console.log("Fetched production FX rates:", rates);
       return rates;
     } 
     
     // Use mock data for development
+    console.log("Using mock FX rates:", MOCK_FX_RATES);
     return Promise.resolve(MOCK_FX_RATES);
   } catch (error) {
     toast.error("Failed to fetch FX rates");
@@ -135,6 +147,7 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
   try {
     // Mock API call for development
     // In production, this would be an actual API call or web scraping
+    console.log("Fetching mock VertoFX rates");
     return Promise.resolve(MOCK_VERTO_RATES);
   } catch (error) {
     toast.error("Failed to fetch VertoFX rates");
@@ -151,6 +164,13 @@ export const calculateCostPrices = async (
   usdToTargetFee: number = 0.005 // 0.5%
 ): Promise<CurrencyRates> => {
   try {
+    console.log("Calculating cost prices with params:", {
+      usdtNgnRate,
+      fxRates,
+      usdtToUsdFee,
+      usdToTargetFee
+    });
+    
     const costPrices: CurrencyRates = {};
     
     // Calculate for USD with corrected formula
@@ -163,6 +183,7 @@ export const calculateCostPrices = async (
       costPrices[currency] = usdtNgnRate * (1 + usdtToUsdFee) / rate / (1 - usdToTargetFee);
     }
     
+    console.log("Calculated cost prices:", costPrices);
     return costPrices;
   } catch (error) {
     toast.error("Failed to calculate cost prices");
