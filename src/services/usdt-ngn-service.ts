@@ -33,9 +33,14 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
 // Update or insert USDT/NGN rate
 export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
   try {
+    // Always insert a new rate to maintain history
     const { error } = await supabase
       .from('usdt_ngn_rates')
-      .insert([{ rate }]);
+      .insert([{ 
+        rate,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }]);
     
     if (error) throw error;
     

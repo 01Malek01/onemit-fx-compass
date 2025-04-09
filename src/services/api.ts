@@ -147,19 +147,20 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
 export const calculateCostPrices = async (
   usdtNgnRate: number, 
   fxRates: CurrencyRates,
-  usdtToUsdFee: number = 0.01,
-  usdToTargetFee: number = 0.005
+  usdtToUsdFee: number = 0.0015, // Updated to 0.15%
+  usdToTargetFee: number = 0.005 // 0.5%
 ): Promise<CurrencyRates> => {
   try {
     const costPrices: CurrencyRates = {};
     
-    // Calculate for USD
-    costPrices.USD = (usdtNgnRate * (1 - usdtToUsdFee)) / (1 - usdToTargetFee);
+    // Calculate for USD with corrected formula
+    const usdRate = 1.0; // USD to USD rate is 1.0
+    costPrices.USD = usdtNgnRate * (1 + usdtToUsdFee) / usdRate / (1 - usdToTargetFee);
     
-    // Calculate for other currencies
+    // Calculate for other currencies with corrected formula
     for (const [currency, rate] of Object.entries(fxRates)) {
       if (currency === "USD") continue;
-      costPrices[currency] = (usdtNgnRate * (1 - usdtToUsdFee)) / rate / (1 - usdtToUsdFee);
+      costPrices[currency] = usdtNgnRate * (1 + usdtToUsdFee) / rate / (1 - usdToTargetFee);
     }
     
     return costPrices;

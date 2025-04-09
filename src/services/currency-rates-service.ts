@@ -18,23 +18,46 @@ export interface CurrencyRate {
 // Save currency rates to the database
 export const saveCurrencyRates = async (rates: CurrencyRates): Promise<boolean> => {
   try {
-    const entries = Object.entries(rates).map(([currency_code, rate]) => ({
-      currency_code,
-      rate,
-      source: 'api'
-    }));
-    
-    const { error } = await supabase
+    // First fetch existing rates to determine whether to insert or update
+    const { data: existingRates } = await supabase
       .from('currency_rates')
-      .upsert(
-        entries,
-        { 
-          onConflict: 'currency_code',
-          ignoreDuplicates: false
-        }
-      );
+      .select('currency_code');
     
-    if (error) throw error;
+    const existingCurrencies = new Set();
+    if (existingRates) {
+      existingRates.forEach(rate => existingCurrencies.add(rate.currency_code));
+    }
+    
+    // Process each rate individually to avoid constraint issues
+    for (const [currency_code, rate] of Object.entries(rates)) {
+      if (existingCurrencies.has(currency_code)) {
+        // Update existing rate
+        const { error } = await supabase
+          .from('currency_rates')
+          .update({ rate, updated_at: new Date().toISOString() })
+          .eq('currency_code', currency_code);
+          
+        if (error) {
+          console.error(`Error updating rate for ${currency_code}:`, error);
+          return false;
+        }
+      } else {
+        // Insert new rate
+        const { error } = await supabase
+          .from('currency_rates')
+          .insert([{ 
+            currency_code, 
+            rate, 
+            source: 'api',
+            is_active: true
+          }]);
+          
+        if (error) {
+          console.error(`Error inserting rate for ${currency_code}:`, error);
+          return false;
+        }
+      }
+    }
     
     toast.success("Currency rates updated successfully");
     return true;

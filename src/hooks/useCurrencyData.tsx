@@ -89,6 +89,9 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       // Get margin settings from database
       const marginSettings = await fetchMarginSettings();
       if (marginSettings && usdtRate) {
+        // Calculate cost prices using loaded margins
+        calculateAllCostPrices(marginSettings.usd_margin, marginSettings.other_currencies_margin);
+        
         // Save rates to historical table for analytics
         await saveHistoricalRates(rates, usdtRate);
       }
@@ -105,22 +108,36 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
 
   // Handle USDT/NGN rate update
   const updateUsdtRate = async (rate: number) => {
+    if (!rate || rate <= 0) {
+      toast.error("Please enter a valid rate");
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
+      // Save the new rate to database
       const success = await saveUsdtNgnRate(rate);
       if (success) {
-        setUsdtNgnRate(rate); // Make sure to update local state
+        setUsdtNgnRate(rate);
         setLastUpdated(new Date());
         toast.success("USDT/NGN rate updated successfully");
         
-        // Trigger recalculation of cost prices after rate update
+        // Fetch current FX rates if needed
+        if (Object.keys(fxRates).length === 0) {
+          const rates = await fetchFxRates();
+          setFxRates(rates);
+          await saveCurrencyRates(rates);
+        }
+        
+        // Get margin settings from database
         const marginSettings = await fetchMarginSettings();
         if (marginSettings) {
+          // Recalculate cost prices with the updated rate
           calculateAllCostPrices(marginSettings.usd_margin, marginSettings.other_currencies_margin);
         }
         
-        // Also update historical rates when USDT rate is updated
+        // Update historical rates
         await saveHistoricalRates(fxRates, rate);
       }
     } catch (error) {
@@ -133,7 +150,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
 
   // Calculate all cost prices
   const calculateAllCostPrices = (usdMargin: number, otherCurrenciesMargin: number) => {
-    if (!usdtNgnRate) return;
+    if (!usdtNgnRate || usdtNgnRate <= 0) return;
     
     // Store previous cost prices for comparison
     setPreviousCostPrices({ ...costPrices });
@@ -168,6 +185,11 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     
     setCostPrices(newCostPrices);
   };
+
+  // Initialize data on mount
+  useEffect(() => {
+    loadAllData();
+  }, []);
 
   return [
     { 
