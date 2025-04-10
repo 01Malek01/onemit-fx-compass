@@ -9,6 +9,7 @@ import useCurrencyData from '@/hooks/useCurrencyData';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp } from 'lucide-react';
 import { fetchMarginSettings, updateMarginSettings } from '@/services/margin-settings-service';
+import { fetchLatestUsdtNgnRate } from '@/services/usdt-ngn-service';
 
 const DashboardContainer = () => {
   // Margins state
@@ -25,21 +26,41 @@ const DashboardContainer = () => {
   useEffect(() => {
     console.log("DashboardContainer: Running initial data loading effect");
     const initialize = async () => {
-      // Load all currency data
-      console.log("DashboardContainer: Initializing and loading all data");
-      await loadAllData();
-      
-      // Fetch margin settings from database
-      const settings = await fetchMarginSettings();
-      if (settings) {
-        console.log("Initial margin settings loaded:", settings);
-        setUsdMargin(settings.usd_margin);
-        setOtherCurrenciesMargin(settings.other_currencies_margin);
+      try {
+        // Force-fetch the latest USDT/NGN rate first to ensure we have it
+        const latestRate = await fetchLatestUsdtNgnRate();
+        console.log("DashboardContainer: Pre-fetched latest USDT/NGN rate:", latestRate);
         
-        // Calculate cost prices with the loaded margins
-        calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
-      } else {
-        console.warn("No margin settings found, using defaults");
+        if (latestRate && latestRate > 0) {
+          console.log("DashboardContainer: Setting pre-fetched USDT/NGN rate:", latestRate);
+          setUsdtNgnRate(latestRate); // Directly update the state
+        }
+        
+        // Load all currency data
+        console.log("DashboardContainer: Initializing and loading all data");
+        await loadAllData();
+        
+        // After loading data, fetch the rate again to ensure we have the latest
+        const confirmedRate = await fetchLatestUsdtNgnRate();
+        if (confirmedRate && confirmedRate > 0) {
+          console.log("DashboardContainer: Confirming USDT/NGN rate after loadAllData:", confirmedRate);
+          setUsdtNgnRate(confirmedRate);
+        }
+        
+        // Fetch margin settings from database
+        const settings = await fetchMarginSettings();
+        if (settings) {
+          console.log("Initial margin settings loaded:", settings);
+          setUsdMargin(settings.usd_margin);
+          setOtherCurrenciesMargin(settings.other_currencies_margin);
+          
+          // Calculate cost prices with the loaded margins and confirmed rate
+          calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
+        } else {
+          console.warn("No margin settings found, using defaults");
+        }
+      } catch (error) {
+        console.error("DashboardContainer: Error during initialization:", error);
       }
     };
     

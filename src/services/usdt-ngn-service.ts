@@ -14,7 +14,7 @@ export interface UsdtNgnRate {
 // Fetch the most recent USDT/NGN rate
 export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
   try {
-    console.log("Fetching latest USDT/NGN rate from Supabase");
+    console.log("[usdt-ngn-service] Fetching latest USDT/NGN rate from Supabase");
     const { data, error } = await supabase
       .from('usdt_ngn_rates')
       .select('*')
@@ -22,27 +22,27 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
       .limit(1);
     
     if (error) {
-      console.error("Supabase error fetching USDT/NGN rate:", error);
+      console.error("[usdt-ngn-service] Supabase error fetching USDT/NGN rate:", error);
       throw error;
     }
     
-    console.log("Fetched USDT/NGN rate data:", data);
+    console.log("[usdt-ngn-service] Fetched USDT/NGN rate data:", data);
     
     if (!data || data.length === 0) {
-      console.warn("No USDT/NGN rate found in database, returning default");
+      console.warn("[usdt-ngn-service] No USDT/NGN rate found in database, returning default");
       return 0;
     }
     
     // Make sure we're parsing the rate as a number and validate it
     const rate = Number(data[0].rate);
     if (isNaN(rate) || rate <= 0) {
-      console.error("Invalid rate value retrieved:", data[0].rate);
+      console.error("[usdt-ngn-service] Invalid rate value retrieved:", data[0].rate);
       throw new Error("Invalid rate value retrieved");
     }
-    console.log("Returning valid USDT/NGN rate:", rate);
+    console.log("[usdt-ngn-service] Returning valid USDT/NGN rate:", rate);
     return rate;
   } catch (error) {
-    console.error("Error fetching USDT/NGN rate:", error);
+    console.error("[usdt-ngn-service] Error fetching USDT/NGN rate:", error);
     toast.error("Failed to fetch USDT/NGN rate");
     return 0;
   }
@@ -52,12 +52,12 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
 export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
   try {
     if (!rate || isNaN(rate) || rate <= 0) {
-      console.error("Invalid rate value:", rate);
+      console.error("[usdt-ngn-service] Invalid rate value:", rate);
       toast.error("Invalid rate value provided");
       throw new Error("Invalid rate value");
     }
 
-    console.log("Saving USDT/NGN rate to Supabase:", rate);
+    console.log("[usdt-ngn-service] Saving USDT/NGN rate to Supabase:", rate);
     
     // Always insert a new rate to maintain history
     const { data, error } = await supabase
@@ -69,16 +69,16 @@ export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
       }]);
     
     if (error) {
-      console.error("Supabase error saving USDT/NGN rate:", error);
+      console.error("[usdt-ngn-service] Supabase error saving USDT/NGN rate:", error);
       toast.error("Failed to save USDT/NGN rate");
       throw error;
     }
     
-    console.log("USDT/NGN rate saved successfully:", rate);
+    console.log("[usdt-ngn-service] USDT/NGN rate saved successfully:", rate);
     toast.success("USDT/NGN rate updated successfully");
     return true;
   } catch (error) {
-    console.error("Error updating USDT/NGN rate:", error);
+    console.error("[usdt-ngn-service] Error updating USDT/NGN rate:", error);
     toast.error("Failed to update USDT/NGN rate");
     return false;
   }

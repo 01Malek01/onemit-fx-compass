@@ -45,54 +45,54 @@ export const useRateDataLoader = ({
   
   // Load all data from APIs and database
   const loadAllData = async () => {
-    console.log("Loading all data...");
+    console.log("[useRateDataLoader] Loading all data...");
     setIsLoading(true);
     
     try {
       // Fetch USDT/NGN rate from database
       const usdtRate = await fetchLatestUsdtNgnRate();
-      console.log("Fetched USDT/NGN rate from database:", usdtRate);
+      console.log("[useRateDataLoader] Fetched USDT/NGN rate from database:", usdtRate);
       
       // Important: Only update the state if we get a valid rate
       if (usdtRate && usdtRate > 0) {
-        console.log("Setting USDT/NGN rate from database:", usdtRate);
+        console.log("[useRateDataLoader] Setting USDT/NGN rate from database:", usdtRate);
         setUsdtNgnRate(usdtRate);
       } else {
-        console.warn("Received invalid or no USDT/NGN rate from database:", usdtRate);
+        console.warn("[useRateDataLoader] Received invalid or no USDT/NGN rate from database:", usdtRate);
       }
       
       // First try to get FX rates from database
       let rates = await fetchCurrencyRates();
-      console.log("Fetched currency rates from DB:", rates);
+      console.log("[useRateDataLoader] Fetched currency rates from DB:", rates);
       
       // If no rates in DB, fetch from API and save to database
       if (!rates || Object.keys(rates).length === 0) {
-        console.log("No rates in DB, fetching from API...");
+        console.log("[useRateDataLoader] No rates in DB, fetching from API...");
         rates = await fetchFxRates();
-        console.log("Fetched FX rates from API:", rates);
+        console.log("[useRateDataLoader] Fetched FX rates from API:", rates);
         
         if (Object.keys(rates).length > 0) {
           const saved = await saveCurrencyRates(rates);
-          console.log("Saved currency rates to DB:", saved);
+          console.log("[useRateDataLoader] Saved currency rates to DB:", saved);
         }
       }
       setFxRates(rates);
       
       // Fetch VertoFX rates (these are always from API as they're comparison only)
       const vertoRates = await fetchVertoFXRates();
-      console.log("Fetched VertoFX rates:", vertoRates);
+      console.log("[useRateDataLoader] Fetched VertoFX rates:", vertoRates);
       setVertoFxRates(vertoRates);
       
       // Get margin settings from database
       const marginSettings = await fetchMarginSettings();
-      console.log("Fetched margin settings:", marginSettings);
+      console.log("[useRateDataLoader] Fetched margin settings:", marginSettings);
       
       // Only calculate if we have a valid USDT/NGN rate
       const validRate = usdtRate && usdtRate > 0;
       const validRates = rates && Object.keys(rates).length > 0;
       
       if (marginSettings && validRate && validRates) {
-        console.log("Calculating cost prices with fetched data:", {
+        console.log("[useRateDataLoader] Calculating cost prices with fetched data:", {
           usdMargin: marginSettings.usd_margin,
           otherCurrenciesMargin: marginSettings.other_currencies_margin,
           usdtRate
@@ -105,9 +105,9 @@ export const useRateDataLoader = ({
         
         // Save rates to historical table for analytics
         const saved = await saveHistoricalRates(rates, usdtRate);
-        console.log("Saved historical rates:", saved);
+        console.log("[useRateDataLoader] Saved historical rates:", saved);
       } else {
-        console.warn("Missing data for calculations:", { 
+        console.warn("[useRateDataLoader] Missing data for calculations:", { 
           hasMarginSettings: !!marginSettings, 
           validRate, 
           validRates 
@@ -115,9 +115,9 @@ export const useRateDataLoader = ({
       }
       
       setLastUpdated(new Date());
-      console.log("All rates loaded and updated successfully");
+      console.log("[useRateDataLoader] All rates loaded and updated successfully");
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("[useRateDataLoader] Error loading data:", error);
       toast.error("Failed to load some data");
     } finally {
       setIsLoading(false);
@@ -126,7 +126,7 @@ export const useRateDataLoader = ({
 
   // Handle USDT/NGN rate update
   const updateUsdtRate = async (rate: number) => {
-    console.log("Updating USDT/NGN rate:", rate);
+    console.log("[useRateDataLoader] Updating USDT/NGN rate:", rate);
     
     if (!rate || isNaN(rate) || rate <= 0) {
       toast.error("Please enter a valid rate");
@@ -141,7 +141,7 @@ export const useRateDataLoader = ({
       
       // Save the new rate to database
       const success = await saveUsdtNgnRate(rate);
-      console.log("USDT/NGN rate saved to database:", success);
+      console.log("[useRateDataLoader] USDT/NGN rate saved to database:", success);
       
       if (success) {
         setLastUpdated(new Date());
@@ -149,9 +149,9 @@ export const useRateDataLoader = ({
         // Fetch current FX rates if needed
         let currentRates = fxRates;
         if (Object.keys(currentRates).length === 0) {
-          console.log("No FX rates loaded, fetching...");
+          console.log("[useRateDataLoader] No FX rates loaded, fetching...");
           currentRates = await fetchFxRates();
-          console.log("Fetched FX rates:", currentRates);
+          console.log("[useRateDataLoader] Fetched FX rates:", currentRates);
           setFxRates(currentRates);
           
           if (Object.keys(currentRates).length > 0) {
@@ -161,7 +161,7 @@ export const useRateDataLoader = ({
         
         // Get margin settings from database
         const marginSettings = await fetchMarginSettings();
-        console.log("Fetched margin settings for recalculation:", marginSettings);
+        console.log("[useRateDataLoader] Fetched margin settings for recalculation:", marginSettings);
         
         if (marginSettings) {
           // Recalculate cost prices with the updated rate
@@ -170,7 +170,7 @@ export const useRateDataLoader = ({
             marginSettings.other_currencies_margin
           );
         } else {
-          console.warn("Could not fetch margin settings, using defaults");
+          console.warn("[useRateDataLoader] Could not fetch margin settings, using defaults");
           calculateAllCostPrices(2.5, 3.0); // Use default values if no settings found
         }
         
@@ -181,8 +181,9 @@ export const useRateDataLoader = ({
 
         toast.success("Rate updated and prices recalculated");
       } else {
-        console.error("Failed to save USDT/NGN rate");
+        console.error("[useRateDataLoader] Failed to save USDT/NGN rate");
         toast.error("Failed to update USDT/NGN rate");
+        
         // Revert the local state if save failed
         const originalRate = await fetchLatestUsdtNgnRate();
         if (originalRate && originalRate > 0) {
@@ -190,7 +191,7 @@ export const useRateDataLoader = ({
         }
       }
     } catch (error) {
-      console.error("Error updating USDT/NGN rate:", error);
+      console.error("[useRateDataLoader] Error updating USDT/NGN rate:", error);
       toast.error("Failed to update USDT/NGN rate");
     } finally {
       setIsLoading(false);
