@@ -27,6 +27,9 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
+  // Debug logging
+  console.log("CurrencyInput rendered with value:", value);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
     setIsError(false);

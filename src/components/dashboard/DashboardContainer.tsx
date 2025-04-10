@@ -41,10 +41,11 @@ const DashboardContainer = () => {
         await loadAllData();
         
         // After loading data, fetch the rate again to ensure we have the latest
+        // This is crucial as sometimes the rate might not be set correctly in loadAllData due to async timing
         const confirmedRate = await fetchLatestUsdtNgnRate();
         if (confirmedRate && confirmedRate > 0) {
           console.log("DashboardContainer: Confirming USDT/NGN rate after loadAllData:", confirmedRate);
-          setUsdtNgnRate(confirmedRate);
+          setUsdtNgnRate(confirmedRate); // Force-set the rate again to ensure UI reflects latest value
         }
         
         // Fetch margin settings from database
@@ -79,6 +80,12 @@ const DashboardContainer = () => {
   const handleRefresh = async () => {
     console.log("DashboardContainer: Handling refresh button click");
     await loadAllData();
+    
+    // After loading data, force fetch the latest rate again to ensure consistency
+    const latestRate = await fetchLatestUsdtNgnRate();
+    if (latestRate && latestRate > 0) {
+      setUsdtNgnRate(latestRate);
+    }
     
     // After loading data, recalculate with current margins
     calculateAllCostPrices(usdMargin, otherCurrenciesMargin);

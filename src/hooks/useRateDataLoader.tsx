@@ -87,7 +87,7 @@ export const useRateDataLoader = ({
       const marginSettings = await fetchMarginSettings();
       console.log("[useRateDataLoader] Fetched margin settings:", marginSettings);
       
-      // Only calculate if we have a valid USDT/NGN rate
+      // Always use the fetched USDT/NGN rate for calculations, not the state which might be stale
       const validRate = usdtRate && usdtRate > 0;
       const validRates = rates && Object.keys(rates).length > 0;
       
