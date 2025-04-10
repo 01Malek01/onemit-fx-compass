@@ -51,12 +51,13 @@ export const useRateDataLoader = ({
     try {
       // Fetch USDT/NGN rate from database
       const usdtRate = await fetchLatestUsdtNgnRate();
-      console.log("Fetched USDT/NGN rate:", usdtRate);
+      console.log("Fetched USDT/NGN rate from database:", usdtRate);
       
       if (usdtRate && usdtRate > 0) {
+        console.log("Setting USDT/NGN rate from database:", usdtRate);
         setUsdtNgnRate(usdtRate);
       } else {
-        console.warn("Received invalid USDT/NGN rate:", usdtRate);
+        console.warn("Received invalid or no USDT/NGN rate from database:", usdtRate);
       }
       
       // First try to get FX rates from database
@@ -64,7 +65,7 @@ export const useRateDataLoader = ({
       console.log("Fetched currency rates from DB:", rates);
       
       // If no rates in DB, fetch from API and save to database
-      if (Object.keys(rates).length === 0) {
+      if (!rates || Object.keys(rates).length === 0) {
         console.log("No rates in DB, fetching from API...");
         rates = await fetchFxRates();
         console.log("Fetched FX rates from API:", rates);
@@ -85,8 +86,14 @@ export const useRateDataLoader = ({
       const marginSettings = await fetchMarginSettings();
       console.log("Fetched margin settings:", marginSettings);
       
-      if (marginSettings && usdtRate && Object.keys(rates).length > 0) {
+      if (marginSettings && usdtRate && usdtRate > 0 && Object.keys(rates).length > 0) {
         // Calculate cost prices using loaded margins
+        console.log("Calculating cost prices with fetched data:", {
+          usdMargin: marginSettings.usd_margin,
+          otherCurrenciesMargin: marginSettings.other_currencies_margin,
+          usdtRate
+        });
+        
         calculateAllCostPrices(
           marginSettings.usd_margin, 
           marginSettings.other_currencies_margin
@@ -104,7 +111,7 @@ export const useRateDataLoader = ({
       }
       
       setLastUpdated(new Date());
-      toast.success("All rates updated successfully");
+      console.log("All rates loaded and updated successfully");
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load some data");
@@ -130,7 +137,7 @@ export const useRateDataLoader = ({
       
       // Save the new rate to database
       const success = await saveUsdtNgnRate(rate);
-      console.log("USDT/NGN rate saved:", success);
+      console.log("USDT/NGN rate saved to database:", success);
       
       if (success) {
         setLastUpdated(new Date());

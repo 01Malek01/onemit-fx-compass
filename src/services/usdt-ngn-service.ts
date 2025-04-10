@@ -33,8 +33,10 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
       return 0;
     }
     
-    console.log("Returning USDT/NGN rate:", data[0].rate);
-    return Number(data[0].rate);
+    // Make sure we're parsing the rate as a number
+    const rate = Number(data[0].rate);
+    console.log("Returning USDT/NGN rate:", rate);
+    return rate;
   } catch (error) {
     console.error("Error fetching USDT/NGN rate:", error);
     toast.error("Failed to fetch USDT/NGN rate");

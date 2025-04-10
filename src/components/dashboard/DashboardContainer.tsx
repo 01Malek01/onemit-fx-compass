@@ -21,10 +21,12 @@ const DashboardContainer = () => {
     { loadAllData, updateUsdtRate, setUsdtNgnRate, calculateAllCostPrices }
   ] = useCurrencyData();
 
-  // Load initial data
+  // Load initial data - make sure this runs only once and correctly loads the data
   useEffect(() => {
+    console.log("DashboardContainer: Running initial data loading effect");
     const initialize = async () => {
       // Load all currency data
+      console.log("DashboardContainer: Initializing and loading all data");
       await loadAllData();
       
       // Fetch margin settings from database
@@ -54,6 +56,7 @@ const DashboardContainer = () => {
 
   // Handle refresh button click
   const handleRefresh = async () => {
+    console.log("DashboardContainer: Handling refresh button click");
     await loadAllData();
     
     // After loading data, recalculate with current margins

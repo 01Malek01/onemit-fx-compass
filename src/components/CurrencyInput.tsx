@@ -56,7 +56,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
 
   // Update the input value when the prop changes
   useEffect(() => {
-    if (value && value > 0 && value.toString() !== inputValue) {
+    console.log("CurrencyInput: Received prop value:", value);
+    if (value && value > 0) {
       console.log("CurrencyInput: Updating input value from props:", value);
       setInputValue(value.toString());
     }
