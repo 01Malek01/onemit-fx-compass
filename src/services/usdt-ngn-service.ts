@@ -29,13 +29,17 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
     console.log("Fetched USDT/NGN rate data:", data);
     
     if (!data || data.length === 0) {
-      console.log("No USDT/NGN rate found in database");
+      console.warn("No USDT/NGN rate found in database, returning default");
       return 0;
     }
     
-    // Make sure we're parsing the rate as a number
+    // Make sure we're parsing the rate as a number and validate it
     const rate = Number(data[0].rate);
-    console.log("Returning USDT/NGN rate:", rate);
+    if (isNaN(rate) || rate <= 0) {
+      console.error("Invalid rate value retrieved:", data[0].rate);
+      throw new Error("Invalid rate value retrieved");
+    }
+    console.log("Returning valid USDT/NGN rate:", rate);
     return rate;
   } catch (error) {
     console.error("Error fetching USDT/NGN rate:", error);
@@ -70,7 +74,7 @@ export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
       throw error;
     }
     
-    console.log("USDT/NGN rate saved successfully");
+    console.log("USDT/NGN rate saved successfully:", rate);
     toast.success("USDT/NGN rate updated successfully");
     return true;
   } catch (error) {

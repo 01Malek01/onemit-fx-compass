@@ -53,6 +53,7 @@ export const useRateDataLoader = ({
       const usdtRate = await fetchLatestUsdtNgnRate();
       console.log("Fetched USDT/NGN rate from database:", usdtRate);
       
+      // Important: Only update the state if we get a valid rate
       if (usdtRate && usdtRate > 0) {
         console.log("Setting USDT/NGN rate from database:", usdtRate);
         setUsdtNgnRate(usdtRate);
@@ -86,8 +87,11 @@ export const useRateDataLoader = ({
       const marginSettings = await fetchMarginSettings();
       console.log("Fetched margin settings:", marginSettings);
       
-      if (marginSettings && usdtRate && usdtRate > 0 && Object.keys(rates).length > 0) {
-        // Calculate cost prices using loaded margins
+      // Only calculate if we have a valid USDT/NGN rate
+      const validRate = usdtRate && usdtRate > 0;
+      const validRates = rates && Object.keys(rates).length > 0;
+      
+      if (marginSettings && validRate && validRates) {
         console.log("Calculating cost prices with fetched data:", {
           usdMargin: marginSettings.usd_margin,
           otherCurrenciesMargin: marginSettings.other_currencies_margin,
@@ -105,8 +109,8 @@ export const useRateDataLoader = ({
       } else {
         console.warn("Missing data for calculations:", { 
           hasMarginSettings: !!marginSettings, 
-          usdtRate, 
-          ratesCount: Object.keys(rates).length 
+          validRate, 
+          validRates 
         });
       }
       
