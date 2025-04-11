@@ -5,7 +5,7 @@ import { useCostPriceCalculator } from './useCostPriceCalculator';
 import { useRateDataLoader } from './useRateDataLoader';
 
 export interface CurrencyDataState {
-  usdtNgnRate: number;
+  usdtNgnRate: number | null;
   fxRates: Record<string, number>;
   vertoFxRates: Record<string, { buy: number; sell: number }>;
   costPrices: Record<string, number>;

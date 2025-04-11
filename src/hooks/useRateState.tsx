@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { CurrencyRates, VertoFXRates } from '@/services/api';
 
 export interface RateState {
-  usdtNgnRate: number;
+  usdtNgnRate: number | null;
   fxRates: CurrencyRates;
   vertoFxRates: VertoFXRates;
   costPrices: CurrencyRates;
@@ -24,7 +24,7 @@ export interface RateStateActions {
 
 export const useRateState = (): [RateState, RateStateActions] => {
   // State variables
-  const [usdtNgnRate, setUsdtNgnRate] = useState<number>(0); // Changed from hardcoded value to 0
+  const [usdtNgnRate, setUsdtNgnRate] = useState<number | null>(null); // Changed from 0 to null
   const [fxRates, setFxRates] = useState<CurrencyRates>({});
   const [vertoFxRates, setVertoFxRates] = useState<VertoFXRates>({});
   const [costPrices, setCostPrices] = useState<CurrencyRates>({});

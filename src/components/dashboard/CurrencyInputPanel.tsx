@@ -4,7 +4,7 @@ import CurrencyInput from '@/components/CurrencyInput';
 import MarginControls from '@/components/MarginControls';
 
 interface CurrencyInputPanelProps {
-  usdtNgnRate: number;
+  usdtNgnRate: number | null;
   setUsdtNgnRate: (rate: number) => void;
   usdMargin: number;
   otherCurrenciesMargin: number;
@@ -27,7 +27,7 @@ const CurrencyInputPanel: React.FC<CurrencyInputPanelProps> = ({
       <div className="md:col-span-1">
         <CurrencyInput
           label="USDT/NGN Rate"
-          value={usdtNgnRate}
+          value={usdtNgnRate !== null ? usdtNgnRate : 0}
           onChange={setUsdtNgnRate}
           onSubmit={onUsdtRateUpdate}
           isLoading={isLoading}

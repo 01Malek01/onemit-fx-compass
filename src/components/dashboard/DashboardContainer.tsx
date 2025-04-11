@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import CurrencyInputPanel from '@/components/dashboard/CurrencyInputPanel';
@@ -71,7 +70,7 @@ const DashboardContainer = () => {
 
   // Recalculate cost prices when rates or margins change
   useEffect(() => {
-    if (usdtNgnRate > 0) {
+    if (usdtNgnRate !== null && usdtNgnRate > 0) {
       console.log("DashboardContainer: Recalculating with USDT rate:", usdtNgnRate);
       calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
     }
@@ -95,7 +94,7 @@ const DashboardContainer = () => {
   // Handle USDT/NGN rate update
   const handleUsdtRateUpdate = async () => {
     console.log("DashboardContainer: Handling USDT rate update with value:", usdtNgnRate);
-    if (usdtNgnRate > 0) {
+    if (usdtNgnRate !== null && usdtNgnRate > 0) {
       await updateUsdtRate(usdtNgnRate);
     } else {
       console.warn("Attempted to update with invalid USDT rate:", usdtNgnRate);
@@ -131,8 +130,8 @@ const DashboardContainer = () => {
     };
   };
 
-  // Show loading state if usdtNgnRate is not yet loaded or if isLoading is true
-  if (usdtNgnRate === 0 || isLoading) {
+  // Show loading state if usdtNgnRate is null or if isLoading is true
+  if (usdtNgnRate === null || isLoading) {
     return (
       <div className="container mx-auto py-6 px-4 max-w-7xl">
         <div className="dashboard-bg absolute inset-0 -z-10"></div>

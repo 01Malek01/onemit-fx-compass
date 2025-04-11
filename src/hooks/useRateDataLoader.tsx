@@ -13,7 +13,7 @@ export interface RateDataLoaderProps {
   setIsLoading: (loading: boolean) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
   fxRates: CurrencyRates;
-  usdtNgnRate: number;
+  usdtNgnRate: number | null;
 }
 
 export const useRateDataLoader = ({
