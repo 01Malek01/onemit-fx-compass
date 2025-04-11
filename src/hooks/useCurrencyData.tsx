@@ -49,6 +49,11 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     usdtNgnRate
   });
 
+  // Debug log for tracking usdtNgnRate changes
+  useEffect(() => {
+    console.log("👀 useCurrencyData: usdtNgnRate value in state:", usdtNgnRate);
+  }, [usdtNgnRate]);
+
   // Initialize data on mount
   useEffect(() => {
     loadAllData();

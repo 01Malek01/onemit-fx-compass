@@ -27,7 +27,7 @@ const CurrencyInputPanel: React.FC<CurrencyInputPanelProps> = ({
       <div className="md:col-span-1">
         <CurrencyInput
           label="USDT/NGN Rate"
-          value={usdtNgnRate !== null ? usdtNgnRate : 0}
+          value={usdtNgnRate}
           onChange={setUsdtNgnRate}
           onSubmit={onUsdtRateUpdate}
           isLoading={isLoading}

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,8 +26,13 @@ const DashboardContainer = () => {
     getOneremitRates
   } = useDashboardState();
 
-  // Show loading state if usdtNgnRate is null or if isLoading is true
-  if (usdtNgnRate === null || isLoading) {
+  // Debug logging to track usdtNgnRate changes
+  useEffect(() => {
+    console.log("👀 usdtNgnRate value in DashboardContainer:", usdtNgnRate);
+  }, [usdtNgnRate]);
+
+  // Show loading state if usdtNgnRate is null
+  if (usdtNgnRate === null) {
     return <DashboardSkeleton />;
   }
 

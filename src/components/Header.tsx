@@ -1,12 +1,15 @@
+
 import React from 'react';
 import { RefreshCw, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 interface HeaderProps {
   lastUpdated: Date | null;
   onRefresh: () => void;
   isLoading: boolean;
 }
+
 const Header: React.FC<HeaderProps> = ({
   lastUpdated,
   onRefresh,
@@ -20,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({
             Last updated: {lastUpdated.toLocaleTimeString()} {lastUpdated.toLocaleDateString()}
           </div> : <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-1.5">
             <Info className="h-3.5 w-3.5" aria-hidden="true" />
-            Welcome to the FX Cost Engine
+            {isLoading ? 'Loading rate data...' : 'Welcome to the FX Cost Engine'}
           </p>}
       </div>
       
@@ -43,4 +46,5 @@ const Header: React.FC<HeaderProps> = ({
       <div className="absolute top-0 right-0 h-14 w-[30%] bg-gradient-to-r from-primary/5 to-primary/20 rounded-full blur-3xl -z-10" aria-hidden="true" />
     </header>;
 };
+
 export default Header;

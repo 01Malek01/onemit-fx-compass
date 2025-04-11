@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface CurrencyInputProps {
   label: string;
-  value: number;
+  value: number | null;
   onChange: (value: number) => void;
   onSubmit: () => void;
   isLoading: boolean;
