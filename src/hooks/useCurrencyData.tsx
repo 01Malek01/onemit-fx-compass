@@ -16,7 +16,7 @@ export interface CurrencyDataState {
 
 export interface CurrencyDataActions {
   loadAllData: () => Promise<void>;
-  updateUsdtRate: (rate: number) => Promise<void>;
+  updateUsdtRate: (rate: number) => Promise<boolean>; // Updated return type to match implementation
   setUsdtNgnRate: (rate: number) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
 }

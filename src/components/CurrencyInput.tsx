@@ -23,7 +23,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   isLoading,
   autoFocus = false
 }) => {
-  const [inputValue, setInputValue] = useState<string>(value ? value.toString() : '');
+  const [inputValue, setInputValue] = useState<string>('');
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
@@ -60,7 +60,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   // Update the input value when the prop changes (e.g. from database load)
   useEffect(() => {
     console.log("CurrencyInput: Received prop value:", value);
-    if (value && value > 0) {
+    if (value !== null && value !== undefined) {
       const valueString = value.toString();
       // Only update if the values are different to prevent cursor jumping
       if (valueString !== inputValue) {

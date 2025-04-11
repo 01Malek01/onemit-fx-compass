@@ -24,7 +24,7 @@ export interface RateStateActions {
 
 export const useRateState = (): [RateState, RateStateActions] => {
   // State variables
-  const [usdtNgnRate, setUsdtNgnRate] = useState<number>(0);
+  const [usdtNgnRate, setUsdtNgnRate] = useState<number>(0); // Changed from hardcoded value to 0
   const [fxRates, setFxRates] = useState<CurrencyRates>({});
   const [vertoFxRates, setVertoFxRates] = useState<VertoFXRates>({});
   const [costPrices, setCostPrices] = useState<CurrencyRates>({});
