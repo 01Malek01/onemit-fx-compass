@@ -2,12 +2,15 @@
 import { toast } from "sonner";
 import { 
   saveUsdtNgnRate,
-  fetchLatestUsdtNgnRate
+  fetchLatestUsdtNgnRate,
+  DEFAULT_RATE
 } from '@/services/usdt-ngn-service';
 import { 
   fetchMarginSettings 
 } from '@/services/margin-settings-service';
-import { saveHistoricalRates } from '@/services/historical-rates-service';
+import { 
+  saveHistoricalRates 
+} from '@/services/historical-rates-service';
 
 interface UsdtRateUpdaterProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -77,6 +80,8 @@ export const useUsdtRateUpdater = ({
         const originalRate = await fetchLatestUsdtNgnRate();
         if (originalRate && originalRate > 0) {
           setUsdtNgnRate(originalRate);
+        } else {
+          setUsdtNgnRate(DEFAULT_RATE);
         }
         return false;
       }

@@ -9,7 +9,7 @@ import {
 const USDT_TO_USD_FEE = 0.001; // 0.10% as decimal
 
 export interface CostPriceCalculatorProps {
-  usdtNgnRate: number;
+  usdtNgnRate: number | null;
   fxRates: CurrencyRates;
   setCostPrices: (prices: CurrencyRates) => void;
   setPreviousCostPrices: (prices: CurrencyRates) => void;

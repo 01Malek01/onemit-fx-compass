@@ -7,7 +7,8 @@ import {
   VertoFXRates 
 } from '@/services/api';
 import { 
-  fetchLatestUsdtNgnRate
+  fetchLatestUsdtNgnRate,
+  DEFAULT_RATE
 } from '@/services/usdt-ngn-service';
 import { 
   fetchMarginSettings 
@@ -60,7 +61,7 @@ export const loadRatesData = async (
     setVertoFxRates(vertoRates);
     
     return { 
-      usdtRate: usdtRate || 0, 
+      usdtRate: usdtRate || DEFAULT_RATE, 
       fxRates: rates,
       success: true
     };
@@ -68,7 +69,7 @@ export const loadRatesData = async (
     console.error("[rateDataUtils] Error loading rates data:", error);
     toast.error("Failed to load rates data");
     return { 
-      usdtRate: 0, 
+      usdtRate: DEFAULT_RATE, 
       fxRates: {},
       success: false
     };

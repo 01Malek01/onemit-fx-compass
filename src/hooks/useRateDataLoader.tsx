@@ -1,7 +1,7 @@
 
 import { toast } from "sonner";
 import { CurrencyRates, VertoFXRates } from '@/services/api';
-import { fetchLatestUsdtNgnRate } from '@/services/usdt-ngn-service';
+import { fetchLatestUsdtNgnRate, DEFAULT_RATE } from '@/services/usdt-ngn-service';
 import { loadRatesData, loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils/rateDataUtils';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 
@@ -54,19 +54,20 @@ export const useRateDataLoader = ({
         console.log("[useRateDataLoader] Setting USDT/NGN rate from database:", usdtRate);
         setUsdtNgnRate(usdtRate);
       } else {
-        console.warn("[useRateDataLoader] Received invalid or no USDT/NGN rate from database:", usdtRate);
+        console.warn("[useRateDataLoader] Received invalid or no USDT/NGN rate from database, using default:", DEFAULT_RATE);
+        setUsdtNgnRate(DEFAULT_RATE);
       }
       
       // Apply margin settings and calculate cost prices
       const calculationsApplied = await loadAndApplyMarginSettings(
         calculateAllCostPrices,
         loadedFxRates,
-        usdtRate
+        usdtRate || DEFAULT_RATE
       );
       
       if (calculationsApplied) {
         // Save historical data for analytics
-        await saveHistoricalRatesData(loadedFxRates, usdtRate);
+        await saveHistoricalRatesData(loadedFxRates, usdtRate || DEFAULT_RATE);
       }
       
       setLastUpdated(new Date());
@@ -74,6 +75,8 @@ export const useRateDataLoader = ({
     } catch (error) {
       console.error("[useRateDataLoader] Error loading data:", error);
       toast.error("Failed to load some data");
+      // Set default rate if there was an error
+      setUsdtNgnRate(DEFAULT_RATE);
     } finally {
       setIsLoading(false);
     }
