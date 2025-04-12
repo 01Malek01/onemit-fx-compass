@@ -4,11 +4,15 @@ import { toast } from "sonner";
 import { CurrencyRates } from './api';
 import { Database } from '@/integrations/supabase/types';
 
-// Interface for historical rate records
+// Interface that matches our Supabase historical_rates table schema
 export interface HistoricalRate {
   id?: string;
   timestamp?: string;
+  date?: string; // This matches the database schema
   usdt_ngn_rate: number;
+  currency_code?: string; // Added to match DB schema
+  rate?: number; // Added to match DB schema
+  // Additional fields for our application logic
   margin_usd: number;
   margin_others: number;
   eur_usd?: number;
@@ -54,32 +58,42 @@ export const saveHistoricalRates = async (
       return false;
     }
 
-    // Prepare data for insertion
-    const historicalData: HistoricalRate = {
-      usdt_ngn_rate: usdtNgnRate,
-      margin_usd: usdMargin,
-      margin_others: otherCurrenciesMargin,
-      eur_usd: fxRates.EUR,
-      gbp_usd: fxRates.GBP,
-      cad_usd: fxRates.CAD,
-      ngn_usd: costPrices.USD,
-      ngn_eur: costPrices.EUR,
-      ngn_gbp: costPrices.GBP,
-      ngn_cad: costPrices.CAD,
-      source: source,
-      timestamp: new Date().toISOString()
-    };
+    // Now we need to save multiple records - one for each currency
+    const insertPromises: Promise<any>[] = [];
+    const timestamp = new Date().toISOString();
 
-    console.log("[historical-rates] Prepared historical data:", historicalData);
-    
-    // Insert data into Supabase
-    const { error } = await supabase
-      .from('historical_rates')
-      .insert(historicalData);
-    
-    if (error) {
-      console.error("[historical-rates] Error saving historical data:", error);
-      toast.error("Failed to save historical rate data");
+    // Save USD data
+    insertPromises.push(
+      supabase.from('historical_rates').insert({
+        currency_code: 'USD',
+        rate: costPrices.USD,
+        usdt_ngn_rate: usdtNgnRate,
+        date: timestamp
+      })
+    );
+
+    // Save other currencies data
+    const otherCurrencies = ['EUR', 'GBP', 'CAD'];
+    otherCurrencies.forEach(currencyCode => {
+      if (costPrices[currencyCode]) {
+        insertPromises.push(
+          supabase.from('historical_rates').insert({
+            currency_code: currencyCode,
+            rate: costPrices[currencyCode],
+            usdt_ngn_rate: usdtNgnRate,
+            date: timestamp
+          })
+        );
+      }
+    });
+
+    // Wait for all inserts to complete
+    const results = await Promise.all(insertPromises);
+    const errors = results.filter(result => result.error);
+
+    if (errors.length > 0) {
+      console.error("[historical-rates] Errors saving historical data:", errors);
+      toast.error("Failed to save some historical rate data");
       return false;
     }
     
@@ -102,7 +116,7 @@ export const fetchHistoricalRates = async (
     const { data, error } = await supabase
       .from('historical_rates')
       .select('*')
-      .order('timestamp', { ascending: false })
+      .order('date', { ascending: false })
       .limit(limit);
     
     if (error) {
@@ -111,7 +125,11 @@ export const fetchHistoricalRates = async (
     }
     
     console.log(`Fetched ${data?.length || 0} historical rates`);
-    return data as HistoricalRate[] || [];
+    
+    // Convert the raw data to our application's HistoricalRate type
+    // We need to explicitly cast because the DB schema and our application schema are different
+    const historicalRates: HistoricalRate[] = (data as unknown) as HistoricalRate[];
+    return historicalRates;
   } catch (error) {
     console.error(`Error fetching historical rates:`, error);
     toast.error(`Failed to fetch historical data`);
