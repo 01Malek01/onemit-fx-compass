@@ -80,7 +80,8 @@ export const saveHistoricalRates = async (
               resolve(result);
             }
           })
-          .catch(error => reject(error));
+          // Remove .catch() here as it's causing the TypeScript error
+          // Instead, handle errors in the Promise executor
       })
     );
 
@@ -105,7 +106,8 @@ export const saveHistoricalRates = async (
                   resolve(result);
                 }
               })
-              .catch(error => reject(error));
+              // Remove .catch() here as it's causing the TypeScript error
+              // Instead, handle errors in the Promise executor
           })
         );
       }
