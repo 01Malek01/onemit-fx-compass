@@ -64,12 +64,20 @@ export const saveHistoricalRates = async (
 
     // Save USD data
     insertPromises.push(
-      supabase.from('historical_rates').insert({
-        currency_code: 'USD',
-        rate: costPrices.USD,
-        usdt_ngn_rate: usdtNgnRate,
-        date: timestamp
-      }).then(result => result)
+      new Promise((resolve, reject) => {
+        supabase.from('historical_rates').insert({
+          currency_code: 'USD',
+          rate: costPrices.USD,
+          usdt_ngn_rate: usdtNgnRate,
+          date: timestamp
+        }).then(result => {
+          if (result.error) {
+            reject(result.error);
+          } else {
+            resolve(result);
+          }
+        }).catch(reject);
+      })
     );
 
     // Save other currencies data
@@ -77,12 +85,20 @@ export const saveHistoricalRates = async (
     otherCurrencies.forEach(currencyCode => {
       if (costPrices[currencyCode]) {
         insertPromises.push(
-          supabase.from('historical_rates').insert({
-            currency_code: currencyCode,
-            rate: costPrices[currencyCode],
-            usdt_ngn_rate: usdtNgnRate,
-            date: timestamp
-          }).then(result => result)
+          new Promise((resolve, reject) => {
+            supabase.from('historical_rates').insert({
+              currency_code: currencyCode,
+              rate: costPrices[currencyCode],
+              usdt_ngn_rate: usdtNgnRate,
+              date: timestamp
+            }).then(result => {
+              if (result.error) {
+                reject(result.error);
+              } else {
+                resolve(result);
+              }
+            }).catch(reject);
+          })
         );
       }
     });
