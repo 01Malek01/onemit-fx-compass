@@ -69,7 +69,7 @@ export const saveHistoricalRates = async (
         rate: costPrices.USD,
         usdt_ngn_rate: usdtNgnRate,
         date: timestamp
-      })
+      }).then(result => result)
     );
 
     // Save other currencies data
@@ -82,7 +82,7 @@ export const saveHistoricalRates = async (
             rate: costPrices[currencyCode],
             usdt_ngn_rate: usdtNgnRate,
             date: timestamp
-          })
+          }).then(result => result)
         );
       }
     });
