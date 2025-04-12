@@ -10,7 +10,7 @@ interface CurrencyInputProps {
   label: string;
   value: number | null;
   onChange: (value: number) => void;
-  onSubmit: () => void;
+  onSubmit: (value: number) => void; // Update type to accept a value parameter
   isLoading: boolean;
   autoFocus?: boolean;
 }
@@ -45,7 +45,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     const numValue = parseFloat(inputValue);
     if (!isNaN(numValue) && numValue > 0) {
       onChange(numValue);
-      onSubmit();
+      onSubmit(numValue); // Pass the numValue to onSubmit
       showSavedIndicator();
     } else {
       setIsError(true);

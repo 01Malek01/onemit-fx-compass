@@ -10,7 +10,7 @@ interface RateCalculatorSectionProps {
   setUsdtNgnRate: (rate: number) => void;
   usdMargin: number;
   otherCurrenciesMargin: number;
-  onUsdtRateUpdate: () => void;
+  onUsdtRateUpdate: (rate: number) => void; // Update type to accept a value parameter
   onMarginUpdate: (usdMargin: number, otherMargin: number) => void;
   isLoading: boolean;
 }

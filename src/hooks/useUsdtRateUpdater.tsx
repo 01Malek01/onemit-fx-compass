@@ -28,9 +28,9 @@ export const useUsdtRateUpdater = ({
   fxRates
 }: UsdtRateUpdaterProps) => {
   
-  // Handle USDT/NGN rate update
+  // Handle USDT/NGN rate update - now uses the passed rate parameter
   const updateUsdtRate = async (rate: number): Promise<boolean> => {
-    console.log("[useUsdtRateUpdater] Updating USDT/NGN rate:", rate);
+    console.log("[useUsdtRateUpdater] Updating USDT/NGN rate with explicitly passed value:", rate);
     
     if (!rate || isNaN(rate) || rate <= 0) {
       toast.error("Please enter a valid rate");

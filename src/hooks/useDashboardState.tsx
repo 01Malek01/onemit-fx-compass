@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings, updateMarginSettings } from '@/services/margin-settings-service';
@@ -85,13 +84,13 @@ export const useDashboardState = () => {
     calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
   };
 
-  // Handle USDT/NGN rate update
-  const handleUsdtRateUpdate = async () => {
-    console.log("DashboardContainer: Handling USDT rate update with value:", usdtNgnRate);
-    if (usdtNgnRate !== null && usdtNgnRate > 0) {
-      await updateUsdtRate(usdtNgnRate);
+  // Handle USDT/NGN rate update - now accepts the rate parameter
+  const handleUsdtRateUpdate = async (rate: number) => {
+    console.log("DashboardContainer: Handling USDT rate update with explicitly passed value:", rate);
+    if (rate && rate > 0) {
+      await updateUsdtRate(rate);
     } else {
-      console.warn("Attempted to update with invalid USDT rate:", usdtNgnRate);
+      console.warn("Attempted to update with invalid USDT rate:", rate);
     }
   };
 
