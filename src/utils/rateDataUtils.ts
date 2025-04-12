@@ -15,13 +15,14 @@ import {
 } from '@/services/margin-settings-service';
 import { 
   fetchCurrencyRates, 
-  saveCurrencyRates 
+  saveCurrencyRates,
+  fetchExchangeRates
 } from '@/services/currency-rates-service';
 import { 
   saveHistoricalRates 
 } from '@/services/historical-rates-service';
 
-// Load rates from database or API
+// Load rates from API and database
 export const loadRatesData = async (
   setFxRates: (rates: CurrencyRates) => void,
   setVertoFxRates: (rates: VertoFXRates) => void,
@@ -38,21 +39,35 @@ export const loadRatesData = async (
     const usdtRate = await fetchLatestUsdtNgnRate();
     console.log("[rateDataUtils] Fetched USDT/NGN rate from database:", usdtRate);
     
-    // First try to get FX rates from database
-    let rates = await fetchCurrencyRates();
-    console.log("[rateDataUtils] Fetched currency rates from DB:", rates);
+    // Define the currencies we need rates for
+    const supportedCurrencies = ['USD', 'EUR', 'GBP', 'CAD']; 
     
-    // If no rates in DB, fetch from API and save to database
-    if (!rates || Object.keys(rates).length === 0) {
-      console.log("[rateDataUtils] No rates in DB, fetching from API...");
-      rates = await fetchFxRates();
-      console.log("[rateDataUtils] Fetched FX rates from API:", rates);
+    // Fetch fresh rates from API
+    console.log("[rateDataUtils] Fetching rates from API for currencies:", supportedCurrencies);
+    const apiRates = await fetchExchangeRates(supportedCurrencies);
+    console.log("[rateDataUtils] Fetched rates from API:", apiRates);
+    
+    // Process the rates - API returns rates against USD, but we need to ensure USD is 1.0
+    let rates: CurrencyRates = {};
+    if (Object.keys(apiRates).length > 0) {
+      // Ensure USD is included with rate 1.0
+      rates = { ...apiRates, USD: 1.0 };
       
-      if (Object.keys(rates).length > 0) {
-        const saved = await saveCurrencyRates(rates);
-        console.log("[rateDataUtils] Saved currency rates to DB:", saved);
+      // Save to database for persistence
+      const saved = await saveCurrencyRates(rates);
+      console.log("[rateDataUtils] Saved currency rates to DB:", saved);
+    } else {
+      // Fallback: Get rates from database if API fails
+      console.log("[rateDataUtils] API fetch failed, getting rates from DB");
+      rates = await fetchCurrencyRates();
+      console.log("[rateDataUtils] Fetched currency rates from DB:", rates);
+      
+      // Ensure USD exists in rates
+      if (!rates.USD) {
+        rates.USD = 1.0;
       }
     }
+    
     setFxRates(rates);
     
     // Fetch VertoFX rates (these are always from API as they're comparison only)
