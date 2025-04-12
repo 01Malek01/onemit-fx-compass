@@ -1,5 +1,6 @@
 
 import { CurrencyRates } from '@/services/api';
+import { updateCurrentCostPrices } from '@/services/api';
 import { 
   calculateUsdPrice,
   calculateOtherCurrencyPrice
@@ -76,6 +77,9 @@ export const useCostPriceCalculator = ({
     
     console.log("All cost prices calculated:", newCostPrices);
     setCostPrices(newCostPrices);
+    
+    // Update global cost prices for API access
+    updateCurrentCostPrices(newCostPrices);
   };
 
   return { calculateAllCostPrices };

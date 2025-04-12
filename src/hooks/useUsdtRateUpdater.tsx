@@ -11,6 +11,7 @@ import {
 import { 
   saveHistoricalRates 
 } from '@/services/historical-rates-service';
+import { getCurrentCostPrices } from '@/services/api';
 
 interface UsdtRateUpdaterProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -18,6 +19,7 @@ interface UsdtRateUpdaterProps {
   setIsLoading: (loading: boolean) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
   fxRates: Record<string, number>;
+  costPrices: Record<string, number>;
 }
 
 export const useUsdtRateUpdater = ({
@@ -25,7 +27,8 @@ export const useUsdtRateUpdater = ({
   setLastUpdated,
   setIsLoading,
   calculateAllCostPrices,
-  fxRates
+  fxRates,
+  costPrices
 }: UsdtRateUpdaterProps) => {
   
   // Handle USDT/NGN rate update - now uses the passed rate parameter
@@ -54,22 +57,42 @@ export const useUsdtRateUpdater = ({
         const marginSettings = await fetchMarginSettings();
         console.log("[useUsdtRateUpdater] Fetched margin settings for recalculation:", marginSettings);
         
+        let usdMargin = 2.5;
+        let otherCurrenciesMargin = 3.0;
+        
         if (marginSettings) {
+          usdMargin = marginSettings.usd_margin;
+          otherCurrenciesMargin = marginSettings.other_currencies_margin;
+          
           // Recalculate cost prices with the updated rate
           calculateAllCostPrices(
-            marginSettings.usd_margin, 
-            marginSettings.other_currencies_margin
+            usdMargin, 
+            otherCurrenciesMargin
           );
         } else {
           console.warn("[useUsdtRateUpdater] Could not fetch margin settings, using defaults");
-          calculateAllCostPrices(2.5, 3.0); // Use default values if no settings found
+          calculateAllCostPrices(usdMargin, otherCurrenciesMargin); // Use default values if no settings found
         }
         
-        // Update historical rates
-        if (Object.keys(fxRates).length > 0) {
-          await saveHistoricalRates(fxRates, rate);
-        }
-
+        // Save historical rates
+        // Wait a brief moment for cost prices to be calculated
+        setTimeout(async () => {
+          try {
+            // Save historical rate data with source="manual" for manual updates
+            await saveHistoricalRates(
+              rate,
+              usdMargin,
+              otherCurrenciesMargin,
+              fxRates,
+              costPrices,
+              'manual'
+            );
+            console.log("[useUsdtRateUpdater] Historical data saved after rate update");
+          } catch (error) {
+            console.error("[useUsdtRateUpdater] Error saving historical data:", error);
+          }
+        }, 100);
+        
         toast.success("Rate updated and prices recalculated");
         return true;
       } else {

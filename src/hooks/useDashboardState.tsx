@@ -3,6 +3,7 @@ import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings, updateMarginSettings } from '@/services/margin-settings-service';
 import { fetchLatestUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { CurrencyRates } from '@/services/api';
+import { saveHistoricalRates } from '@/services/historical-rates-service';
 
 export const useDashboardState = () => {
   // Margins state
@@ -11,7 +12,7 @@ export const useDashboardState = () => {
   
   // Use our custom hook for currency data
   const [
-    { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading },
+    { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading, fxRates },
     { loadAllData, updateUsdtRate, setUsdtNgnRate, calculateAllCostPrices }
   ] = useCurrencyData();
 
@@ -82,6 +83,23 @@ export const useDashboardState = () => {
     
     // After loading data, recalculate with current margins
     calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+    
+    // Save historical data after refresh with source="refresh"
+    try {
+      if (latestRate && Object.keys(costPrices).length > 0) {
+        await saveHistoricalRates(
+          latestRate,
+          usdMargin,
+          otherCurrenciesMargin,
+          fxRates,
+          costPrices,
+          'refresh'
+        );
+        console.log("Historical data saved after refresh");
+      }
+    } catch (error) {
+      console.error("Error saving historical data after refresh:", error);
+    }
   };
 
   // Handle USDT/NGN rate update - now accepts the rate parameter
@@ -108,6 +126,23 @@ export const useDashboardState = () => {
     // Recalculate prices with new margins
     if (success) {
       calculateAllCostPrices(newUsdMargin, newOtherMargin);
+      
+      // Save historical data after margin update with source="manual"
+      try {
+        if (usdtNgnRate && Object.keys(costPrices).length > 0) {
+          await saveHistoricalRates(
+            usdtNgnRate,
+            newUsdMargin,
+            newOtherMargin,
+            fxRates,
+            costPrices,
+            'manual'
+          );
+          console.log("Historical data saved after margin update");
+        }
+      } catch (error) {
+        console.error("Error saving historical data after margin update:", error);
+      }
     }
   };
 
@@ -136,6 +171,7 @@ export const useDashboardState = () => {
     handleRefresh,
     handleUsdtRateUpdate,
     handleMarginUpdate,
-    getOneremitRates
+    getOneremitRates,
+    fxRates, // Export fxRates for use in historical data saving
   };
 };

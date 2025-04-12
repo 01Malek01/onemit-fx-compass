@@ -2,12 +2,14 @@
 import React, { useEffect } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import RateCalculatorSection from '@/components/dashboard/RateCalculatorSection';
 import CostPriceSection from '@/components/dashboard/CostPriceSection';
 import MarketComparisonSection from '@/components/dashboard/MarketComparisonSection';
+import { BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const DashboardContainer = () => {
   const {
@@ -78,6 +80,29 @@ const DashboardContainer = () => {
         vertoFxRates={vertoFxRates}
         isLoading={isLoading}
       />
+      
+      <Separator className="my-8 opacity-30" />
+      
+      {/* Analytics placeholder section */}
+      <Card className="fx-card relative overflow-hidden mt-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" aria-hidden="true" />
+        <CardHeader className="relative">
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <span>Rate Analytics</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative">
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <p className="text-lg text-muted-foreground mb-4">
+              Historical data will appear here soon
+            </p>
+            <Button disabled className="opacity-70">
+              View Trends
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

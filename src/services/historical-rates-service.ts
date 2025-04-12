@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { CurrencyRates } from './api';
@@ -7,58 +6,87 @@ import { Database } from '@/integrations/supabase/types';
 // Interface for historical rate records
 export interface HistoricalRate {
   id?: string;
-  currency_code: string;
-  rate: number;
+  timestamp?: string;
   usdt_ngn_rate: number;
-  date?: string;
+  margin_usd: number;
+  margin_others: number;
+  eur_usd?: number;
+  gbp_usd?: number;
+  cad_usd?: number;
+  ngn_usd?: number;
+  ngn_eur?: number;
+  ngn_gbp?: number;
+  ngn_cad?: number;
+  source?: string;
+  created_at?: string;
 }
 
-// Save historical rate data
+/**
+ * Save a complete snapshot of rates and cost prices
+ * @param usdtNgnRate Current USDT/NGN rate
+ * @param usdMargin USD margin percentage
+ * @param otherCurrenciesMargin Other currencies margin percentage
+ * @param fxRates Current FX rates (currency codes as keys)
+ * @param costPrices Calculated cost prices (currency codes as keys)
+ * @param source Source of the update ("manual", "auto", or "refresh")
+ * @returns Promise<boolean> Success indicator
+ */
 export const saveHistoricalRates = async (
-  currencyRates: CurrencyRates,
-  usdtNgnRate: number
+  usdtNgnRate: number,
+  usdMargin: number,
+  otherCurrenciesMargin: number,
+  fxRates: CurrencyRates,
+  costPrices: CurrencyRates,
+  source: string = 'manual'
 ): Promise<boolean> => {
   try {
-    if (!currencyRates || Object.keys(currencyRates).length === 0) {
-      console.warn("No currency rates provided for historical data");
-      return false;
-    }
-
+    console.log("[historical-rates] Saving historical rates snapshot");
+    
+    // Validate input values
     if (!usdtNgnRate || usdtNgnRate <= 0) {
-      console.warn("Invalid USDT/NGN rate for historical data:", usdtNgnRate);
+      console.warn("[historical-rates] Invalid USDT/NGN rate for historical data:", usdtNgnRate);
       return false;
     }
 
-    console.log("Saving historical rates with USDT/NGN rate:", usdtNgnRate);
-    console.log("Currency rates for historical data:", currencyRates);
+    if (!costPrices || Object.keys(costPrices).length === 0) {
+      console.warn("[historical-rates] No cost prices available for historical data");
+      return false;
+    }
 
-    const currentDate = new Date().toISOString();
-    const entries = Object.entries(currencyRates).map(([currency_code, rate]) => ({
-      currency_code,
-      rate,
+    // Prepare data for insertion
+    const historicalData: HistoricalRate = {
       usdt_ngn_rate: usdtNgnRate,
-      date: currentDate
-    }));
+      margin_usd: usdMargin,
+      margin_others: otherCurrenciesMargin,
+      eur_usd: fxRates.EUR,
+      gbp_usd: fxRates.GBP,
+      cad_usd: fxRates.CAD,
+      ngn_usd: costPrices.USD,
+      ngn_eur: costPrices.EUR,
+      ngn_gbp: costPrices.GBP,
+      ngn_cad: costPrices.CAD,
+      source: source,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log("[historical-rates] Prepared historical data:", historicalData);
     
-    console.log("Preparing historical entries:", entries);
+    // Insert data into Supabase
+    const { error } = await supabase
+      .from('historical_rates')
+      .insert(historicalData);
     
-    // Insert in batches to avoid payload size issues
-    for (let i = 0; i < entries.length; i += 10) {
-      const batch = entries.slice(i, i + 10);
-      const { error } = await supabase
-        .from('historical_rates')
-        .insert(batch);
-      
-      if (error) {
-        console.error(`Supabase error saving batch ${i} of historical rates:`, error);
-        // Continue with other batches even if one fails
-      }
+    if (error) {
+      console.error("[historical-rates] Error saving historical data:", error);
+      toast.error("Failed to save historical rate data");
+      return false;
     }
     
-    console.log("Historical rates saved successfully");
+    console.log("[historical-rates] Historical rate data saved successfully");
     return true;
   } catch (error) {
-    console.error("Error saving historical rates:", error);
+    console.error("[historical-rates] Error in saveHistoricalRates:", error);
+    toast.error("Failed to save historical rate data");
     return false;
   }
 };
