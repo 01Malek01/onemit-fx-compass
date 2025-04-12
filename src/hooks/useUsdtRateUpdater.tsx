@@ -11,7 +11,7 @@ import {
 import { 
   saveHistoricalRates 
 } from '@/services/historical-rates-service';
-import { getCurrentCostPrices } from '@/services/api';
+import { getCurrentCostPrices, CurrencyRates } from '@/services/api';
 
 interface UsdtRateUpdaterProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -19,7 +19,8 @@ interface UsdtRateUpdaterProps {
   setIsLoading: (loading: boolean) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
   fxRates: Record<string, number>;
-  costPrices: Record<string, number>;
+  // Make costPrices optional to prevent the type error
+  costPrices?: Record<string, number>;
 }
 
 export const useUsdtRateUpdater = ({
@@ -28,7 +29,7 @@ export const useUsdtRateUpdater = ({
   setIsLoading,
   calculateAllCostPrices,
   fxRates,
-  costPrices
+  costPrices = {} // Default to empty object if not provided
 }: UsdtRateUpdaterProps) => {
   
   // Handle USDT/NGN rate update - now uses the passed rate parameter
@@ -78,13 +79,16 @@ export const useUsdtRateUpdater = ({
         // Wait a brief moment for cost prices to be calculated
         setTimeout(async () => {
           try {
+            // Get the latest cost prices that were just calculated
+            const currentCostPrices = getCurrentCostPrices();
+            
             // Save historical rate data with source="manual" for manual updates
             await saveHistoricalRates(
               rate,
               usdMargin,
               otherCurrenciesMargin,
               fxRates,
-              costPrices,
+              currentCostPrices || {},
               'manual'
             );
             console.log("[useUsdtRateUpdater] Historical data saved after rate update");

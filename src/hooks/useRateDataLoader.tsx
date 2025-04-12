@@ -34,6 +34,7 @@ export const useRateDataLoader = ({
     setIsLoading,
     calculateAllCostPrices,
     fxRates
+    // costPrices is now optional in UsdtRateUpdaterProps, so we don't need to provide it
   });
   
   // Load all data from APIs and database
@@ -66,8 +67,12 @@ export const useRateDataLoader = ({
       );
       
       if (calculationsApplied) {
-        // Save historical data for analytics
-        await saveHistoricalRatesData(loadedFxRates, usdtRate || DEFAULT_RATE);
+        // Save historical data for analytics after calculations
+        try {
+          await saveHistoricalRatesData(loadedFxRates, usdtRate || DEFAULT_RATE);
+        } catch (error) {
+          console.error("[useRateDataLoader] Error saving historical data:", error);
+        }
       }
       
       setLastUpdated(new Date());

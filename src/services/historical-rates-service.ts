@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
 import { CurrencyRates } from './api';
@@ -91,31 +92,29 @@ export const saveHistoricalRates = async (
   }
 };
 
-// Fetch historical rates for a specific currency
+// Fetch historical rates for analytics
 export const fetchHistoricalRates = async (
-  currencyCode: string,
   limit: number = 30
 ): Promise<HistoricalRate[]> => {
   try {
-    console.log(`Fetching historical rates for ${currencyCode}, limit: ${limit}`);
+    console.log(`Fetching historical rates, limit: ${limit}`);
     
     const { data, error } = await supabase
       .from('historical_rates')
       .select('*')
-      .eq('currency_code', currencyCode)
-      .order('date', { ascending: false })
+      .order('timestamp', { ascending: false })
       .limit(limit);
     
     if (error) {
-      console.error(`Supabase error fetching historical rates for ${currencyCode}:`, error);
+      console.error(`Supabase error fetching historical rates:`, error);
       throw error;
     }
     
-    console.log(`Fetched ${data?.length || 0} historical rates for ${currencyCode}`);
-    return data || [];
+    console.log(`Fetched ${data?.length || 0} historical rates`);
+    return data as HistoricalRate[] || [];
   } catch (error) {
-    console.error(`Error fetching historical rates for ${currencyCode}:`, error);
-    toast.error(`Failed to fetch historical data for ${currencyCode}`);
+    console.error(`Error fetching historical rates:`, error);
+    toast.error(`Failed to fetch historical data`);
     return [];
   }
 };

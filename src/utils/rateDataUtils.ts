@@ -1,9 +1,11 @@
+
 import { toast } from "sonner";
 import { 
   fetchFxRates, 
   fetchVertoFXRates,
   CurrencyRates,
-  VertoFXRates 
+  VertoFXRates,
+  getCurrentCostPrices
 } from '@/services/api';
 import { 
   fetchLatestUsdtNgnRate,
@@ -122,9 +124,8 @@ export const loadAndApplyMarginSettings = async (
       // We need to wait a tick for React to update the cost prices
       setTimeout(async () => {
         try {
-          // We need to get the cost prices from our state
-          // This will be added as a parameter in a future update
-          const costPrices = {}; // This will be filled in another PR
+          // Get the latest cost prices that were just calculated
+          const currentCostPrices = getCurrentCostPrices();
           
           // Save historical rate data with source="auto" for automatic updates
           if (Object.keys(fxRates).length > 0) {
@@ -133,7 +134,7 @@ export const loadAndApplyMarginSettings = async (
               marginSettings.usd_margin,
               marginSettings.other_currencies_margin,
               fxRates,
-              {}, // Cost prices will be populated in a future PR
+              currentCostPrices,
               'auto'
             );
             console.log("[rateDataUtils] Historical data saved after auto refresh");
@@ -165,8 +166,30 @@ export const saveHistoricalRatesData = async (
 ): Promise<boolean> => {
   if (Object.keys(fxRates).length > 0 && usdtRate && usdtRate > 0) {
     try {
+      // Get current margin settings
+      const marginSettings = await fetchMarginSettings();
+      if (!marginSettings) {
+        console.warn("[rateDataUtils] No margin settings found for historical data");
+        return false;
+      }
+      
+      // Get current cost prices
+      const costPrices = getCurrentCostPrices();
+      if (Object.keys(costPrices).length === 0) {
+        console.warn("[rateDataUtils] No cost prices available for historical data");
+        return false;
+      }
+      
       // Save rates to historical table for analytics
-      const saved = await saveHistoricalRates(fxRates, usdtRate);
+      const saved = await saveHistoricalRates(
+        usdtRate,
+        marginSettings.usd_margin,
+        marginSettings.other_currencies_margin,
+        fxRates,
+        costPrices,
+        'refresh'
+      );
+      
       console.log("[rateDataUtils] Saved historical rates:", saved);
       return saved;
     } catch (error) {
