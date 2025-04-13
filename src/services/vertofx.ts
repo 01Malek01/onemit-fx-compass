@@ -39,7 +39,12 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
 
   try {
     console.log(`[VertoFX API] Sending request to ${url} with payload:`, JSON.stringify(payload));
-    const response = await axios.post(url, payload, { headers });
+    // Set a 10-second timeout to avoid hanging requests
+    const response = await axios.post(url, payload, { 
+      headers,
+      timeout: 10000 // 10 second timeout
+    });
+    
     const data = response.data;
     console.log(`[VertoFX API] Response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
 
@@ -66,38 +71,64 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
     console.warn(`[VertoFX API] Invalid response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
     return null;
   } catch (error) {
-    console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}:`, error);
+    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+      console.error(`[VertoFX API] Request timed out for ${fromCurrency}/${toCurrency}`);
+    } else {
+      console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}:`, error);
+    }
     return null;
   }
 }
 
 /**
  * Fetch both NGN → XXX and XXX → NGN rates for a predefined set of currencies
+ * with improved error handling and retries
  */
 export async function getAllNgnRates(): Promise<Record<string, VertoFxRate>> {
   console.log("[VertoFX API] Fetching all NGN rates");
   const currencies = ["USD", "EUR", "GBP", "CAD"];
   const results: Record<string, VertoFxRate> = {};
-
+  
+  // Process currencies with retry mechanism
   for (const currency of currencies) {
     console.log(`[VertoFX API] Processing ${currency}`);
     
-    // NGN to Currency (Buy rate)
-    const ngnToCurr = await getVertoFxRate("NGN", currency);
+    // NGN to Currency (Buy rate) - with retry
+    let ngnToCurr = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      ngnToCurr = await getVertoFxRate("NGN", currency);
+      if (ngnToCurr) break;
+      
+      if (attempt < 2) {
+        console.log(`[VertoFX API] Retrying NGN-${currency} after failed attempt ${attempt}`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
+      }
+    }
+    
     if (ngnToCurr) {
       results[`NGN-${currency}`] = ngnToCurr;
       console.log(`[VertoFX API] Added NGN-${currency} rate:`, ngnToCurr.rate);
     } else {
-      console.warn(`[VertoFX API] Failed to fetch NGN-${currency} rate`);
+      console.warn(`[VertoFX API] Failed to fetch NGN-${currency} rate after retries`);
     }
 
-    // Currency to NGN (Sell rate)
-    const currToNgn = await getVertoFxRate(currency, "NGN");
+    // Currency to NGN (Sell rate) - with retry
+    let currToNgn = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      currToNgn = await getVertoFxRate(currency, "NGN");
+      if (currToNgn) break;
+      
+      if (attempt < 2) {
+        console.log(`[VertoFX API] Retrying ${currency}-NGN after failed attempt ${attempt}`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
+      }
+    }
+    
     if (currToNgn) {
       results[`${currency}-NGN`] = currToNgn;
       console.log(`[VertoFX API] Added ${currency}-NGN rate:`, currToNgn.rate);
     } else {
-      console.warn(`[VertoFX API] Failed to fetch ${currency}-NGN rate`);
+      console.warn(`[VertoFX API] Failed to fetch ${currency}-NGN rate after retries`);
     }
   }
 

@@ -40,8 +40,13 @@ export const fetchExchangeRates = async (currencies: string[]): Promise<Record<s
     // Join the currencies with a comma for the API request
     const currenciesParam = currencies.join(',');
     
-    // Make API request
-    const response = await fetch(`${API_BASE_URL}?apikey=${API_KEY}&currencies=${currenciesParam}`);
+    // Make API request with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+    
+    const response = await fetch(`${API_BASE_URL}?apikey=${API_KEY}&currencies=${currenciesParam}`, {
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
     
     if (!response.ok) {
       throw new Error(`API returned status ${response.status}`);
@@ -57,10 +62,29 @@ export const fetchExchangeRates = async (currencies: string[]): Promise<Record<s
     return data.data;
   } catch (error) {
     console.error("[currency-rates-service] Error fetching exchange rates:", error);
-    toast.error("Failed to fetch current exchange rates");
+    toast.warning("Using saved exchange rates - couldn't connect to rate provider", {
+      description: "Will retry on next refresh"
+    });
     
-    // Return empty object as fallback
-    return {};
+    // Get rates from database as fallback
+    try {
+      const savedRates = await fetchCurrencyRates();
+      if (Object.keys(savedRates).length > 0) {
+        console.log("[currency-rates-service] Using fallback saved rates:", savedRates);
+        return savedRates;
+      }
+    } catch (dbError) {
+      console.error("[currency-rates-service] Failed to fetch fallback rates:", dbError);
+    }
+    
+    // If database fallback fails too, return default rates
+    console.log("[currency-rates-service] Using hardcoded fallback rates");
+    return {
+      USD: 1.0,
+      EUR: 0.88,
+      GBP: 0.76,
+      CAD: 1.38
+    };
   }
 };
 
