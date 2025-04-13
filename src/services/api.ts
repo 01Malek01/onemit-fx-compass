@@ -81,12 +81,7 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
     const vertoRates = await Promise.race([getAllNgnRates(), timeoutPromise]);
     
     // Convert the API response format to our app's expected format
-    const formattedRates: VertoFXRates = {
-      USD: { buy: 0, sell: 0 },
-      EUR: { buy: 0, sell: 0 },
-      GBP: { buy: 0, sell: 0 },
-      CAD: { buy: 0, sell: 0 }
-    };
+    const formattedRates: VertoFXRates = { ...DEFAULT_VERTOFX_RATES };
     
     // Process rates
     for (const currency of ['USD', 'EUR', 'GBP', 'CAD']) {
@@ -129,17 +124,17 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
       
       return formattedRates;
     } else {
-      console.warn("[API] No valid rates found in API response, using cached rates");
-      return { ...cachedVertoFxRates };
+      console.warn("[API] No valid rates found in API response, using default rates");
+      return { ...DEFAULT_VERTOFX_RATES };
     }
   } catch (error) {
     console.error("[API] Error fetching VertoFX rates:", error);
     
     // Only show toast when not silent refresh
     if (!cacheWithExpiration.get(VERTOFX_RATES_CACHE_KEY)) {
-      toast.warning("Using cached VertoFX rates - couldn't connect to provider");
+      toast.warning("Using default VertoFX rates - couldn't connect to provider");
     }
     
-    return { ...cachedVertoFxRates };
+    return { ...DEFAULT_VERTOFX_RATES };
   }
 };

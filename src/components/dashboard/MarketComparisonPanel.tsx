@@ -22,9 +22,10 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   console.log("MarketComparisonPanel received vertoFxRates:", vertoFxRates);
   
   // Check if we have valid VertoFX rates
-  const hasVertoRates = Object.values(vertoFxRates).some(rate => 
-    (rate.buy > 0 || rate.sell > 0)
-  );
+  const hasVertoRates = Object.keys(vertoFxRates).length > 0 && 
+    Object.values(vertoFxRates).some(rate => 
+      (rate.buy > 0 || rate.sell > 0)
+    );
   
   // Count how many currencies have valid buy rates
   const validBuyRateCount = Object.values(vertoFxRates).filter(rate => rate.buy > 0).length;

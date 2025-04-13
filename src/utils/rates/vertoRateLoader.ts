@@ -4,7 +4,12 @@ import { cacheWithExpiration } from '../cacheUtils';
 import { raceWithTimeout } from '../apiUtils';
 
 // Local cache for last successful rate data
-let lastSuccessfulVertoFxRates: VertoFXRates = {};
+let lastSuccessfulVertoFxRates: VertoFXRates = {
+  USD: { buy: 1635, sell: 1600 },
+  EUR: { buy: 1870, sell: 1805 },
+  GBP: { buy: 2150, sell: 2080 },
+  CAD: { buy: 1190, sell: 1140 }
+};
 
 /**
  * Load VertoFX rates with fallbacks
@@ -65,6 +70,10 @@ export const loadVertoFxRates = async (
         isMobile ? 600000 : 300000
       );
       return vertoRates;
+    } else {
+      // If API returned no valid rates, use default values
+      console.log("[vertoRateLoader] API returned no valid rates, using defaults");
+      return { ...lastSuccessfulVertoFxRates };
     }
   } catch (error) {
     console.error("[vertoRateLoader] Error fetching VertoFX rates:", error);

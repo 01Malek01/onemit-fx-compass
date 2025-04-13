@@ -88,7 +88,7 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
     if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
       console.error(`[VertoFX API] Request timed out for ${fromCurrency}/${toCurrency}`);
     } else {
-      console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}`);
+      console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}`, error);
     }
     return null;
   }

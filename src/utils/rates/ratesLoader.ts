@@ -60,17 +60,19 @@ export const loadRatesData = async (
     // Set core data immediately to improve perceived performance
     setFxRates(rates);
     
+    // Load VertoFX rates immediately, but handle separately
+    const vertoRates = await loadVertoFxRates(isMobile, setVertoFxRates).catch(error => {
+      console.warn("[ratesLoader] Error loading VertoFX rates:", error);
+      return {};
+    });
+    
     // Cache this initial data for future fast loads
     browserStorage.setItem(INITIAL_LOAD_CACHE_KEY, {
       usdtRate,
       fxRates: rates,
+      vertoRates,
       timestamp: Date.now()
     }, 60 * 60 * 1000); // 1 hour cache
-    
-    // Load non-essential data in background
-    loadVertoFxRates(isMobile, setVertoFxRates).catch(error => {
-      console.warn("[ratesLoader] Background loading of VertoFX rates failed:", error);
-    });
     
     return { 
       usdtRate, 
