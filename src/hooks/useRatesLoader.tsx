@@ -12,7 +12,7 @@ interface RatesLoaderProps {
   setIsLoading: (loading: boolean) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
   fetchBybitRate: () => Promise<number | null>;
-  isMobile?: boolean; // Add mobile awareness
+  isMobile?: boolean;
 }
 
 export const useRatesLoader = ({
@@ -38,18 +38,21 @@ export const useRatesLoader = ({
         margins: false
       };
       
+      // Store cached database rate for later use
+      let cachedDatabaseRate: number | null = null;
+      
       // Prioritize critical data first on mobile
       if (isMobile) {
         // On mobile, prioritize database rates first for faster initial load
         console.log("[useRatesLoader] Mobile detected, prioritizing cached rates");
-        const databaseRate = await fetchLatestUsdtNgnRate().catch(error => {
+        cachedDatabaseRate = await fetchLatestUsdtNgnRate().catch(error => {
           console.error("[useRatesLoader] Error fetching from database:", error);
           return null;
         });
         
-        if (databaseRate && databaseRate > 0) {
-          console.log("[useRatesLoader] Setting USDT/NGN rate from database:", databaseRate);
-          setUsdtNgnRate(databaseRate);
+        if (cachedDatabaseRate && cachedDatabaseRate > 0) {
+          console.log("[useRatesLoader] Setting USDT/NGN rate from database:", cachedDatabaseRate);
+          setUsdtNgnRate(cachedDatabaseRate);
           
           // Show toast that we're using cached data initially
           toast.info("Using cached rates", {
@@ -63,7 +66,7 @@ export const useRatesLoader = ({
       const bybitRate = isMobile 
         ? await Promise.race([
             bybitRatePromise, 
-            new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
+            new Promise<null>(resolve => setTimeout(() => resolve(null), 2000)) // Reduced timeout to 2s for mobile
           ])
         : await bybitRatePromise;
       
@@ -83,7 +86,7 @@ export const useRatesLoader = ({
       if (bybitRate && bybitRate > 0) {
         console.log("[useRatesLoader] Setting USDT/NGN rate from Bybit:", bybitRate);
         setUsdtNgnRate(bybitRate);
-      } else if (!isMobile || !databaseRate) {
+      } else if (!isMobile || !cachedDatabaseRate) {
         // Only try to fetch from database again if we're not on mobile
         // or if we didn't already set a database rate
         console.log("[useRatesLoader] Bybit rate unavailable, fetching from database");
@@ -105,7 +108,7 @@ export const useRatesLoader = ({
       const calculationsApplied = await loadAndApplyMarginSettings(
         calculateAllCostPrices,
         loadedFxRates,
-        bybitRate || DEFAULT_RATE
+        bybitRate || cachedDatabaseRate || DEFAULT_RATE
       ).catch(error => {
         console.error("[useRatesLoader] Error applying margin settings:", error);
         return false;

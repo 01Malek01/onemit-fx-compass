@@ -21,6 +21,30 @@ let lastSuccessfulFxRates: CurrencyRates = {};
 let lastSuccessfulVertoFxRates: VertoFXRates = {};
 let lastSuccessfulUsdtRate: number = 0;
 
+// Add a simple in-memory cache with cache expiry
+const cacheWithExpiration = {
+  data: {} as Record<string, any>,
+  timestamps: {} as Record<string, number>,
+  
+  set(key: string, value: any, expiryMs = 300000) { // Default 5 minute expiry
+    this.data[key] = value;
+    this.timestamps[key] = Date.now() + expiryMs;
+  },
+  
+  get(key: string) {
+    const now = Date.now();
+    if (this.timestamps[key] && now < this.timestamps[key]) {
+      return this.data[key];
+    }
+    return null;
+  },
+  
+  isValid(key: string) {
+    const now = Date.now();
+    return this.timestamps[key] && now < this.timestamps[key];
+  }
+};
+
 // Load rates from API and database
 export const loadRatesData = async (
   setFxRates: (rates: CurrencyRates) => void,
@@ -36,6 +60,27 @@ export const loadRatesData = async (
   let loadSuccess = true;
   
   try {
+    // Check memory cache first for ultra-fast loading on mobile
+    if (isMobile) {
+      const cachedRates = cacheWithExpiration.get('fxRates');
+      const cachedVertoRates = cacheWithExpiration.get('vertoRates');
+      
+      if (cachedRates) {
+        console.log("[loadRatesData] Using in-memory cached FX rates for instant mobile loading");
+        setFxRates(cachedRates);
+      }
+      
+      if (cachedVertoRates) {
+        console.log("[loadRatesData] Using in-memory cached Verto rates for instant mobile loading");
+        setVertoFxRates(cachedVertoRates);
+      }
+      
+      if (cachedRates && cachedVertoRates) {
+        // Don't return yet - continue loading fresh data in background
+        // but user gets instant feedback
+      }
+    }
+    
     // Fetch USDT/NGN rate from database
     let usdtRate = await fetchLatestUsdtNgnRate().catch(error => {
       console.error("[loadRatesData] Error fetching USDT/NGN rate:", error);
@@ -60,8 +105,8 @@ export const loadRatesData = async (
     let apiRates: CurrencyRates = {};
     
     try {
-      // Use a shorter timeout for mobile
-      const apiTimeout = isMobile ? 3000 : 5000;
+      // Use a much shorter timeout for mobile - 2 seconds max wait
+      const apiTimeout = isMobile ? 2000 : 5000;
       
       apiRates = await fetchExchangeRates(supportedCurrencies, apiTimeout);
       console.log("[loadRatesData] Fetched rates from API:", apiRates);
@@ -75,6 +120,9 @@ export const loadRatesData = async (
     if (Object.keys(apiRates).length > 0) {
       // Ensure USD is included with rate 1.0
       rates = { ...apiRates, USD: 1.0 };
+      
+      // Update memory cache
+      cacheWithExpiration.set('fxRates', rates, isMobile ? 600000 : 300000); // 10min mobile, 5min desktop
       
       // Save to database for persistence - skip on mobile to improve performance
       if (!isMobile) {
@@ -122,11 +170,36 @@ export const loadRatesData = async (
     // Fetch VertoFX rates - use a simplified approach on mobile
     let vertoRates: VertoFXRates = {};
     try {
-      // Skip VertoFX rate loading on initial mobile load if we already have cached values
+      // On mobile, use cached values for immediate display, then update in background
       if (isMobile && Object.keys(lastSuccessfulVertoFxRates).length > 0) {
         console.log("[loadRatesData] Mobile detected, using cached VertoFX rates for faster load");
         vertoRates = { ...lastSuccessfulVertoFxRates };
+        setVertoFxRates(vertoRates);
+        
+        // In the background, try to load fresh rates with a timeout
+        setTimeout(async () => {
+          try {
+            const freshRates = await Promise.race([
+              fetchVertoFXRates(),
+              new Promise<VertoFXRates>((_, reject) => 
+                setTimeout(() => reject(new Error('VertoFX timeout')), 3000)
+              ) as Promise<VertoFXRates>
+            ]);
+            
+            // If successful, update the display with fresh rates
+            if (freshRates && Object.keys(freshRates).length > 0) {
+              console.log("[loadRatesData] Background update of VertoFX rates successful");
+              setVertoFxRates(freshRates);
+              lastSuccessfulVertoFxRates = { ...freshRates };
+              cacheWithExpiration.set('vertoRates', freshRates, 600000); // 10min cache
+            }
+          } catch (error) {
+            console.log("[loadRatesData] Background update of VertoFX rates failed:", error);
+            // No need to do anything - we're already showing cached rates
+          }
+        }, 100);
       } else {
+        // Non-mobile or no cached rates available - fetch directly
         vertoRates = await fetchVertoFXRates();
         console.log("[loadRatesData] Fetched VertoFX rates:", vertoRates);
       
@@ -137,19 +210,21 @@ export const loadRatesData = async (
         
         if (hasValidRates) {
           lastSuccessfulVertoFxRates = { ...vertoRates };
+          cacheWithExpiration.set('vertoRates', vertoRates, isMobile ? 600000 : 300000);
         } else {
           console.warn("[loadRatesData] Invalid VertoFX rates, using cached rates");
           vertoRates = { ...lastSuccessfulVertoFxRates };
           loadSuccess = false;
         }
+        
+        setVertoFxRates(vertoRates);
       }
     } catch (vertoError) {
       console.error("[loadRatesData] Error fetching VertoFX rates:", vertoError);
       vertoRates = { ...lastSuccessfulVertoFxRates };
+      setVertoFxRates(vertoRates);
       loadSuccess = false;
     }
-    
-    setVertoFxRates(vertoRates);
     
     return { 
       usdtRate, 

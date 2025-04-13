@@ -6,6 +6,38 @@ import { CurrencyRateResponse } from "./types";
 const API_KEY = 'fca_live_Go01rIgZxHqhRvqFQ2BLi6o5oZGoovGuZk3sQ8nV';
 const API_BASE_URL = 'https://api.freecurrencyapi.com/v1/latest';
 
+// Simple browser storage for frequently accessed data
+const rateCacheStorage = {
+  getItem(key: string) {
+    try {
+      const item = localStorage.getItem(key);
+      if (!item) return null;
+      
+      const { value, expiry } = JSON.parse(item);
+      if (expiry && Date.now() > expiry) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return value;
+    } catch (e) {
+      return null;
+    }
+  },
+  
+  setItem(key: string, value: any, ttlMs = 3600000) { // 1 hour default TTL
+    try {
+      const item = {
+        value,
+        expiry: Date.now() + ttlMs
+      };
+      localStorage.setItem(key, JSON.stringify(item));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+};
+
 /**
  * Fetches the latest exchange rates for specified currencies against USD
  * @param currencies Array of currency codes (e.g., ["EUR", "GBP", "CAD"])
@@ -19,6 +51,15 @@ export const fetchExchangeRates = async (
   try {
     console.log("[currency-rates/api] Fetching exchange rates for:", currencies);
     
+    // Check browser storage cache first for instant response on mobile
+    const cacheKey = `currency_rates_${currencies.join('_')}`;
+    const cachedRates = rateCacheStorage.getItem(cacheKey);
+    
+    if (cachedRates) {
+      console.log("[currency-rates/api] Using cached rates from browser storage:", cachedRates);
+      return cachedRates;
+    }
+    
     // Join the currencies with a comma for the API request
     const currenciesParam = currencies.join(',');
     
@@ -27,7 +68,9 @@ export const fetchExchangeRates = async (
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     const response = await fetch(`${API_BASE_URL}?apikey=${API_KEY}&currencies=${currenciesParam}`, {
-      signal: controller.signal
+      signal: controller.signal,
+      // Set high priority fetch for critical resources
+      priority: 'high'
     }).finally(() => clearTimeout(timeoutId));
     
     if (!response.ok) {
@@ -40,6 +83,9 @@ export const fetchExchangeRates = async (
     if (!data || !data.data) {
       throw new Error("Invalid API response format");
     }
+    
+    // Cache the successful response in browser storage
+    rateCacheStorage.setItem(cacheKey, data.data, 1800000); // 30 min TTL
     
     return data.data;
   } catch (error) {

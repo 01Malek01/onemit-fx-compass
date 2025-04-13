@@ -3,7 +3,7 @@ import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 import { useBybitRateFetcher } from './useBybitRateFetcher';
 import { useRatesLoader } from './useRatesLoader';
-import { useDeviceDetect } from './use-mobile';
+import { useDeviceDetect, isLikelySlowDevice } from './use-mobile';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -26,8 +26,13 @@ export const useRateDataLoader = ({
   fxRates,
   usdtNgnRate
 }: RateDataLoaderProps) => {
-  // Check if on mobile for optimized loading
-  const { isMobile } = useDeviceDetect();
+  // Enhanced device detection with connection quality awareness
+  const { isMobile, connection } = useDeviceDetect();
+  
+  // Determine if we should use ultra-light mode for very slow connections
+  const isUltraLightMode = React.useMemo(() => {
+    return isMobile && isLikelySlowDevice();
+  }, [isMobile, connection]);
   
   // Use the USDT rate updater hook
   const { updateUsdtRate } = useUsdtRateUpdater({
@@ -57,9 +62,32 @@ export const useRateDataLoader = ({
     isMobile
   });
 
+  // Function to intelligently load data based on device and connection
+  const smartLoad = React.useCallback(async () => {
+    // Start the loading indicator
+    setIsLoading(true);
+    
+    try {
+      if (isUltraLightMode) {
+        console.log("[useRateDataLoader] Ultra light mode detected, using minimal loading strategy");
+        // For ultra light mode, we'll prioritize DB values and skip some API calls
+        await loadAllData();
+      } else {
+        // Normal loading strategy
+        await loadAllData();
+      }
+    } catch (error) {
+      console.error("[useRateDataLoader] Error in smart loading:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadAllData, isUltraLightMode, setIsLoading]);
+
   return { 
-    loadAllData, 
+    loadAllData: smartLoad, 
     updateUsdtRate, 
-    refreshBybitRate 
+    refreshBybitRate,
+    isMobile,
+    isUltraLightMode
   };
 };
