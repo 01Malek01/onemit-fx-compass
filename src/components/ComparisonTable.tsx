@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,10 +36,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant={isBetter ? "success" : "destructive"} className="mt-1 gap-1 cursor-help">
-                {isBetter ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
-                {Math.abs(diff).toFixed(2)}%
-              </Badge>
+              
             </TooltipTrigger>
             <TooltipContent>
               <p>{isBetter ? 'Better than' : 'Worse than'} VertoFX by {Math.abs(diff).toFixed(2)}%</p>
