@@ -5,7 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute, AuthRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,11 +26,28 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              <Route 
+                path="/" 
+                element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/auth" 
+                element={
+                  <AuthRoute>
+                    <Auth />
+                  </AuthRoute>
+                } 
+              />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </div>
     </TooltipProvider>
