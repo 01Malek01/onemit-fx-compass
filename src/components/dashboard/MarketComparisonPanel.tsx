@@ -18,15 +18,26 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {currencies.map((currency) => (
-        <ComparisonTable
-          key={currency}
-          currencyCode={currency}
-          oneremitRates={oneremitRatesFn(currency)}
-          vertoFxRates={vertoFxRates[currency] || { buy: 0, sell: 0 }}
-          isLoading={isLoading}
-        />
-      ))}
+      {currencies.map((currency) => {
+        // Make sure we have valid rates, otherwise use fallback values
+        const vertoRates = vertoFxRates[currency] || { buy: 0, sell: 0 };
+        
+        // Ensure the rates are actual numbers and not 0 (API failure case)
+        const safeVertoRates = {
+          buy: vertoRates.buy || 0,
+          sell: vertoRates.sell || 0
+        };
+        
+        return (
+          <ComparisonTable
+            key={currency}
+            currencyCode={currency}
+            oneremitRates={oneremitRatesFn(currency)}
+            vertoFxRates={safeVertoRates}
+            isLoading={isLoading}
+          />
+        );
+      })}
     </div>
   );
 };

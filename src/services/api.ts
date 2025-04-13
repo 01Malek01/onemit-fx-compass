@@ -1,5 +1,6 @@
 
 import { fetchExchangeRates } from './currency-rates-service';
+import { getAllNgnRates, VertoFxRate } from './vertofx';
 
 // Type for currency rates
 export type CurrencyRates = Record<string, number>;
@@ -26,13 +27,47 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
   return await fetchExchangeRates(supportedCurrencies);
 };
 
-// Fetch VertoFX rates - mock data for comparison purposes
+// Fetch VertoFX rates - now using the real API
 export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
-  // This is mock data for demonstration purposes
-  return {
-    USD: { buy: 1520, sell: 1500 },
-    EUR: { buy: 1670, sell: 1650 },
-    GBP: { buy: 1980, sell: 1955 },
-    CAD: { buy: 1130, sell: 1110 }
-  };
+  try {
+    console.log("Fetching live VertoFX rates...");
+    
+    const vertoRates = await getAllNgnRates();
+    console.log("Live VertoFX rates loaded:", vertoRates);
+    
+    // Convert the API response format to our app's expected format
+    const formattedRates: VertoFXRates = {
+      USD: { buy: 0, sell: 0 },
+      EUR: { buy: 0, sell: 0 },
+      GBP: { buy: 0, sell: 0 },
+      CAD: { buy: 0, sell: 0 }
+    };
+    
+    // Process NGN-XXX rates (buy rates from our perspective)
+    // This is when our customers buy foreign currency using NGN
+    for (const currency of ['USD', 'EUR', 'GBP', 'CAD']) {
+      const ngnToForeignKey = `NGN-${currency}`;
+      if (vertoRates[ngnToForeignKey]) {
+        formattedRates[currency].buy = 1 / vertoRates[ngnToForeignKey].rate;
+      }
+      
+      // Process XXX-NGN rates (sell rates from our perspective)
+      // This is when our customers sell foreign currency to get NGN
+      const foreignToNgnKey = `${currency}-NGN`;
+      if (vertoRates[foreignToNgnKey]) {
+        formattedRates[currency].sell = vertoRates[foreignToNgnKey].rate;
+      }
+    }
+    
+    return formattedRates;
+  } catch (error) {
+    console.error("Error fetching VertoFX rates:", error);
+    // Return fallback rates with placeholder values
+    return {
+      USD: { buy: 0, sell: 0 },
+      EUR: { buy: 0, sell: 0 },
+      GBP: { buy: 0, sell: 0 },
+      CAD: { buy: 0, sell: 0 }
+    };
+  }
 };

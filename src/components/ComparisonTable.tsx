@@ -27,6 +27,15 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   isLoading = false,
 }) => {
   const getBuyRateComparison = () => {
+    // If either rate is 0 or missing, show the rate without comparison
+    if (!vertoFxRates.buy || !oneremitRates.buy) {
+      return (
+        <div>
+          <div className="text-lg font-medium">{formatCurrency(oneremitRates.buy, 'NGN')}</div>
+        </div>
+      );
+    }
+    
     const isBetter = compareRates(oneremitRates.buy, vertoFxRates.buy, true);
     const diff = calculateDifference(oneremitRates.buy, vertoFxRates.buy);
     
@@ -51,6 +60,15 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   };
 
   const getSellRateComparison = () => {
+    // If either rate is 0 or missing, show the rate without comparison
+    if (!vertoFxRates.sell || !oneremitRates.sell) {
+      return (
+        <div>
+          <div className="text-lg font-medium">{formatCurrency(oneremitRates.sell, 'NGN')}</div>
+        </div>
+      );
+    }
+    
     const isBetter = compareRates(oneremitRates.sell, vertoFxRates.sell, false);
     const diff = calculateDifference(oneremitRates.sell, vertoFxRates.sell);
     
@@ -72,6 +90,12 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
         </TooltipProvider>
       </div>
     );
+  };
+
+  // Function to format VertoFX rates with handling for 0 values
+  const formatVertoRate = (rate: number) => {
+    if (!rate) return "-"; // Show dash for missing rates
+    return formatCurrency(rate, 'NGN');
   };
 
   return (
@@ -105,8 +129,8 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
               </TableRow>
               <TableRow className="hover:bg-secondary/20">
                 <TableCell className="font-medium">VertoFX</TableCell>
-                <TableCell>{formatCurrency(vertoFxRates.buy, 'NGN')}</TableCell>
-                <TableCell>{formatCurrency(vertoFxRates.sell, 'NGN')}</TableCell>
+                <TableCell>{formatVertoRate(vertoFxRates.buy)}</TableCell>
+                <TableCell>{formatVertoRate(vertoFxRates.sell)}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
