@@ -21,6 +21,9 @@ export const getBybitP2PRate = async (
     const requestTimestamp = Date.now();
     console.log("[BybitAPI] Calling Supabase Edge Function proxy at", new Date(requestTimestamp).toISOString());
     
+    // Get connection info if available, without causing TypeScript errors
+    const connectionInfo = getConnectionInfo();
+    
     // Call our Supabase Edge Function with a unique timestamp to prevent caching issues
     const { data, error } = await supabase.functions.invoke('bybit-proxy', {
       body: {
@@ -31,14 +34,9 @@ export const getBybitP2PRate = async (
         clientInfo: {
           userAgent: navigator.userAgent,
           platform: navigator.platform,
-          connection: navigator.connection ? 
-            {
-              type: (navigator.connection as any).effectiveType,
-              downlink: (navigator.connection as any).downlink
-            } : 'unknown'
+          connection: connectionInfo
         }
-      },
-      signal: abortController.signal
+      }
     });
     
     clearTimeout(timeoutId);
@@ -132,4 +130,38 @@ export const getBybitP2PRate = async (
       error: errorMessage
     };
   }
+};
+
+/**
+ * Helper function to safely get connection information without TypeScript errors
+ */
+const getConnectionInfo = () => {
+  if (typeof navigator === 'undefined') {
+    return {
+      type: null,
+      effectiveType: null,
+      downlink: null,
+      saveData: null
+    };
+  }
+  
+  // Use type assertion with the Navigator Network Information API
+  // @ts-ignore - Accessing non-standard browser API
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  
+  if (!connection) {
+    return {
+      type: null,
+      effectiveType: null,
+      downlink: null,
+      saveData: null
+    };
+  }
+  
+  return {
+    type: connection.type || null,
+    effectiveType: connection.effectiveType || null,
+    downlink: connection.downlink || null,
+    saveData: connection.saveData || null
+  };
 };
