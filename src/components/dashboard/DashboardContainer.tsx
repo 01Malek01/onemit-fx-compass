@@ -61,6 +61,12 @@ const DashboardContainer = () => {
   // State for real-time indicator
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   
+  // Create a wrapper for handleBybitRateRefresh that returns void
+  const handleBybitRateRefreshWrapper = async (): Promise<void> => {
+    await handleBybitRateRefresh();
+    // Ignoring the boolean return value
+  };
+  
   // Optimized effect to track changes
   useEffect(() => {
     setIsRealtimeActive(true);

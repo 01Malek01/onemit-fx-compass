@@ -10,7 +10,7 @@ interface RateCalculatorSectionProps {
   lastUpdated: Date | null;
   usdMargin: number;
   otherCurrenciesMargin: number;
-  onBybitRateRefresh: () => Promise<void>;
+  onBybitRateRefresh: () => Promise<boolean>; // Updated to match the actual return type
   onMarginUpdate: (usdMargin: number, otherMargin: number) => void;
   isLoading: boolean;
 }
