@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, Clock, Wifi, Info } from 'lucide-react';
@@ -19,22 +19,29 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   onRefresh,
   isLoading
 }) => {
-  // Format the rate with comma separators
-  const formattedRate = rate ? 
-    new Intl.NumberFormat('en-NG', { 
-      style: 'currency', 
-      currency: 'NGN',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(rate) : '₦0.00';
+  // Format the rate with comma separators - memoized to avoid re-renders
+  const formattedRate = useMemo(() => {
+    return rate ? 
+      new Intl.NumberFormat('en-NG', { 
+        style: 'currency', 
+        currency: 'NGN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(rate) : '₦0.00';
+  }, [rate]);
   
-  // Format the last updated time
-  const lastUpdatedText = lastUpdated ? 
-    formatDistanceToNow(lastUpdated, { addSuffix: true }) : 
-    'never';
+  // Format the last updated time - memoized to avoid re-renders
+  const lastUpdatedText = useMemo(() => {
+    return lastUpdated ? 
+      formatDistanceToNow(lastUpdated, { addSuffix: true }) : 
+      'never';
+  }, [lastUpdated]);
 
-  const isStale = lastUpdated && 
-    (new Date().getTime() - lastUpdated.getTime() > 3600000); // Older than 1 hour
+  // Check if the rate is stale (more than 1 hour old)
+  const isStale = useMemo(() => {
+    return lastUpdated && 
+      (new Date().getTime() - lastUpdated.getTime() > 3600000);
+  }, [lastUpdated]);
 
   return (
     <Card className="fx-card relative overflow-hidden">
@@ -101,9 +108,6 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Updating...' : 'Refresh'}
-            {!isLoading && (
-              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            )}
           </Button>
         </div>
         

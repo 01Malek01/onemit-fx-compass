@@ -4,7 +4,9 @@ import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 import { useBybitRateFetcher } from './useBybitRateFetcher';
 import { useRatesLoader } from './useRatesLoader';
-import { useDeviceDetect, isLikelySlowDevice } from './use-mobile';
+import { useDeviceDetect } from './use-mobile';
+import { isLikelySlowDevice } from '@/utils/deviceUtils';
+import { toast } from 'sonner';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -79,6 +81,9 @@ export const useRateDataLoader = ({
       }
     } catch (error) {
       console.error("[useRateDataLoader] Error in smart loading:", error);
+      toast.error("Failed to load data", {
+        description: "Please check your connection and try again"
+      });
     } finally {
       setIsLoading(false);
     }

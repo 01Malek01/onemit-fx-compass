@@ -1,42 +1,12 @@
 
 import { toast } from "sonner";
 import { CurrencyRateResponse } from "./types";
+import { browserStorage } from "@/utils/cacheUtils";
+import { fetchWithTimeout } from "@/utils/apiUtils";
 
 // API configuration
 const API_KEY = 'fca_live_Go01rIgZxHqhRvqFQ2BLi6o5oZGoovGuZk3sQ8nV';
 const API_BASE_URL = 'https://api.freecurrencyapi.com/v1/latest';
-
-// Simple browser storage for frequently accessed data
-const rateCacheStorage = {
-  getItem(key: string) {
-    try {
-      const item = localStorage.getItem(key);
-      if (!item) return null;
-      
-      const { value, expiry } = JSON.parse(item);
-      if (expiry && Date.now() > expiry) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      return value;
-    } catch (e) {
-      return null;
-    }
-  },
-  
-  setItem(key: string, value: any, ttlMs = 3600000) { // 1 hour default TTL
-    try {
-      const item = {
-        value,
-        expiry: Date.now() + ttlMs
-      };
-      localStorage.setItem(key, JSON.stringify(item));
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-};
 
 /**
  * Fetches the latest exchange rates for specified currencies against USD
@@ -53,7 +23,7 @@ export const fetchExchangeRates = async (
     
     // Check browser storage cache first for instant response on mobile
     const cacheKey = `currency_rates_${currencies.join('_')}`;
-    const cachedRates = rateCacheStorage.getItem(cacheKey);
+    const cachedRates = browserStorage.getItem(cacheKey);
     
     if (cachedRates) {
       console.log("[currency-rates/api] Using cached rates from browser storage:", cachedRates);
@@ -63,21 +33,13 @@ export const fetchExchangeRates = async (
     // Join the currencies with a comma for the API request
     const currenciesParam = currencies.join(',');
     
-    // Make API request with a configurable timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    // Make API request with configurable timeout
+    const data = await fetchWithTimeout<CurrencyRateResponse>(
+      `${API_BASE_URL}?apikey=${API_KEY}&currencies=${currenciesParam}`,
+      undefined,
+      timeoutMs
+    );
     
-    const response = await fetch(`${API_BASE_URL}?apikey=${API_KEY}&currencies=${currenciesParam}`, {
-      signal: controller.signal,
-      // Set high priority fetch for critical resources
-      priority: 'high'
-    }).finally(() => clearTimeout(timeoutId));
-    
-    if (!response.ok) {
-      throw new Error(`API returned status ${response.status}`);
-    }
-    
-    const data: CurrencyRateResponse = await response.json();
     console.log("[currency-rates/api] API response:", data);
     
     if (!data || !data.data) {
@@ -85,7 +47,7 @@ export const fetchExchangeRates = async (
     }
     
     // Cache the successful response in browser storage
-    rateCacheStorage.setItem(cacheKey, data.data, 1800000); // 30 min TTL
+    browserStorage.setItem(cacheKey, data.data, 1800000); // 30 min TTL
     
     return data.data;
   } catch (error) {
