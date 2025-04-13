@@ -2,6 +2,7 @@
 import { toast } from "sonner";
 import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
+import { useCallback } from 'react';
 
 interface BybitRateFetcherProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -15,10 +16,11 @@ export const useBybitRateFetcher = ({
   setIsLoading
 }: BybitRateFetcherProps) => {
   
-  const fetchBybitRate = async (): Promise<number | null> => {
+  const fetchBybitRate = useCallback(async (): Promise<number | null> => {
     try {
       console.log("[useBybitRateFetcher] Fetching Bybit P2P rate with improved retry logic");
-      const { rate, error } = await fetchBybitRateWithRetry(5, 2000); // Increased to 5 retries with 2s delay
+      // Increase max retries to 5 with 3s delay for better reliability
+      const { rate, error } = await fetchBybitRateWithRetry(7, 3000);
       
       if (!rate || rate <= 0) {
         console.warn(`[useBybitRateFetcher] Failed to get valid Bybit rate: ${error || "Unknown error"}`);
@@ -38,9 +40,9 @@ export const useBybitRateFetcher = ({
       console.error("[useBybitRateFetcher] Error in fetchBybitRate:", error);
       return null;
     }
-  };
+  }, []);
 
-  const refreshBybitRate = async (): Promise<boolean> => {
+  const refreshBybitRate = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     toast.dismiss(); // Clear any existing toasts first
     
@@ -48,8 +50,10 @@ export const useBybitRateFetcher = ({
       console.log("[useBybitRateFetcher] Starting Bybit rate refresh");
       const startTime = Date.now();
       
-      // Show immediate feedback
-      toast.loading("Updating USDT/NGN rate...");
+      // Show immediate feedback with longer timeout
+      const toastId = toast.loading("Updating USDT/NGN rate...", { 
+        duration: 20000 // Increase timeout for slow connections
+      });
       
       const bybitRate = await fetchBybitRate();
       
@@ -61,15 +65,16 @@ export const useBybitRateFetcher = ({
         setUsdtNgnRate(bybitRate);
         setLastUpdated(new Date());
         
-        toast.dismiss();
+        toast.dismiss(toastId);
         toast.success("USDT/NGN rate updated from Bybit");
         return true;
       } else {
         console.warn("[useBybitRateFetcher] Could not refresh Bybit rate");
         
-        toast.dismiss();
+        toast.dismiss(toastId);
         toast.error("Failed to update USDT/NGN rate from Bybit", {
-          description: "Network connection issue. Using last saved rate instead."
+          description: "Network connection issue. Using last saved rate instead.",
+          duration: 6000 // Show error longer
         });
         
         return false;
@@ -79,14 +84,15 @@ export const useBybitRateFetcher = ({
       
       toast.dismiss();
       toast.error("Failed to update USDT/NGN rate", {
-        description: "Check your network connection and try again"
+        description: "Check your network connection and try again",
+        duration: 6000
       });
       
       return false;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchBybitRate, setIsLoading, setLastUpdated, setUsdtNgnRate]);
 
   return {
     fetchBybitRate,

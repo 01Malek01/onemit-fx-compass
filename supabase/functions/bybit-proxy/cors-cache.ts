@@ -7,9 +7,9 @@ export const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// In-memory cache for Bybit responses
+// In-memory cache for Bybit responses with fail-safe expiration
 const responseCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 15 * 1000; // 15 second cache TTL (reduced for more frequent updates)
+const CACHE_TTL = 10 * 1000; // 10 second cache TTL (reduced for more frequent updates)
 
 /**
  * Checks cache for existing response
@@ -49,15 +49,22 @@ export const createCacheKey = (params: { tokenId: string; currencyId: string; ve
  */
 export const updateCache = (cacheKey: string, response: any) => {
   console.log(`Updating cache for key: ${cacheKey}`);
+  
+  // Protection against invalid responses
+  if (!response || typeof response !== 'object') {
+    console.warn("Attempted to cache invalid response, skipping");
+    return;
+  }
+  
   responseCache.set(cacheKey, {
     data: response,
     timestamp: Date.now()
   });
   
-  // Clean up old cache entries every 5 minutes
+  // Clean up old cache entries every minute
   setTimeout(() => {
     cleanupCache();
-  }, 5 * 60 * 1000);
+  }, 60 * 1000);
 };
 
 /**

@@ -14,7 +14,10 @@ export const getBybitP2PRate = async (
   console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
 
   try {
-    // Add client-side timeout handling
+    // Add client-side timeout handling with AbortController
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 25000); // 25 second timeout
+    
     const requestTimestamp = Date.now();
     console.log("[BybitAPI] Calling Supabase Edge Function proxy at", new Date(requestTimestamp).toISOString());
     
@@ -24,9 +27,21 @@ export const getBybitP2PRate = async (
         currencyId,
         tokenId,
         verifiedOnly,
-        requestTimestamp // Add timestamp for cache busting
-      }
+        requestTimestamp, // Add timestamp for cache busting
+        clientInfo: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          connection: navigator.connection ? 
+            {
+              type: (navigator.connection as any).effectiveType,
+              downlink: (navigator.connection as any).downlink
+            } : 'unknown'
+        }
+      },
+      signal: abortController.signal
     });
+    
+    clearTimeout(timeoutId);
     
     // Log elapsed time
     const elapsedMs = Date.now() - requestTimestamp;
@@ -79,28 +94,25 @@ export const getBybitP2PRate = async (
       error: data?.error || "Invalid response from Edge Function"
     };
   } catch (error: any) {
-    console.error("❌ Error fetching Bybit P2P rate:", error);
+    console.error("[BybitAPI] Error fetching Bybit P2P rate:", error);
     
     // Determine if it's a network error, timeout, or other issue
     let errorMessage = "Unknown error occurred";
     
     if (error.name === "AbortError") {
-      errorMessage = "Request timed out";
+      errorMessage = "Request timed out after 25 seconds";
     } else if (error.code === "ECONNABORTED") {
       errorMessage = "Request timed out";
     } else if (error.code === "ERR_NETWORK") {
       errorMessage = "Network error - check your internet connection";
-    } else if (error.message && error.message.includes("Failed to fetch")) {
-      errorMessage = "Network connection error - edge function may be unavailable";
-    } else if (error.response) {
-      // The request was made and the server responded with a status code
-      errorMessage = `Server responded with error ${error.response.status}: ${error.response.statusText}`;
-    } else if (error.request) {
-      // The request was made but no response was received
-      errorMessage = "No response received from server";
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      errorMessage = error.message || "Error setting up request";
+    } else if (error.message && typeof error.message === 'string') {
+      if (error.message.includes("Failed to fetch")) {
+        errorMessage = "Network connection error - edge function may be unavailable";
+      } else if (error.message.includes("AbortError")) {
+        errorMessage = "Request timed out";
+      } else {
+        errorMessage = error.message;
+      }
     }
     
     return {
