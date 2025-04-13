@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, Clock, Check, Wifi } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Clock, Wifi, Info } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -63,7 +63,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p className="text-xs">Live rates from Bybit P2P exchange</p>
+                <p className="text-xs">Live rates via secure server proxy to Bybit P2P exchange</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -120,6 +120,11 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
             <span>This rate hasn't been updated recently. Consider refreshing to get the latest rate.</span>
           </div>
         )}
+        
+        <div className="mt-2 text-xs flex items-center gap-1.5 text-muted-foreground">
+          <Info className="h-3.5 w-3.5" />
+          <span>Rates are fetched through a secure server proxy to avoid CORS issues</span>
+        </div>
       </CardContent>
     </Card>
   );

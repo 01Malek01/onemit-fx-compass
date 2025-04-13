@@ -41,49 +41,21 @@ export const getBybitP2PRate = async (
   verifiedOnly: boolean = true
 ): Promise<BybitP2PResponse | null> => {
   console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
-  const url = "https://api2.bybit.com/fiat/otc/item/online";
-
-  const headers = {
-    "Accept": "application/json",
-    "Accept-Encoding": "gzip, deflate, br, zstd",
-    "Accept-Language": "en",
-    "Content-Type": "application/json;charset=UTF-8",
-    "Origin": "https://www.bybit.com",
-    "Host": "api2.bybit.com",
-    "Referer": "https://www.bybit.com/",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  };
-
-  const payload = {
-    userId: "",
-    tokenId,
-    currencyId,
-    payment: [],
-    side: "1", // Buy side
-    size: "10",
-    page: "1",
-    rows: "10",
-    amount: "",
-    canTrade: true,
-    sortType: "TRADE_PRICE",
-    vaMaker: verifiedOnly
-  };
-
-  console.log("[BybitAPI] Request payload:", JSON.stringify(payload, null, 2));
 
   try {
-    console.log("[BybitAPI] Sending request to:", url);
-    const response = await axios.post(url, payload, { 
-      headers,
-      timeout: 15000 // 15 seconds timeout
+    console.log("[BybitAPI] Calling Supabase Edge Function proxy");
+    
+    // Call our Supabase Edge Function instead of directly calling the Bybit API
+    const { data, error } = await supabase.functions.invoke('bybit-proxy', {
+      body: {
+        currencyId,
+        tokenId,
+        verifiedOnly
+      }
     });
     
-    console.log("[BybitAPI] Response status:", response.status);
-    console.log("[BybitAPI] Response headers:", response.headers);
-    
-    if (!response.data) {
-      console.error("[BybitAPI] No data returned in response");
+    if (error) {
+      console.error("[BybitAPI] Edge function error:", error);
       return {
         traders: [],
         market_summary: {
@@ -98,112 +70,18 @@ export const getBybitP2PRate = async (
         },
         timestamp: new Date().toISOString(),
         success: false,
-        error: "No data returned from Bybit API"
+        error: `Edge function error: ${error.message || "Unknown error"}`
       };
     }
     
-    console.log("[BybitAPI] Response code:", response.data.ret_code);
-    console.log("[BybitAPI] Response message:", response.data.ret_msg);
+    console.log("[BybitAPI] Received response from Edge Function:", data);
     
-    if (response.data.result) {
-      const itemCount = response.data.result.items?.length || 0;
-      console.log("[BybitAPI] Items found:", itemCount);
-      
-      if (itemCount === 0) {
-        console.warn("[BybitAPI] No items found in response");
-        return {
-          traders: [],
-          market_summary: {
-            total_traders: 0,
-            price_range: {
-              min: 0,
-              max: 0,
-              average: 0,
-              median: 0,
-              mode: 0,
-            },
-          },
-          timestamp: new Date().toISOString(),
-          success: false,
-          error: "No P2P traders found for the specified criteria"
-        };
-      }
-    } else {
-      console.warn("[BybitAPI] No result object in response");
-      console.log("[BybitAPI] Full response:", JSON.stringify(response.data, null, 2));
+    // The Edge Function returns the data in the same format we expect
+    if (data && data.success && data.market_summary && data.traders) {
+      return data as BybitP2PResponse;
     }
     
-    const data = response.data;
-
-    if (
-      data.ret_code === 0 &&
-      data.result &&
-      data.result.items &&
-      data.result.items.length > 0
-    ) {
-      const items = data.result.items;
-
-      const traders = items.map((item: any) => ({
-        price: parseFloat(item.price),
-        nickname: item.nickName,
-        completion_rate: item.recentExecuteRate,
-        orders: item.recentOrderNum,
-        available_quantity: parseFloat(item.lastQuantity),
-        min_amount: parseFloat(item.minAmount),
-        max_amount: parseFloat(item.maxAmount),
-        verified: !!item.authTag,
-        payment_methods: item.payments ?? [],
-        order_completion_time: item.orderFinishTime ?? "15Min(s)",
-      }));
-
-      const prices = traders.map((t) => t.price);
-      
-      // Sort prices for median calculation
-      const sortedPrices = [...prices].sort((a, b) => a - b);
-      const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)];
-      
-      const average =
-        prices.reduce((sum, p) => sum + p, 0) / (prices.length || 1);
-      
-      // Find most common price (mode)
-      const priceFrequency: Record<number, number> = {};
-      let maxFreq = 0;
-      let modePrice = prices[0] || 0;
-      
-      prices.forEach(price => {
-        priceFrequency[price] = (priceFrequency[price] || 0) + 1;
-        if (priceFrequency[price] > maxFreq) {
-          maxFreq = priceFrequency[price];
-          modePrice = price;
-        }
-      });
-      
-      console.log("[BybitAPI] Successfully processed data:", {
-        traders: traders.length,
-        average,
-        median: medianPrice,
-        min: Math.min(...prices),
-        max: Math.max(...prices)
-      });
-
-      return {
-        traders,
-        market_summary: {
-          total_traders: prices.length,
-          price_range: {
-            min: Math.min(...prices),
-            max: Math.max(...prices),
-            average,
-            median: medianPrice,
-            mode: modePrice,
-          },
-        },
-        timestamp: new Date().toISOString(),
-        success: true
-      };
-    }
-
-    console.error("[BybitAPI] Invalid or empty response structure:", JSON.stringify(data, null, 2));
+    // Handle unsuccessful responses from the Edge Function
     return {
       traders: [],
       market_summary: {
@@ -218,7 +96,7 @@ export const getBybitP2PRate = async (
       },
       timestamp: new Date().toISOString(),
       success: false,
-      error: `Invalid response from Bybit API: ${data?.ret_msg || "Unknown error"}`
+      error: data?.error || "Invalid response from Edge Function"
     };
   } catch (error: any) {
     console.error("❌ Error fetching Bybit P2P rate:", error);
@@ -293,7 +171,7 @@ export const saveBybitRate = async (rate: number): Promise<boolean> => {
   }
 };
 
-// New function to fetch with retry logic
+// Function to fetch with retry logic
 export const fetchBybitRateWithRetry = async (
   maxRetries: number = 2,
   delayMs: number = 2000
