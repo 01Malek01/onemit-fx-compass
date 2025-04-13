@@ -1,6 +1,7 @@
 
 import axios from "axios";
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from "sonner";
 
 export interface P2PTrader {
   price: number;
@@ -29,6 +30,9 @@ export interface P2PMarketSummary {
 export interface BybitP2PResponse {
   traders: P2PTrader[];
   market_summary: P2PMarketSummary;
+  timestamp: string;
+  success: boolean;
+  error?: string;
 }
 
 export const getBybitP2PRate = async (
@@ -56,7 +60,7 @@ export const getBybitP2PRate = async (
     tokenId,
     currencyId,
     payment: [],
-    side: "1",
+    side: "1", // Buy side
     size: "10",
     page: "1",
     rows: "10",
@@ -66,21 +70,67 @@ export const getBybitP2PRate = async (
     vaMaker: verifiedOnly
   };
 
-  console.log("[BybitAPI] Request payload:", payload);
+  console.log("[BybitAPI] Request payload:", JSON.stringify(payload, null, 2));
 
   try {
-    const response = await axios.post(url, payload, { headers });
+    console.log("[BybitAPI] Sending request to:", url);
+    const response = await axios.post(url, payload, { 
+      headers,
+      timeout: 15000 // 15 seconds timeout
+    });
+    
     console.log("[BybitAPI] Response status:", response.status);
     console.log("[BybitAPI] Response headers:", response.headers);
     
-    if (response.data) {
-      console.log("[BybitAPI] Response code:", response.data.ret_code);
-      console.log("[BybitAPI] Response message:", response.data.ret_msg);
+    if (!response.data) {
+      console.error("[BybitAPI] No data returned in response");
+      return {
+        traders: [],
+        market_summary: {
+          total_traders: 0,
+          price_range: {
+            min: 0,
+            max: 0,
+            average: 0,
+            median: 0,
+            mode: 0,
+          },
+        },
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: "No data returned from Bybit API"
+      };
+    }
+    
+    console.log("[BybitAPI] Response code:", response.data.ret_code);
+    console.log("[BybitAPI] Response message:", response.data.ret_msg);
+    
+    if (response.data.result) {
+      const itemCount = response.data.result.items?.length || 0;
+      console.log("[BybitAPI] Items found:", itemCount);
       
-      if (response.data.result) {
-        const itemCount = response.data.result.items?.length || 0;
-        console.log("[BybitAPI] Items found:", itemCount);
+      if (itemCount === 0) {
+        console.warn("[BybitAPI] No items found in response");
+        return {
+          traders: [],
+          market_summary: {
+            total_traders: 0,
+            price_range: {
+              min: 0,
+              max: 0,
+              average: 0,
+              median: 0,
+              mode: 0,
+            },
+          },
+          timestamp: new Date().toISOString(),
+          success: false,
+          error: "No P2P traders found for the specified criteria"
+        };
       }
+    } else {
+      console.warn("[BybitAPI] No result object in response");
+      console.log("[BybitAPI] Full response:", JSON.stringify(response.data, null, 2));
     }
     
     const data = response.data;
@@ -107,15 +157,33 @@ export const getBybitP2PRate = async (
       }));
 
       const prices = traders.map((t) => t.price);
+      
+      // Sort prices for median calculation
+      const sortedPrices = [...prices].sort((a, b) => a - b);
+      const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)];
+      
       const average =
         prices.reduce((sum, p) => sum + p, 0) / (prices.length || 1);
-
-      const median = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
+      
+      // Find most common price (mode)
+      const priceFrequency: Record<number, number> = {};
+      let maxFreq = 0;
+      let modePrice = prices[0] || 0;
+      
+      prices.forEach(price => {
+        priceFrequency[price] = (priceFrequency[price] || 0) + 1;
+        if (priceFrequency[price] > maxFreq) {
+          maxFreq = priceFrequency[price];
+          modePrice = price;
+        }
+      });
       
       console.log("[BybitAPI] Successfully processed data:", {
         traders: traders.length,
         average,
-        median
+        median: medianPrice,
+        min: Math.min(...prices),
+        max: Math.max(...prices)
       });
 
       return {
@@ -126,15 +194,32 @@ export const getBybitP2PRate = async (
             min: Math.min(...prices),
             max: Math.max(...prices),
             average,
-            median,
-            mode: prices[0],
+            median: medianPrice,
+            mode: modePrice,
           },
         },
+        timestamp: new Date().toISOString(),
+        success: true
       };
     }
 
-    console.error("[BybitAPI] Invalid or empty response structure:", data);
-    return null;
+    console.error("[BybitAPI] Invalid or empty response structure:", JSON.stringify(data, null, 2));
+    return {
+      traders: [],
+      market_summary: {
+        total_traders: 0,
+        price_range: {
+          min: 0,
+          max: 0,
+          average: 0,
+          median: 0,
+          mode: 0,
+        },
+      },
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: `Invalid response from Bybit API: ${data?.ret_msg || "Unknown error"}`
+    };
   } catch (error: any) {
     console.error("❌ Error fetching Bybit P2P rate:", error);
     console.error("[BybitAPI] Error details:", {
@@ -144,7 +229,41 @@ export const getBybitP2PRate = async (
       statusText: error.response?.statusText,
       responseData: error.response?.data
     });
-    return null;
+    
+    // Determine if it's a network error, timeout, or other issue
+    let errorMessage = "Unknown error occurred";
+    
+    if (error.code === "ECONNABORTED") {
+      errorMessage = "Request timed out";
+    } else if (error.code === "ERR_NETWORK") {
+      errorMessage = "Network error - check your internet connection";
+    } else if (error.response) {
+      // The request was made and the server responded with a status code
+      errorMessage = `Server responded with error ${error.response.status}: ${error.response.statusText}`;
+    } else if (error.request) {
+      // The request was made but no response was received
+      errorMessage = "No response received from server";
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      errorMessage = error.message || "Error setting up request";
+    }
+    
+    return {
+      traders: [],
+      market_summary: {
+        total_traders: 0,
+        price_range: {
+          min: 0,
+          max: 0,
+          average: 0,
+          median: 0,
+          mode: 0,
+        },
+      },
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: errorMessage
+    };
   }
 };
 
@@ -172,4 +291,52 @@ export const saveBybitRate = async (rate: number): Promise<boolean> => {
     console.error("❌ Error in saveBybitRate:", error);
     return false;
   }
+};
+
+// New function to fetch with retry logic
+export const fetchBybitRateWithRetry = async (
+  maxRetries: number = 2,
+  delayMs: number = 2000
+): Promise<{rate: number | null, error?: string}> => {
+  let lastError = "";
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log(`[BybitAPI] Attempt ${attempt}/${maxRetries} to fetch P2P rate`);
+    
+    try {
+      const response = await getBybitP2PRate();
+      
+      if (response && response.success && response.market_summary.total_traders > 0) {
+        // Use median price as it's more stable against outliers
+        const rate = response.market_summary.price_range.median;
+        
+        if (rate && rate > 0) {
+          console.log(`[BybitAPI] Successfully fetched rate on attempt ${attempt}: ${rate}`);
+          
+          // Save successful rate to database
+          await saveBybitRate(rate);
+          
+          return { rate };
+        } else {
+          lastError = "Received invalid rate value (zero or negative)";
+          console.warn(`[BybitAPI] ${lastError}`);
+        }
+      } else {
+        lastError = response?.error || "No traders found or empty response";
+        console.warn(`[BybitAPI] ${lastError}`);
+      }
+    } catch (error: any) {
+      lastError = error.message || "Unknown error";
+      console.error(`[BybitAPI] Error on attempt ${attempt}: ${lastError}`);
+    }
+    
+    // Don't wait after the last attempt
+    if (attempt < maxRetries) {
+      console.log(`[BybitAPI] Waiting ${delayMs}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  
+  console.error(`[BybitAPI] All ${maxRetries} attempts failed. Last error: ${lastError}`);
+  return { rate: null, error: lastError };
 };

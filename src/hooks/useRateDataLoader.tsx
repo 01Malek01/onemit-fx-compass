@@ -4,7 +4,7 @@ import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { fetchLatestUsdtNgnRate, DEFAULT_RATE, saveUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 import { loadRatesData, loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils/index';
-import { getBybitP2PRate, saveBybitRate } from '@/services/bybit';
+import { fetchBybitRateWithRetry } from '@/services/bybit';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -36,48 +36,24 @@ export const useRateDataLoader = ({
     fxRates
   });
   
-  const fetchBybitRate = async (retry: boolean = true): Promise<number | null> => {
+  const fetchBybitRate = async (): Promise<number | null> => {
     try {
-      console.log("[useRateDataLoader] Fetching Bybit P2P rate...");
-      const bybitData = await getBybitP2PRate("NGN", "USDT");
+      console.log("[useRateDataLoader] Fetching Bybit P2P rate with improved retry logic");
+      const { rate, error } = await fetchBybitRateWithRetry(2, 2000);
       
-      if (!bybitData) {
-        console.warn("[useRateDataLoader] No data returned from Bybit API");
-        
-        // Implement retry with a 2-second delay if this is our first attempt
-        if (retry) {
-          console.log("[useRateDataLoader] Retrying Bybit API call in 2 seconds...");
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return fetchBybitRate(false); // No more retries after this
-        }
-        
+      if (!rate || rate <= 0) {
+        console.warn(`[useRateDataLoader] Failed to get valid Bybit rate: ${error || "Unknown error"}`);
         return null;
       }
       
-      // Use median price as it's more resistant to outliers, fallback to average
-      const rate = bybitData.market_summary.price_range.median || 
-                   bybitData.market_summary.price_range.average;
+      console.log("[useRateDataLoader] Bybit P2P rate fetched successfully:", rate);
       
-      console.log("[useRateDataLoader] Bybit P2P rate fetched:", rate);
-      
-      // Save to Supabase for history/analytics
-      if (rate) {
-        await saveBybitRate(rate);
-        // Also save to the standard rate service for compatibility
-        await saveUsdtNgnRate(rate);
-      }
+      // Save to the standard rate service for compatibility
+      await saveUsdtNgnRate(rate);
       
       return rate;
     } catch (error) {
-      console.error("[useRateDataLoader] Error fetching Bybit rate:", error);
-      
-      // Implement retry with a 2-second delay if this is our first attempt
-      if (retry) {
-        console.log("[useRateDataLoader] Retrying Bybit API call in 2 seconds...");
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return fetchBybitRate(false); // No more retries after this
-      }
-      
+      console.error("[useRateDataLoader] Error in fetchBybitRate:", error);
       return null;
     }
   };
@@ -162,12 +138,27 @@ export const useRateDataLoader = ({
         return true;
       } else {
         console.warn("[useRateDataLoader] Could not refresh Bybit rate");
-        toast.error("Failed to update USDT/NGN rate from Bybit");
+        toast.error("Failed to update USDT/NGN rate from Bybit", {
+          description: "Using last saved rate instead"
+        });
+        
+        // Try to get the latest rate from database as a fallback
+        const databaseRate = await fetchLatestUsdtNgnRate();
+        if (databaseRate && databaseRate > 0) {
+          console.log("[useRateDataLoader] Using fallback database rate:", databaseRate);
+          setUsdtNgnRate(databaseRate);
+          setLastUpdated(new Date());
+          calculateAllCostPrices(2.5, 3.0); // Default margins
+          return true;
+        }
+        
         return false;
       }
     } catch (error) {
       console.error("[useRateDataLoader] Error refreshing Bybit rate:", error);
-      toast.error("Failed to update USDT/NGN rate");
+      toast.error("Failed to update USDT/NGN rate", {
+        description: "Check your network connection and try again"
+      });
       return false;
     } finally {
       setIsLoading(false);

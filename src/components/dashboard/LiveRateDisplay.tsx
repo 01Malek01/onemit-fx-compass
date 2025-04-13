@@ -2,8 +2,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, Clock } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Clock, Check, Wifi } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LiveRateDisplayProps {
   rate: number | null;
@@ -32,6 +33,9 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     formatDistanceToNow(lastUpdated, { addSuffix: true }) : 
     'never';
 
+  const isStale = lastUpdated && 
+    (new Date().getTime() - lastUpdated.getTime() > 3600000); // Older than 1 hour
+
   return (
     <Card className="fx-card relative overflow-hidden">
       <div 
@@ -43,14 +47,26 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
           <div className="relative">
             {rate ? (
               <>
-                <div className="absolute -left-1 -top-1 w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className={`absolute -left-1 -top-1 w-2 h-2 ${isStale ? "bg-amber-500" : "bg-green-500"} rounded-full animate-ping`}></div>
+                <div className={`w-2 h-2 ${isStale ? "bg-amber-500" : "bg-green-500"} rounded-full`}></div>
               </>
             ) : (
               <AlertTriangle className="h-4 w-4 text-amber-400" />
             )}
           </div>
           USDT/NGN Rate (Live from Bybit)
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="ml-auto cursor-help">
+                  <Wifi className="h-3.5 w-3.5 text-muted-foreground opacity-70" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="text-xs">Live rates from Bybit P2P exchange</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
       </CardHeader>
       <CardContent className="relative">
@@ -62,7 +78,18 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
               <Clock className="h-3 w-3" />
               Last updated: {lastUpdatedText}
-              {!rate && lastUpdated && <span className="text-amber-400">(Using fallback)</span>}
+              {!rate && lastUpdated && 
+                <span className="inline-flex items-center gap-0.5 text-amber-400">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>(Using fallback)</span>
+                </span>
+              }
+              {isStale && rate && 
+                <span className="inline-flex items-center gap-0.5 text-amber-400">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>(Rate may be outdated)</span>
+                </span>
+              }
             </p>
           </div>
           <Button 
@@ -73,14 +100,24 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
             className="gap-1.5 relative overflow-hidden"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {isLoading ? 'Updating...' : 'Refresh'}
+            {!isLoading && (
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
           </Button>
         </div>
         
         {!rate && (
           <div className="mt-2 text-xs py-1.5 px-2 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 rounded-md flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            <span>Rate information unavailable. Using last known rate or default.</span>
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>Unable to fetch current rate from Bybit. Using last known rate or default value.</span>
+          </div>
+        )}
+        
+        {isStale && rate && (
+          <div className="mt-2 text-xs py-1.5 px-2 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 rounded-md flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>This rate hasn't been updated recently. Consider refreshing to get the latest rate.</span>
           </div>
         )}
       </CardContent>
