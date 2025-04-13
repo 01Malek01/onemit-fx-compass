@@ -14,24 +14,23 @@ export const getBybitP2PRate = async (
   console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
 
   try {
-    // Add request timeout handling for client-side
-    const timeoutId = setTimeout(() => {
-      throw new Error("Client-side timeout exceeded");
-    }, 10000); // 10 second client-side timeout
+    // Add client-side timeout handling
+    const requestTimestamp = Date.now();
+    console.log("[BybitAPI] Calling Supabase Edge Function proxy at", new Date(requestTimestamp).toISOString());
     
-    console.log("[BybitAPI] Calling Supabase Edge Function proxy");
-    
-    // Call our Supabase Edge Function without the signal parameter
+    // Call our Supabase Edge Function with a unique timestamp to prevent caching issues
     const { data, error } = await supabase.functions.invoke('bybit-proxy', {
       body: {
         currencyId,
         tokenId,
         verifiedOnly,
-        requestTimestamp: new Date().toISOString() // Add timestamp for cache busting
+        requestTimestamp // Add timestamp for cache busting
       }
     });
     
-    clearTimeout(timeoutId);
+    // Log elapsed time
+    const elapsedMs = Date.now() - requestTimestamp;
+    console.log(`[BybitAPI] Edge function responded after ${elapsedMs}ms`);
     
     if (error) {
       console.error("[BybitAPI] Edge function error:", error);
@@ -53,7 +52,8 @@ export const getBybitP2PRate = async (
       };
     }
     
-    console.log("[BybitAPI] Received response from Edge Function:", data);
+    console.log("[BybitAPI] Received response from Edge Function:", 
+      data ? `success=${data.success}, traders=${data.traders?.length || 0}` : "No data");
     
     // The Edge Function returns the data in the same format we expect
     if (data && data.success && data.market_summary && data.traders) {
@@ -61,6 +61,7 @@ export const getBybitP2PRate = async (
     }
     
     // Handle unsuccessful responses from the Edge Function
+    console.warn("[BybitAPI] Edge function returned unsuccessful response:", data?.error || "Unknown error");
     return {
       traders: [],
       market_summary: {

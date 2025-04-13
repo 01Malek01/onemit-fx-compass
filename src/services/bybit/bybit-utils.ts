@@ -7,13 +7,13 @@ import { cacheWithExpiration } from '@/utils/cacheUtils';
 const BYBIT_RATE_CACHE_KEY = 'bybit_rate_cache';
 
 /**
- * Function to fetch Bybit rate with retry logic and caching
+ * Function to fetch Bybit rate with improved retry logic and caching
  * @param maxRetries Maximum number of retry attempts
  * @param delayMs Delay in ms between retries
  */
 export const fetchBybitRateWithRetry = async (
-  maxRetries: number = 2,
-  delayMs: number = 2000
+  maxRetries: number = 3,
+  delayMs: number = 2500
 ): Promise<{rate: number | null, error?: string}> => {
   // Check cache first for ultra-fast response
   const cachedRate = cacheWithExpiration.get(BYBIT_RATE_CACHE_KEY);
@@ -23,23 +23,24 @@ export const fetchBybitRateWithRetry = async (
   }
   
   let lastError = "";
+  let lastResponse = null;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     console.log(`[BybitAPI] Attempt ${attempt}/${maxRetries} to fetch P2P rate`);
     
     try {
       // Extend timeout for each retry attempt
-      const timeout = delayMs * attempt;
-      
       const response = await getBybitP2PRate("NGN", "USDT", true);
+      lastResponse = response;
       
       if (!response) {
         lastError = "Null response from Bybit API";
+        console.warn(`[BybitAPI] ${lastError}`);
         continue;
       }
       
       if (response && response.success && response.market_summary && response.market_summary.total_traders > 0) {
-        // Use average price for more stability, not min price
+        // Use average price for more stability
         const rate = response.market_summary.price_range.average; 
         
         if (rate && rate > 0) {
@@ -51,7 +52,7 @@ export const fetchBybitRateWithRetry = async (
             // Continue anyway as this is not critical
           });
           
-          // Cache the rate for 10 minutes (increased from 5)
+          // Cache the rate for 10 minutes
           cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 10 * 60 * 1000);
           
           return { rate };
@@ -75,6 +76,16 @@ export const fetchBybitRateWithRetry = async (
     }
   }
   
+  // Log detailed info about last response for debugging
   console.error(`[BybitAPI] All ${maxRetries} attempts failed. Last error: ${lastError}`);
+  if (lastResponse) {
+    console.error("[BybitAPI] Last response details:", JSON.stringify({
+      success: lastResponse.success,
+      traders: lastResponse.traders?.length || 0,
+      error: lastResponse.error,
+      timestamp: lastResponse.timestamp
+    }));
+  }
+  
   return { rate: null, error: lastError };
 };

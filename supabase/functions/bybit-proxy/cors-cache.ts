@@ -7,23 +7,33 @@ export const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// In-memory cache for Bybit responses with shorter TTL
+// In-memory cache for Bybit responses
 const responseCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 30 * 1000; // 30 second cache TTL (reduced from 60s)
+const CACHE_TTL = 20 * 1000; // 20 second cache TTL (reduced for more frequent updates)
 
 /**
  * Checks cache for existing response
  */
 export const checkCache = (cacheKey: string) => {
   const cachedItem = responseCache.get(cacheKey);
-  if (cachedItem) {
-    console.log("Returning cached Bybit response");
-    return {
-      data: cachedItem.data,
-      found: true
-    };
+  
+  if (!cachedItem) {
+    return { data: null, found: false };
   }
-  return { data: null, found: false };
+  
+  // Check if cache has expired
+  const now = Date.now();
+  if (now - cachedItem.timestamp > CACHE_TTL) {
+    console.log("Cache expired, removing stale item");
+    responseCache.delete(cacheKey);
+    return { data: null, found: false };
+  }
+  
+  console.log("Returning cached Bybit response");
+  return {
+    data: cachedItem.data,
+    found: true
+  };
 };
 
 /**
@@ -38,8 +48,33 @@ export const createCacheKey = (params: { tokenId: string; currencyId: string; ve
  * Updates the cache with a response
  */
 export const updateCache = (cacheKey: string, response: any) => {
+  console.log(`Updating cache for key: ${cacheKey}`);
   responseCache.set(cacheKey, {
     data: response,
     timestamp: Date.now()
   });
+  
+  // Clean up old cache entries every 5 minutes
+  setTimeout(() => {
+    cleanupCache();
+  }, 5 * 60 * 1000);
+};
+
+/**
+ * Cleans up expired cache entries
+ */
+const cleanupCache = () => {
+  const now = Date.now();
+  let removedCount = 0;
+  
+  responseCache.forEach((value, key) => {
+    if (now - value.timestamp > CACHE_TTL) {
+      responseCache.delete(key);
+      removedCount++;
+    }
+  });
+  
+  if (removedCount > 0) {
+    console.log(`Cleaned up ${removedCount} expired cache entries`);
+  }
 };

@@ -18,7 +18,7 @@ export const useBybitRateFetcher = ({
   const fetchBybitRate = async (): Promise<number | null> => {
     try {
       console.log("[useBybitRateFetcher] Fetching Bybit P2P rate with improved retry logic");
-      const { rate, error } = await fetchBybitRateWithRetry(3, 2000); // Increased retries to 3
+      const { rate, error } = await fetchBybitRateWithRetry(3, 2500); // 3 retries with 2.5s delay
       
       if (!rate || rate <= 0) {
         console.warn(`[useBybitRateFetcher] Failed to get valid Bybit rate: ${error || "Unknown error"}`);
@@ -42,23 +42,32 @@ export const useBybitRateFetcher = ({
 
   const refreshBybitRate = async (): Promise<boolean> => {
     setIsLoading(true);
+    toast.dismiss(); // Clear any existing toasts first
     
     try {
-      // Clear any existing toasts first
-      toast.dismiss();
+      console.log("[useBybitRateFetcher] Starting Bybit rate refresh");
+      const startTime = Date.now();
+      
+      // Show immediate feedback
+      toast.loading("Updating USDT/NGN rate...");
       
       const bybitRate = await fetchBybitRate();
+      
+      const elapsedMs = Date.now() - startTime;
+      console.log(`[useBybitRateFetcher] Bybit rate fetch completed in ${elapsedMs}ms`);
       
       if (bybitRate && bybitRate > 0) {
         console.log("[useBybitRateFetcher] Refreshed Bybit USDT/NGN rate:", bybitRate);
         setUsdtNgnRate(bybitRate);
         setLastUpdated(new Date());
         
+        toast.dismiss();
         toast.success("USDT/NGN rate updated from Bybit");
         return true;
       } else {
         console.warn("[useBybitRateFetcher] Could not refresh Bybit rate");
         
+        toast.dismiss();
         toast.error("Failed to update USDT/NGN rate from Bybit", {
           description: "Using last saved rate instead"
         });
@@ -67,9 +76,12 @@ export const useBybitRateFetcher = ({
       }
     } catch (error) {
       console.error("[useBybitRateFetcher] Error refreshing Bybit rate:", error);
+      
+      toast.dismiss();
       toast.error("Failed to update USDT/NGN rate", {
         description: "Check your network connection and try again"
       });
+      
       return false;
     } finally {
       setIsLoading(false);

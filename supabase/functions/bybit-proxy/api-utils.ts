@@ -74,9 +74,9 @@ export const createApiPayload = (params: BybitRequestParams) => {
 export const callBybitApi = async (payload: any): Promise<ApiCallResult> => {
   console.log("Sending request to Bybit API");
   
-  // Make request to Bybit API with timeout
+  // Make request to Bybit API with increased timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased from 4s to 8s
   
   try {
     const response = await fetch(BYBIT_API_URL, {
@@ -90,6 +90,7 @@ export const callBybitApi = async (payload: any): Promise<ApiCallResult> => {
     return { response, error: null };
   } catch (error) {
     clearTimeout(timeoutId);
+    console.error("Error calling Bybit API:", error.message || "Unknown error");
     
     if (error.name === 'AbortError') {
       console.error("Bybit API request timed out");
