@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, Clock, Wifi, Info } from 'lucide-react';
@@ -18,6 +18,9 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   onRefresh,
   isLoading
 }) => {
+  // State for countdown to next auto-refresh
+  const [nextRefreshIn, setNextRefreshIn] = useState<number>(60);
+  
   // Format the rate with comma separators - memoized to avoid re-renders
   const formattedRate = useMemo(() => {
     return rate ? 
@@ -43,6 +46,25 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   const isStale = useMemo(() => {
     return lastUpdated && 
       (new Date().getTime() - lastUpdated.getTime() > 3600000);
+  }, [lastUpdated]);
+  
+  // Countdown timer for next refresh
+  useEffect(() => {
+    // Reset countdown when rate is refreshed
+    setNextRefreshIn(60);
+    
+    // Set up countdown timer
+    const timer = setInterval(() => {
+      setNextRefreshIn(prev => {
+        // When we reach 0, reset to 60
+        if (prev <= 1) {
+          return 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => clearInterval(timer);
   }, [lastUpdated]);
 
   return (
@@ -99,6 +121,10 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
                   <span>(Rate may be outdated)</span>
                 </span>
               }
+            </p>
+            <p className="text-xs text-primary/70 mt-1 flex items-center gap-1.5">
+              <RefreshCw className="h-3 w-3" />
+              <span>Auto-refresh in {nextRefreshIn}s</span>
             </p>
           </div>
           <Button 

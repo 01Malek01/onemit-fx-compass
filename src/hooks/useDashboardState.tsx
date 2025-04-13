@@ -66,17 +66,6 @@ export const useDashboardState = () => {
     onMarginSettingsChange: handleRealtimeMarginUpdate
   });
 
-  // Refresh Bybit rate on an interval
-  useEffect(() => {
-    // Refresh every 10 minutes (600000 milliseconds)
-    const intervalId = setInterval(() => {
-      console.log("Auto-refreshing Bybit rate...");
-      refreshBybitRate().catch(console.error);
-    }, 600000);
-    
-    return () => clearInterval(intervalId);
-  }, [refreshBybitRate]);
-
   // Load initial data - make sure this runs only once and correctly loads the data
   useEffect(() => {
     console.log("DashboardContainer: Running initial data loading effect");

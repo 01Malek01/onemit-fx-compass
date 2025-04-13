@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
 
@@ -22,6 +22,8 @@ export const useRateRefresher = ({
   refreshBybitRate,
   calculateAllCostPrices
 }: RateRefresherProps) => {
+  // Reference to store timer
+  const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Handle manual Bybit rate refresh
   const handleBybitRateRefresh = useCallback(async () => {
@@ -54,6 +56,30 @@ export const useRateRefresher = ({
       console.error("Error saving historical data after refresh:", error);
     }
   };
+
+  // Setup automatic refresh interval (every 60 seconds)
+  useEffect(() => {
+    // Clear any existing timer
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+    }
+    
+    // Set up a new timer for auto-refresh every minute (60000ms)
+    autoRefreshTimerRef.current = setInterval(() => {
+      console.log("RateRefresher: Auto-refreshing Bybit rate");
+      handleBybitRateRefresh().catch(error => {
+        console.error("Auto-refresh failed:", error);
+      });
+    }, 60000); // 1 minute interval
+    
+    // Cleanup on unmount
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+        autoRefreshTimerRef.current = null;
+      }
+    };
+  }, [handleBybitRateRefresh]);
 
   return {
     handleRefresh,
