@@ -1,4 +1,5 @@
 
+import { useCallback, useMemo } from 'react';
 import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 import { useBybitRateFetcher } from './useBybitRateFetcher';
@@ -30,7 +31,7 @@ export const useRateDataLoader = ({
   const { isMobile, connection } = useDeviceDetect();
   
   // Determine if we should use ultra-light mode for very slow connections
-  const isUltraLightMode = React.useMemo(() => {
+  const isUltraLightMode = useMemo(() => {
     return isMobile && isLikelySlowDevice();
   }, [isMobile, connection]);
   
@@ -63,7 +64,7 @@ export const useRateDataLoader = ({
   });
 
   // Function to intelligently load data based on device and connection
-  const smartLoad = React.useCallback(async () => {
+  const smartLoad = useCallback(async () => {
     // Start the loading indicator
     setIsLoading(true);
     
