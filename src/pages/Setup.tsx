@@ -27,7 +27,7 @@ const Setup = () => {
     
     try {
       // Fixed admin credentials as per requirement
-      const email = "admin";
+      const email = "admin";  // Will be formatted to admin@admin.com in the service
       const password = "spark1@";
       
       const result = await createAdminUser(email, password);
@@ -35,7 +35,7 @@ const Setup = () => {
       if (result.success) {
         toast({
           title: "Success",
-          description: result.message,
+          description: `${result.message} You will use admin@admin.com as your login email.`,
         });
         
         // Redirect to login page after creating admin
@@ -83,7 +83,7 @@ const Setup = () => {
                   This will create an admin user with the following credentials:
                 </p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Username: <span className="font-mono">admin</span></li>
+                  <li>Email: <span className="font-mono">admin@admin.com</span></li>
                   <li>Password: <span className="font-mono">spark1@</span></li>
                 </ul>
               </div>

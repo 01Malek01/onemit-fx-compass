@@ -5,8 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 // It's recommended to remove this function after creating the admin user
 export async function createAdminUser(email: string, password: string) {
   try {
+    // Convert simple username to email format if it's not already an email
+    const formattedEmail = email.includes('@') ? email : `${email}@admin.com`;
+    
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: formattedEmail,
       password,
     });
 

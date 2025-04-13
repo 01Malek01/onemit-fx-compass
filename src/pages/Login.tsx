@@ -9,7 +9,7 @@ import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('admin@admin.com');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -76,7 +76,7 @@ const Login = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Username
+                  Email
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -85,12 +85,12 @@ const Login = () => {
                   <Input
                     id="email"
                     name="email"
-                    type="text"
+                    type="email"
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
-                    placeholder="Username or Email"
+                    placeholder="admin@admin.com"
                     required
                   />
                 </div>
@@ -137,9 +137,12 @@ const Login = () => {
             </form>
           </CardContent>
           
-          <CardFooter className="justify-center">
-            <p className="text-sm text-muted-foreground mt-2">
+          <CardFooter className="flex flex-col items-center space-y-2">
+            <p className="text-sm text-muted-foreground">
               Secured access for authorized personnel only
+            </p>
+            <p className="text-xs text-muted-foreground">
+              First time? Visit the <a href="/setup" className="text-primary hover:underline">Setup Page</a> to create your admin account
             </p>
           </CardFooter>
         </Card>
