@@ -1,9 +1,8 @@
-
 import { toast } from "sonner";
 import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { fetchLatestUsdtNgnRate, DEFAULT_RATE } from '@/services/usdt-ngn-service';
-import { loadRatesData, loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils/rateDataUtils';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
+import { loadRatesData, loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils/index';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -27,30 +26,25 @@ export const useRateDataLoader = ({
   usdtNgnRate
 }: RateDataLoaderProps) => {
   
-  // Use the USDT rate updater hook
   const { updateUsdtRate } = useUsdtRateUpdater({
     setUsdtNgnRate,
     setLastUpdated,
     setIsLoading,
     calculateAllCostPrices,
     fxRates
-    // costPrices is now optional in UsdtRateUpdaterProps, so we don't need to provide it
   });
   
-  // Load all data from APIs and database
   const loadAllData = async () => {
     console.log("[useRateDataLoader] Loading all data...");
     setIsLoading(true);
     
     try {
-      // Load rates data (FX rates, USDT/NGN rate, VertoFX rates)
       const { usdtRate, fxRates: loadedFxRates, success } = await loadRatesData(
         setFxRates,
         setVertoFxRates,
         setIsLoading
       );
       
-      // Important: Only update the state if we get a valid rate
       if (usdtRate && usdtRate > 0) {
         console.log("[useRateDataLoader] Setting USDT/NGN rate from database:", usdtRate);
         setUsdtNgnRate(usdtRate);
@@ -59,7 +53,6 @@ export const useRateDataLoader = ({
         setUsdtNgnRate(DEFAULT_RATE);
       }
       
-      // Apply margin settings and calculate cost prices
       const calculationsApplied = await loadAndApplyMarginSettings(
         calculateAllCostPrices,
         loadedFxRates,
@@ -67,7 +60,6 @@ export const useRateDataLoader = ({
       );
       
       if (calculationsApplied) {
-        // Save historical data for analytics after calculations
         try {
           await saveHistoricalRatesData(loadedFxRates, usdtRate || DEFAULT_RATE);
         } catch (error) {
@@ -80,7 +72,6 @@ export const useRateDataLoader = ({
     } catch (error) {
       console.error("[useRateDataLoader] Error loading data:", error);
       toast.error("Failed to load some data");
-      // Set default rate if there was an error
       setUsdtNgnRate(DEFAULT_RATE);
     } finally {
       setIsLoading(false);
