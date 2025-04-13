@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +8,9 @@ import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import RateCalculatorSection from '@/components/dashboard/RateCalculatorSection';
 import CostPriceSection from '@/components/dashboard/CostPriceSection';
 import MarketComparisonSection from '@/components/dashboard/MarketComparisonSection';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const DashboardContainer = () => {
   const {
@@ -27,11 +28,20 @@ const DashboardContainer = () => {
     handleMarginUpdate,
     getOneremitRates
   } = useDashboardState();
+  
+  // State for real-time indicator pulsing effect
+  const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
   // Debug logging to track usdtNgnRate changes
   useEffect(() => {
     console.log("👀 usdtNgnRate value in DashboardContainer:", usdtNgnRate);
-  }, [usdtNgnRate]);
+    
+    // Show realtime indicator pulse when values change
+    setIsRealtimeActive(true);
+    const timer = setTimeout(() => setIsRealtimeActive(false), 2000);
+    
+    return () => clearTimeout(timer);
+  }, [usdtNgnRate, usdMargin, otherCurrenciesMargin]);
 
   // Show loading state if usdtNgnRate is null
   if (usdtNgnRate === null) {
@@ -49,6 +59,21 @@ const DashboardContainer = () => {
             onRefresh={handleRefresh} 
             isLoading={isLoading} 
           />
+          <div className="px-4 pb-2 flex justify-end">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Wifi className={`h-3 w-3 ${isRealtimeActive ? 'text-green-500 animate-pulse' : 'text-muted-foreground'}`} />
+                    <span>Real-time updates {isRealtimeActive ? 'active' : 'enabled'}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Changes made by other users will appear automatically</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </CardContent>
       </Card>
 

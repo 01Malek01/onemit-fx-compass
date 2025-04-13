@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings, updateMarginSettings } from '@/services/margin-settings-service';
 import { fetchLatestUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { CurrencyRates } from '@/services/api';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 
 export const useDashboardState = () => {
   // Margins state
@@ -15,6 +17,27 @@ export const useDashboardState = () => {
     { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading, fxRates },
     { loadAllData, updateUsdtRate, setUsdtNgnRate, calculateAllCostPrices }
   ] = useCurrencyData();
+
+  // Handler for real-time USDT/NGN rate updates
+  const handleRealtimeUsdtRateUpdate = (rate: number) => {
+    console.log("Received real-time USDT/NGN rate update:", rate);
+    setUsdtNgnRate(rate);
+    calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+  };
+  
+  // Handler for real-time margin settings updates
+  const handleRealtimeMarginUpdate = (newUsdMargin: number, newOtherMargin: number) => {
+    console.log("Received real-time margin settings update:", { newUsdMargin, newOtherMargin });
+    setUsdMargin(newUsdMargin);
+    setOtherCurrenciesMargin(newOtherMargin);
+    calculateAllCostPrices(newUsdMargin, newOtherMargin);
+  };
+  
+  // Set up real-time subscriptions
+  useRealtimeUpdates({
+    onUsdtRateChange: handleRealtimeUsdtRateUpdate,
+    onMarginSettingsChange: handleRealtimeMarginUpdate
+  });
 
   // Load initial data - make sure this runs only once and correctly loads the data
   useEffect(() => {
