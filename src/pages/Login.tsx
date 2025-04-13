@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInUser } from '@/services/authService';
@@ -7,17 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-
 const Login = () => {
-  const [email, setEmail] = useState('admin');  // Changed to just 'admin' for simplicity
+  const [email, setEmail] = useState('admin'); // Changed to just 'admin' for simplicity
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email || !password) {
       toast({
         title: "Missing credentials",
@@ -26,13 +22,10 @@ const Login = () => {
       });
       return;
     }
-    
     setLoading(true);
-    
     try {
       // Use our dedicated sign-in function
       const result = await signInUser(email, password);
-      
       if (result.success && result.user) {
         toast({
           title: "Login successful",
@@ -57,9 +50,7 @@ const Login = () => {
       setLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-background dashboard-bg">
+  return <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-background dashboard-bg">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">Oneremit FX Terminal</h1>
@@ -84,17 +75,7 @@ const Login = () => {
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <User className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="text"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    placeholder="admin"
-                    required
-                  />
+                  <Input id="email" name="email" type="text" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className="pl-10" placeholder="admin" required />
                 </div>
               </div>
 
@@ -106,38 +87,18 @@ const Login = () => {
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Lock className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    placeholder="Password"
-                    required
-                  />
-                  <div 
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? 
-                      <EyeOff className="h-5 w-5 text-muted-foreground" /> : 
-                      <Eye className="h-5 w-5 text-muted-foreground" />
-                    }
+                  <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10" placeholder="Password" required />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
                   </div>
                 </div>
               </div>
 
               <div className="text-sm mt-2 text-center p-2 bg-primary/10 rounded-md">
-                <p>Use username <span className="font-bold">admin</span> and password <span className="font-bold">spark1@</span></p>
+                
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full mt-6"
-                disabled={loading}
-              >
+              <Button type="submit" className="w-full mt-6" disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
@@ -159,8 +120,6 @@ const Login = () => {
           </p>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Login;
