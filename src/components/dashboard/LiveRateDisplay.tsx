@@ -24,6 +24,15 @@ interface LiveRateDisplayProps {
   isLoading: boolean;
 }
 
+const RATE_UPDATE_EMOJIS = [
+  '🚀', // Rapid update
+  '💹', // Chart increasing
+  '🔥', // Fire (hot update)
+  '✨', // Sparkles
+  '💡', // Idea
+  '🌟', // Glowing star
+];
+
 const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   rate,
   lastUpdated,
@@ -53,6 +62,13 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   });
   
   const { nextRefreshIn } = useRefreshCountdown({ lastUpdated });
+
+  // Pick a random emoji when the rate updates
+  const updateEmoji = useMemo(() => {
+    return showUpdateFlash 
+      ? RATE_UPDATE_EMOJIS[Math.floor(Math.random() * RATE_UPDATE_EMOJIS.length)] 
+      : null;
+  }, [showUpdateFlash]);
 
   return (
     <Card className="fx-card relative overflow-hidden">
@@ -89,7 +105,18 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       <CardContent className="relative">
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <RateValue rate={rate} showUpdateFlash={showUpdateFlash} />
+            <div className="flex items-center gap-2">
+              <RateValue rate={rate} showUpdateFlash={showUpdateFlash} />
+              {updateEmoji && (
+                <span 
+                  className="text-2xl animate-bounce" 
+                  role="img" 
+                  aria-label="Rate update emoji"
+                >
+                  {updateEmoji}
+                </span>
+              )}
+            </div>
             <TimestampDisplay lastUpdated={lastUpdated} rate={rate} isStale={isStale} />
             <RefreshCountdown nextRefreshIn={nextRefreshIn} />
           </div>
