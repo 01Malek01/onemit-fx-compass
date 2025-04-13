@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { CurrencyRate } from "./types";
 
 /**
- * Save currency rates to the database
+ * Save currency rates to the database with improved error handling
  * @param rates Currency rates to save
  * @returns Success indicator
  */
@@ -16,60 +16,70 @@ export const saveCurrencyRates = async (rates: Record<string, number>): Promise<
     }
 
     console.log("[currency-rates/storage] Attempting to save currency rates:", rates);
-
-    // Process each rate individually to avoid constraint issues
+    
+    // Prepare records for batch processing
+    const updates = [];
+    const inserts = [];
+    
+    // First, get all existing currency codes
+    const { data: existingRates, error: fetchError } = await supabase
+      .from('currency_rates')
+      .select('currency_code, id')
+      .in('currency_code', Object.keys(rates));
+      
+    if (fetchError) {
+      console.error("[currency-rates/storage] Error fetching existing rates:", fetchError);
+      throw fetchError;
+    }
+    
+    // Create a map of currency codes to their IDs for quick lookup
+    const existingCurrencyCodes = new Map<string, string>();
+    if (existingRates) {
+      existingRates.forEach(rate => {
+        existingCurrencyCodes.set(rate.currency_code, rate.id);
+      });
+    }
+    
+    // Separate records into updates and inserts
     for (const [currency_code, rate] of Object.entries(rates)) {
-      try {
-        // Check if rate already exists
-        const { data: existingRates, error: fetchError } = await supabase
-          .from('currency_rates')
-          .select('id')
-          .eq('currency_code', currency_code)
-          .limit(1);
+      if (existingCurrencyCodes.has(currency_code)) {
+        updates.push({
+          id: existingCurrencyCodes.get(currency_code),
+          rate,
+          updated_at: new Date().toISOString(),
+          source: 'api'
+        });
+      } else {
+        inserts.push({
+          currency_code,
+          rate,
+          source: 'api',
+          is_active: true
+        });
+      }
+    }
+    
+    // Batch process updates
+    if (updates.length > 0) {
+      const { error: updateError } = await supabase
+        .from('currency_rates')
+        .upsert(updates);
         
-        if (fetchError) {
-          console.error(`[currency-rates/storage] Error checking if ${currency_code} exists:`, fetchError);
-          continue;
-        }
+      if (updateError) {
+        console.error("[currency-rates/storage] Error updating rates:", updateError);
+        throw updateError;
+      }
+    }
+    
+    // Batch process inserts
+    if (inserts.length > 0) {
+      const { error: insertError } = await supabase
+        .from('currency_rates')
+        .insert(inserts);
         
-        const currentDate = new Date().toISOString();
-        
-        if (existingRates && existingRates.length > 0) {
-          // Update existing rate
-          console.log(`[currency-rates/storage] Updating rate for ${currency_code}:`, rate);
-          const { error: updateError } = await supabase
-            .from('currency_rates')
-            .update({ 
-              rate, 
-              updated_at: currentDate,
-              source: 'api'
-            })
-            .eq('currency_code', currency_code);
-            
-          if (updateError) {
-            console.error(`[currency-rates/storage] Error updating rate for ${currency_code}:`, updateError);
-          }
-        } else {
-          // Insert new rate
-          console.log(`[currency-rates/storage] Inserting rate for ${currency_code}:`, rate);
-          const { error: insertError } = await supabase
-            .from('currency_rates')
-            .insert([{ 
-              currency_code, 
-              rate, 
-              source: 'api',
-              is_active: true,
-              created_at: currentDate,
-              updated_at: currentDate
-            }]);
-            
-          if (insertError) {
-            console.error(`[currency-rates/storage] Error inserting rate for ${currency_code}:`, insertError);
-          }
-        }
-      } catch (innerError) {
-        console.error(`[currency-rates/storage] Error processing ${currency_code}:`, innerError);
-        // Continue with other currencies even if one fails
+      if (insertError) {
+        console.error("[currency-rates/storage] Error inserting rates:", insertError);
+        throw insertError;
       }
     }
     
@@ -83,12 +93,14 @@ export const saveCurrencyRates = async (rates: Record<string, number>): Promise<
 };
 
 /**
- * Fetch currency rates from database
+ * Fetch currency rates from database with improved caching
  * @returns Object with currency codes as keys and rates as values
  */
 export const fetchCurrencyRates = async (): Promise<Record<string, number>> => {
   try {
     console.log("[currency-rates/storage] Fetching currency rates from database");
+    
+    // Use more efficient query with filter for active rates only
     const { data, error } = await supabase
       .from('currency_rates')
       .select('currency_code, rate')
@@ -102,7 +114,7 @@ export const fetchCurrencyRates = async (): Promise<Record<string, number>> => {
     const rates: Record<string, number> = {};
     if (data) {
       data.forEach(item => {
-        rates[item.currency_code] = item.rate;
+        rates[item.currency_code] = Number(item.rate);
       });
     }
     

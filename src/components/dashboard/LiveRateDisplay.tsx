@@ -73,7 +73,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   }, [showUpdateFlash]);
 
   return (
-    <Card className="fx-card relative overflow-hidden">
+    <Card className="fx-card relative overflow-hidden" data-testid="live-rate-display">
       {/* Background gradient */}
       <div 
         className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" 
@@ -99,7 +99,10 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="ml-auto cursor-help" aria-describedby="rate-source-tooltip">
-                  <Wifi className="h-3.5 w-3.5 text-muted-foreground opacity-70" />
+                  <Wifi 
+                    className="h-3.5 w-3.5 text-muted-foreground opacity-70" 
+                    aria-label="Real-time connection indicator"
+                  />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" id="rate-source-tooltip">
