@@ -1,5 +1,5 @@
-
 import axios from "axios";
+import { supabase } from '@/integrations/supabase/client';
 
 export interface P2PTrader {
   price: number;
@@ -35,6 +35,7 @@ export const getBybitP2PRate = async (
   tokenId: string = "USDT",
   verifiedOnly: boolean = true
 ): Promise<BybitP2PResponse | null> => {
+  console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
   const url = "https://api2.bybit.com/fiat/otc/item/online";
 
   const headers = {
@@ -54,21 +55,33 @@ export const getBybitP2PRate = async (
     tokenId,
     currencyId,
     payment: [],
-    side: "0", // 0 = buying crypto (from advertisers)
+    side: "1",
     size: "10",
-    page: "2",
+    page: "1",
+    rows: "10",
     amount: "",
-    itemRegion: 1,
-    paymentPeriod: [],
-    sortType: "TRADE_PRICE",
-    bulkMaker: false,
     canTrade: true,
-    vaMaker: verifiedOnly,
-    verificationFilter: 0,
+    sortType: "TRADE_PRICE",
+    vaMaker: verifiedOnly
   };
+
+  console.log("[BybitAPI] Request payload:", payload);
 
   try {
     const response = await axios.post(url, payload, { headers });
+    console.log("[BybitAPI] Response status:", response.status);
+    console.log("[BybitAPI] Response headers:", response.headers);
+    
+    if (response.data) {
+      console.log("[BybitAPI] Response code:", response.data.ret_code);
+      console.log("[BybitAPI] Response message:", response.data.ret_msg);
+      
+      if (response.data.result) {
+        const itemCount = response.data.result.items?.length || 0;
+        console.log("[BybitAPI] Items found:", itemCount);
+      }
+    }
+    
     const data = response.data;
 
     if (
@@ -97,6 +110,12 @@ export const getBybitP2PRate = async (
         prices.reduce((sum, p) => sum + p, 0) / (prices.length || 1);
 
       const median = prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)];
+      
+      console.log("[BybitAPI] Successfully processed data:", {
+        traders: traders.length,
+        average,
+        median
+      });
 
       return {
         traders,
@@ -107,23 +126,30 @@ export const getBybitP2PRate = async (
             max: Math.max(...prices),
             average,
             median,
-            mode: prices[0], // optional: implement actual mode logic if needed
+            mode: prices[0],
           },
         },
       };
     }
 
+    console.error("[BybitAPI] Invalid or empty response structure:", data);
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error fetching Bybit P2P rate:", error);
+    console.error("[BybitAPI] Error details:", {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data
+    });
     return null;
   }
 };
 
-// Function to save Bybit rate to Supabase
 export const saveBybitRate = async (rate: number): Promise<boolean> => {
   try {
-    const { supabase } = await import('@/integrations/supabase/client');
+    console.log("[BybitAPI] Saving rate to Supabase:", rate);
     
     const { error } = await supabase.from("usdt_ngn_rates").insert([
       {

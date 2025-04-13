@@ -36,13 +36,21 @@ export const useRateDataLoader = ({
     fxRates
   });
   
-  const fetchBybitRate = async (): Promise<number | null> => {
+  const fetchBybitRate = async (retry: boolean = true): Promise<number | null> => {
     try {
       console.log("[useRateDataLoader] Fetching Bybit P2P rate...");
       const bybitData = await getBybitP2PRate("NGN", "USDT");
       
       if (!bybitData) {
         console.warn("[useRateDataLoader] No data returned from Bybit API");
+        
+        // Implement retry with a 2-second delay if this is our first attempt
+        if (retry) {
+          console.log("[useRateDataLoader] Retrying Bybit API call in 2 seconds...");
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return fetchBybitRate(false); // No more retries after this
+        }
+        
         return null;
       }
       
@@ -62,6 +70,14 @@ export const useRateDataLoader = ({
       return rate;
     } catch (error) {
       console.error("[useRateDataLoader] Error fetching Bybit rate:", error);
+      
+      // Implement retry with a 2-second delay if this is our first attempt
+      if (retry) {
+        console.log("[useRateDataLoader] Retrying Bybit API call in 2 seconds...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return fetchBybitRate(false); // No more retries after this
+      }
+      
       return null;
     }
   };
@@ -124,7 +140,7 @@ export const useRateDataLoader = ({
     }
   };
 
-  // New function for refreshing only the Bybit rate
+  // Function for refreshing only the Bybit rate with improved error handling
   const refreshBybitRate = async (): Promise<boolean> => {
     setIsLoading(true);
     
