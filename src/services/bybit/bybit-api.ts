@@ -14,16 +14,24 @@ export const getBybitP2PRate = async (
   console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
 
   try {
+    // Add request timeout handling
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 8000); // 8 second timeout
+    
     console.log("[BybitAPI] Calling Supabase Edge Function proxy");
     
-    // Call our Supabase Edge Function instead of directly calling the Bybit API
+    // Call our Supabase Edge Function with abort controller
     const { data, error } = await supabase.functions.invoke('bybit-proxy', {
       body: {
         currencyId,
         tokenId,
-        verifiedOnly
-      }
+        verifiedOnly,
+        requestTimestamp: new Date().toISOString() // Add timestamp for cache busting
+      },
+      signal: abortController.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (error) {
       console.error("[BybitAPI] Edge function error:", error);
@@ -71,18 +79,13 @@ export const getBybitP2PRate = async (
     };
   } catch (error: any) {
     console.error("❌ Error fetching Bybit P2P rate:", error);
-    console.error("[BybitAPI] Error details:", {
-      message: error.message,
-      code: error.code,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      responseData: error.response?.data
-    });
     
     // Determine if it's a network error, timeout, or other issue
     let errorMessage = "Unknown error occurred";
     
-    if (error.code === "ECONNABORTED") {
+    if (error.name === "AbortError") {
+      errorMessage = "Request timed out";
+    } else if (error.code === "ECONNABORTED") {
       errorMessage = "Request timed out";
     } else if (error.code === "ERR_NETWORK") {
       errorMessage = "Network error - check your internet connection";

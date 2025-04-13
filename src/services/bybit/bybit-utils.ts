@@ -28,11 +28,14 @@ export const fetchBybitRateWithRetry = async (
     console.log(`[BybitAPI] Attempt ${attempt}/${maxRetries} to fetch P2P rate`);
     
     try {
-      const response = await getBybitP2PRate();
+      // Extend timeout for each retry attempt
+      const timeout = delayMs * attempt;
+      
+      const response = await getBybitP2PRate("NGN", "USDT", true);
       
       if (response && response.success && response.market_summary.total_traders > 0) {
-        // Use min price as it's more conservative for rate calculations
-        const rate = response.market_summary.price_range.min; 
+        // Use average price for more stability, not min price
+        const rate = response.market_summary.price_range.average; 
         
         if (rate && rate > 0) {
           console.log(`[BybitAPI] Successfully fetched rate on attempt ${attempt}: ${rate}`);
@@ -40,8 +43,8 @@ export const fetchBybitRateWithRetry = async (
           // Save successful rate to database
           await saveBybitRate(rate);
           
-          // Cache the rate for 5 minutes
-          cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 5 * 60 * 1000);
+          // Cache the rate for 10 minutes (increased from 5)
+          cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 10 * 60 * 1000);
           
           return { rate };
         } else {

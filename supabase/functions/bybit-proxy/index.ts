@@ -8,9 +8,9 @@ import { corsHeaders } from "../_shared/cors.ts";
 // Define the Bybit API URL
 const BYBIT_API_URL = "https://api2.bybit.com/fiat/otc/item/online";
 
-// In-memory cache for Bybit responses
+// In-memory cache for Bybit responses with shorter TTL
 const responseCache = new Map();
-const CACHE_TTL = 60 * 1000; // 1 minute cache TTL
+const CACHE_TTL = 30 * 1000; // 30 second cache TTL (reduced from 60s)
 
 serve(async (req) => {
   console.log("Bybit proxy request received:", req.method);
@@ -43,12 +43,14 @@ serve(async (req) => {
     const currencyId = requestData.currencyId || "NGN";
     const verifiedOnly = requestData.verifiedOnly !== undefined ? requestData.verifiedOnly : true;
     
-    // Create a cache key based on the request params
-    const cacheKey = `${tokenId}-${currencyId}-${verifiedOnly}`;
+    // Create a cache key based on the request params and a timestamp component
+    // that rotates every 30 seconds to ensure regular refreshes
+    const timestampComponent = Math.floor(Date.now() / CACHE_TTL);
+    const cacheKey = `${tokenId}-${currencyId}-${verifiedOnly}-${timestampComponent}`;
     
     // Check if we have a cached response
     const cachedItem = responseCache.get(cacheKey);
-    if (cachedItem && Date.now() - cachedItem.timestamp < CACHE_TTL) {
+    if (cachedItem) {
       console.log("Returning cached Bybit response");
       return new Response(JSON.stringify(cachedItem.data), {
         status: 200,
@@ -56,18 +58,38 @@ serve(async (req) => {
       });
     }
     
-    // Prepare headers for Bybit API request
+    // Prepare headers for Bybit API request - updated with more realistic values
     const headers = {
       "Accept": "application/json",
       "Accept-Encoding": "gzip, deflate, br, zstd",
-      "Accept-Language": "en",
+      "Accept-Language": "en-US,en;q=0.9",
       "Content-Type": "application/json;charset=UTF-8",
       "Origin": "https://www.bybit.com",
-      "Host": "api2.bybit.com",
-      "Referer": "https://www.bybit.com/",
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Referer": "https://www.bybit.com/fiat/trade/otc/?actionType=0&token=USDT&fiat=NGN&paymentMethod=",
+      "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     };
+    
+    // Use different payload strategies for different attempts
+    const payloadStrategies = [
+      {
+        side: "0",  // Buy USDT with NGN
+        page: "1", 
+        rows: "20",
+        sortType: "PRICE_ASC"  // Sort by ascending price
+      },
+      {
+        side: "0",  // Buy USDT with NGN
+        page: "1",
+        rows: "20", 
+        sortType: "TRADE_PRICE"  // Default sort
+      }
+    ];
+    
+    // Randomly select a strategy
+    const selectedStrategy = payloadStrategies[Math.floor(Math.random() * payloadStrategies.length)];
     
     // Prepare the payload for Bybit API with updated parameters
     const payload = {
@@ -75,21 +97,21 @@ serve(async (req) => {
       tokenId,
       currencyId,
       payment: [],
-      side: "0", // Changed from "1" to "0"
-      size: "10",
-      page: "2", // Changed from "1" to "2"
-      rows: "10", 
+      side: selectedStrategy.side,
+      size: selectedStrategy.rows,
+      page: selectedStrategy.page,
+      rows: selectedStrategy.rows,
       amount: "",
       canTrade: true,
-      bulkMaker: false, // Added parameter
-      sortType: "TRADE_PRICE",
+      bulkMaker: false,
+      sortType: selectedStrategy.sortType,
       vaMaker: verifiedOnly,
-      verificationFilter: 0, // Added parameter
-      itemRegion: 1, // Added parameter
-      paymentPeriod: [] // Added parameter
+      verificationFilter: 0,
+      itemRegion: 1,
+      paymentPeriod: []
     };
     
-    console.log("Sending request to Bybit API:", JSON.stringify(payload));
+    console.log("Sending request to Bybit API with strategy:", JSON.stringify(selectedStrategy));
     
     // Make request to Bybit API with timeout
     const controller = new AbortController();
