@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInUser } from '@/services/authService';
@@ -6,12 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useDeviceDetect } from '@/hooks/use-mobile';
+
 const Login = () => {
-  const [email, setEmail] = useState('admin'); // Changed to just 'admin' for simplicity
+  const [email, setEmail] = useState('admin');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { isMobile } = useDeviceDetect();
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -50,22 +55,23 @@ const Login = () => {
       setLoading(false);
     }
   };
-  return <div className="min-h-screen flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-background dashboard-bg">
+  
+  return <div className="min-h-screen flex flex-col justify-center items-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-background dashboard-bg">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">Oneremit FX Terminal</h1>
-          <p className="text-muted-foreground">Enter your credentials to access the dashboard</p>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Oneremit FX Terminal</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Enter your credentials to access the dashboard</p>
         </div>
         
         <Card className="fx-card border border-border/40">
-          <CardHeader>
+          <CardHeader className={isMobile ? "px-4 py-4" : "px-6 py-6"}>
             <CardTitle className="text-xl">Admin Login</CardTitle>
             <CardDescription>
               Sign in to manage FX rates and calculator
             </CardDescription>
           </CardHeader>
           
-          <CardContent>
+          <CardContent className={isMobile ? "px-4" : "px-6"}>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-foreground">
@@ -94,32 +100,30 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="text-sm mt-2 text-center p-2 bg-primary/10 rounded-md">
-                
-              </div>
-
               <Button type="submit" className="w-full mt-6" disabled={loading}>
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
           </CardContent>
           
-          <CardFooter className="flex flex-col items-center space-y-2">
+          <CardFooter className={`flex flex-col items-center space-y-2 ${isMobile ? "px-4 pt-2 pb-4" : "px-6"}`}>
             <p className="text-sm text-muted-foreground">
               Secured access for authorized personnel only
             </p>
             <p className="text-xs text-muted-foreground">
-              First time? Visit the <a href="/setup" className="text-primary hover:underline">Setup Page</a> to create your admin account
+              First time? Visit the <a href="/setup" className="text-primary hover:underline">Setup Page</a>
             </p>
           </CardFooter>
         </Card>
         
         <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             © {new Date().getFullYear()} Oneremit FX Terminal - Powered by <a href="#" className="text-primary hover:underline">Oneremit</a>
           </p>
         </div>
       </div>
     </div>;
 };
+
 export default Login;
+

@@ -4,13 +4,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ArrowDownUp } from 'lucide-react';
 import CurrencyInputPanel from '@/components/dashboard/CurrencyInputPanel';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDeviceDetect } from '@/hooks/use-mobile';
 
 interface RateCalculatorSectionProps {
   usdtNgnRate: number | null;
   lastUpdated: Date | null;
   usdMargin: number;
   otherCurrenciesMargin: number;
-  onBybitRateRefresh: () => Promise<boolean>; // Updated to match the actual return type
+  onBybitRateRefresh: () => Promise<boolean>;
   onMarginUpdate: (usdMargin: number, otherMargin: number) => void;
   isLoading: boolean;
 }
@@ -24,9 +25,11 @@ const RateCalculatorSection: React.FC<RateCalculatorSectionProps> = ({
   onMarginUpdate,
   isLoading
 }) => {
+  const { isMobile } = useDeviceDetect();
+
   return (
     <Card className="fx-card">
-      <CardContent className="p-6">
+      <CardContent className={`${isMobile ? 'p-3' : 'p-6'}`}>
         <div className="flex items-center gap-2 mb-4">
           <ArrowDownUp className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-medium">Rate Calculator</h2>
@@ -51,3 +54,4 @@ const RateCalculatorSection: React.FC<RateCalculatorSectionProps> = ({
 };
 
 export default RateCalculatorSection;
+

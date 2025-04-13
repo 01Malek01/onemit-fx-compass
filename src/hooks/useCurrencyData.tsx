@@ -20,6 +20,8 @@ export interface CurrencyDataActions {
   refreshBybitRate: () => Promise<boolean>;
   setUsdtNgnRate: (rate: number) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
+  isMobile: boolean;
+  isUltraLightMode: boolean;
 }
 
 const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
@@ -41,8 +43,8 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     costPrices
   });
 
-  // Use data loading hook
-  const { loadAllData, updateUsdtRate, refreshBybitRate } = useRateDataLoader({
+  // Use data loading hook with device awareness
+  const { loadAllData, updateUsdtRate, refreshBybitRate, isMobile, isUltraLightMode } = useRateDataLoader({
     setUsdtNgnRate,
     setFxRates,
     setVertoFxRates,
@@ -90,9 +92,12 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       updateUsdtRate, 
       refreshBybitRate,
       setUsdtNgnRate, 
-      calculateAllCostPrices 
+      calculateAllCostPrices,
+      isMobile,
+      isUltraLightMode
     }
   ];
 };
 
 export default useCurrencyData;
+

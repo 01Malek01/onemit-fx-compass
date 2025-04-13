@@ -22,8 +22,9 @@ export interface RateDataLoaderProps {
 
 // Loading debounce flag - Add a timeout to prevent double loading
 const LOADING_IN_PROGRESS = 'loading_in_progress';
-const LOADING_TIMEOUT_MS = 10000; // 10 seconds to prevent deadlock
+const LOADING_TIMEOUT_MS = 15000; // 15 seconds to prevent deadlock
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const MOBILE_CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
 export const useRateDataLoader = ({
   setUsdtNgnRate,
@@ -36,14 +37,14 @@ export const useRateDataLoader = ({
   usdtNgnRate
 }: RateDataLoaderProps) => {
   // Enhanced device detection with connection quality awareness
-  const { isMobile } = useDeviceDetect();
+  const { isMobile, width } = useDeviceDetect();
   const connectionInfo = useMemo(() => getConnectionInfo(), []);
   
   // Determine if we should use ultra-light mode for very slow connections
   const isUltraLightMode = useMemo(() => {
     return (isMobile && isLikelySlowDevice()) || 
            (connectionInfo.effectiveType === '2g') ||
-           (connectionInfo.downlink && connectionInfo.downlink < 0.5);
+           (connectionInfo.downlink && connectionInfo.downlink < 1.0);
   }, [isMobile, connectionInfo]);
   
   // Use the USDT rate updater hook
@@ -108,13 +109,19 @@ export const useRateDataLoader = ({
             setLastUpdated(new Date(cachedData.timestamp));
           }
           
-          // Still load data in background for future use, with error handling
-          setTimeout(() => {
-            loadAllData().catch(error => {
-              console.error("[useRateDataLoader] Background data load failed:", error);
-            });
-          }, 2000);
+          // Still load data in background for future use after a delay
+          // but only if we're not on a very slow connection
+          if (connectionInfo.downlink && connectionInfo.downlink > 0.5) {
+            setTimeout(() => {
+              loadAllData().catch(error => {
+                console.error("[useRateDataLoader] Background data load failed:", error);
+              });
+            }, 5000); // More generous delay for mobile
+          }
           
+          // Release loading lock early
+          cacheWithExpiration.set(LOADING_IN_PROGRESS, false, 0);
+          setIsLoading(false);
           return;
         }
         
@@ -127,18 +134,27 @@ export const useRateDataLoader = ({
       
       // Only cache valid data
       if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(fxRates).length > 0) {
-        // Cache essential rates for ultra-light mode with improved structure
+        // Cache essential rates with mobile-optimized duration
+        const cacheDuration = isMobile ? MOBILE_CACHE_DURATION_MS : CACHE_DURATION_MS;
         cacheWithExpiration.set('essential_rates', {
           usdtRate: usdtNgnRate,
           fxRates,
           timestamp: Date.now()
-        }, CACHE_DURATION_MS);
+        }, cacheDuration);
       }
     } catch (error) {
       console.error("[useRateDataLoader] Error in smart loading:", error);
-      toast.error("Failed to load data", {
-        description: "Please check your connection and try again"
-      });
+      
+      // More user-friendly toast for mobile
+      if (isMobile) {
+        toast.error("Could not update rates", {
+          description: "Using cached data instead"
+        });
+      } else {
+        toast.error("Failed to load data", {
+          description: "Please check your connection and try again"
+        });
+      }
     } finally {
       setIsLoading(false);
       // Clear loading flag after a short delay, always ensuring it's cleared
@@ -146,7 +162,7 @@ export const useRateDataLoader = ({
         cacheWithExpiration.set(LOADING_IN_PROGRESS, false, 0);
       }, 1000);
     }
-  }, [loadAllData, isUltraLightMode, setIsLoading, usdtNgnRate, fxRates, setUsdtNgnRate, setFxRates, setLastUpdated]);
+  }, [loadAllData, isUltraLightMode, setIsLoading, usdtNgnRate, fxRates, setUsdtNgnRate, setFxRates, setLastUpdated, connectionInfo, isMobile]);
 
   return { 
     loadAllData: smartLoad, 
@@ -156,3 +172,4 @@ export const useRateDataLoader = ({
     isUltraLightMode
   };
 };
+

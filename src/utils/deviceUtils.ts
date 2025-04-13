@@ -14,10 +14,10 @@ export const isLikelySlowDevice = (): boolean => {
   // @ts-ignore - Navigator connection is not in standard typings
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   if (connection) {
-    // Consider 2G or slow 3G as slow
+    // Consider 2G, slow-2g, or connections below 1.5 Mbps as slow
     if (connection.effectiveType === '2g' || 
         connection.effectiveType === 'slow-2g' ||
-        connection.downlink < 1.0) {
+        connection.downlink < 1.5) {
       return true;
     }
     
@@ -29,7 +29,7 @@ export const isLikelySlowDevice = (): boolean => {
   
   // Check device memory if available
   // @ts-ignore - Navigator deviceMemory is not in standard typings
-  if (navigator.deviceMemory && navigator.deviceMemory < 2) {
+  if (navigator.deviceMemory && navigator.deviceMemory < 4) {
     return true;
   }
   
@@ -83,3 +83,4 @@ export const useSmartDeviceDetection = () => {
     isUltraLightMode: deviceInfo.isMobile && isSlow
   };
 };
+

@@ -9,22 +9,24 @@ export const corsHeaders = {
 
 // In-memory cache for Bybit responses with fail-safe expiration
 const responseCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 10 * 1000; // 10 second cache TTL (reduced for more frequent updates)
+const CACHE_TTL = 15 * 1000; // 15 second cache TTL for desktop
+const MOBILE_CACHE_TTL = 30 * 1000; // 30 second cache TTL for mobile to reduce network usage
 
 /**
  * Checks cache for existing response
  */
-export const checkCache = (cacheKey: string) => {
+export const checkCache = (cacheKey: string, isMobile: boolean = false) => {
   const cachedItem = responseCache.get(cacheKey);
   
   if (!cachedItem) {
     return { data: null, found: false };
   }
   
-  // Check if cache has expired
+  // Check if cache has expired (use longer TTL for mobile)
+  const ttl = isMobile ? MOBILE_CACHE_TTL : CACHE_TTL;
   const now = Date.now();
-  if (now - cachedItem.timestamp > CACHE_TTL) {
-    console.log("Cache expired, removing stale item");
+  if (now - cachedItem.timestamp > ttl) {
+    console.log(`Cache expired after ${Math.floor((now - cachedItem.timestamp)/1000)}s, removing stale item`);
     responseCache.delete(cacheKey);
     return { data: null, found: false };
   }
@@ -40,6 +42,7 @@ export const checkCache = (cacheKey: string) => {
  * Creates a cache key based on request parameters
  */
 export const createCacheKey = (params: { tokenId: string; currencyId: string; verifiedOnly: boolean }) => {
+  // For mobile, we use a longer cache duration by adjusting the timestamp component
   const timestampComponent = Math.floor(Date.now() / CACHE_TTL);
   return `${params.tokenId}-${params.currencyId}-${params.verifiedOnly}-${timestampComponent}`;
 };
@@ -75,7 +78,7 @@ const cleanupCache = () => {
   let removedCount = 0;
   
   responseCache.forEach((value, key) => {
-    if (now - value.timestamp > CACHE_TTL) {
+    if (now - value.timestamp > MOBILE_CACHE_TTL) {
       responseCache.delete(key);
       removedCount++;
     }
@@ -85,3 +88,4 @@ const cleanupCache = () => {
     console.log(`Cleaned up ${removedCount} expired cache entries`);
   }
 };
+
