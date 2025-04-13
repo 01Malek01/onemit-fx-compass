@@ -53,7 +53,7 @@ export const loadRatesData = async (
       Promise.race([
         loadCurrencyRates(isMobile),
         new Promise<CurrencyRates>(resolve => setTimeout(() => 
-          resolve({ USD: 1.0, EUR: 0.88, GBP: 0.76, CAD: 1.38 }), 1500)
+          resolve({ USD: 1.0, EUR: 0.88, GBP: 0.76, CAD: 1.38 }), 1500))
       ])
     ]);
     
