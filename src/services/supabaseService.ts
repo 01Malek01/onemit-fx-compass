@@ -23,6 +23,11 @@ import {
   type HistoricalRate
 } from './historical-rates-service';
 
+import {
+  saveVertoFxHistoricalRates,
+  fetchVertoFxHistoricalRates
+} from './vertofx-historical-service';
+
 // Re-export all service functions for backward compatibility
 // This file is kept for backward compatibility and will be deprecated
 export {
@@ -33,7 +38,9 @@ export {
   saveCurrencyRates,
   fetchCurrencyRates,
   saveHistoricalRates,
-  fetchHistoricalRates
+  fetchHistoricalRates,
+  saveVertoFxHistoricalRates,
+  fetchVertoFxHistoricalRates
 };
 
 // Re-export all types using 'export type'

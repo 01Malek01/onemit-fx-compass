@@ -108,6 +108,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vertofx_historical_rates: {
+        Row: {
+          buy_rate: number
+          currency_pair: string
+          date: string
+          id: string
+          percent_change: number | null
+          provider: string | null
+          sell_rate: number
+        }
+        Insert: {
+          buy_rate: number
+          currency_pair: string
+          date?: string
+          id?: string
+          percent_change?: number | null
+          provider?: string | null
+          sell_rate: number
+        }
+        Update: {
+          buy_rate?: number
+          currency_pair?: string
+          date?: string
+          id?: string
+          percent_change?: number | null
+          provider?: string | null
+          sell_rate?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

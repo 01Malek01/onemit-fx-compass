@@ -1,6 +1,7 @@
 
 import { fetchExchangeRates } from './currency-rates-service';
 import { getAllNgnRates, VertoFxRate } from './vertofx';
+import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
 
 // Type for currency rates
 export type CurrencyRates = Record<string, number>;
@@ -57,6 +58,14 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
       if (vertoRates[foreignToNgnKey]) {
         formattedRates[currency].sell = vertoRates[foreignToNgnKey].rate;
       }
+    }
+    
+    // Save historical VertoFX rates to database
+    try {
+      await saveVertoFxHistoricalRates(vertoRates);
+    } catch (error) {
+      console.error("Error saving historical VertoFX rates:", error);
+      // Continue execution even if saving fails
     }
     
     return formattedRates;
