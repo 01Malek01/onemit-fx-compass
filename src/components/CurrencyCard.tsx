@@ -37,7 +37,7 @@ const CurrencyCard: React.FC<CurrencyCardProps> = ({
     
     return (
       <div 
-        className={`flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${isIncrease ? 'bg-danger/20 text-danger' : 'bg-success/20 text-success'}`}
+        className={`flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${isIncrease ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}
         aria-label={`${isIncrease ? 'Increased' : 'Decreased'} by ${changePercent}%`}
       >
         {isIncrease ? 
@@ -68,7 +68,7 @@ const CurrencyCard: React.FC<CurrencyCardProps> = ({
           {isLoading ? (
             <div className="h-8 w-full skeleton-pulse"></div>
           ) : (
-            <div className="text-2xl font-bold" ref={valueRef}>
+            <div className="text-2xl font-bold text-white" ref={valueRef}>
               {formatCurrency(ngnValue, 'NGN')}
             </div>
           )}

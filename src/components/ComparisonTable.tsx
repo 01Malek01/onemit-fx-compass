@@ -81,11 +81,11 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
       
       return (
         <div className={`${isBetter ? 'rate-better' : 'rate-worse'} animate-slide-in`}>
-          <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
+          <div className="text-lg font-medium text-emerald-500">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge className={`text-xs ${isBetter ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'} animate-slide-up`}>
+                <Badge className={`text-xs ${isBetter ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'} animate-slide-up`}>
                   {isBetter ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
                   {isNaN(diff) ? '0.00' : Math.abs(diff).toFixed(2)}%
                 </Badge>
@@ -119,13 +119,13 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   // Handle errors in the entire component render
   try {
     return (
-      <Card className="fx-card hover:shadow-lg hover:shadow-primary/10 transition-all duration-300">
+      <Card className="fx-card bg-[#111119] hover:shadow-lg hover:shadow-primary/10 transition-all duration-300">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-medium flex items-center">
             <CurrencyFlag currency={currencyCode} className="mr-2" />
             NGN/{currencyCode} Comparison
             {isUsingDefaultRates && (
-              <Badge variant="outline" className="ml-2 bg-red-500/20 text-foreground text-xs px-2 py-0 animate-pulse-subtle">
+              <Badge variant="outline" className="ml-2 bg-red-500/10 text-white text-xs px-2 py-0 animate-pulse-subtle">
                 Default data
               </Badge>
             )}
@@ -139,14 +139,14 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
             </div>
           ) : (
             <div className="text-sm">
-              <div className="flex border-b border-border/50 py-3">
-                <div className="w-1/3 font-medium text-muted-foreground">Provider</div>
-                <div className="w-1/3 font-medium text-muted-foreground">Buy Rate (NGN → {currencyCode})</div>
-                <div className="w-1/3 font-medium text-muted-foreground">Sell Rate ({currencyCode} → NGN)</div>
+              <div className="flex border-b border-gray-700 py-3">
+                <div className="w-1/3 font-medium text-gray-400">Provider</div>
+                <div className="w-1/3 font-medium text-gray-400">Buy Rate (NGN → {currencyCode})</div>
+                <div className="w-1/3 font-medium text-gray-400">Sell Rate ({currencyCode} → NGN)</div>
               </div>
               
-              <div className="flex border-b border-border/50 py-4 items-center animate-fade-in" style={{animationDelay: '100ms'}}>
-                <div className="w-1/3 font-medium text-primary">Oneremit</div>
+              <div className="flex border-b border-gray-700 py-4 items-center animate-fade-in" style={{animationDelay: '100ms'}}>
+                <div className="w-1/3 font-medium">Oneremit</div>
                 <div className="w-1/3">{getBuyRateComparison()}</div>
                 <div className="w-1/3">{getSellRateComparison()}</div>
               </div>
@@ -165,15 +165,15 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
     console.error(`Critical error rendering ComparisonTable for ${currencyCode}:`, error);
     // Fallback UI that won't crash
     return (
-      <Card className="fx-card bg-red-950 border-red-900">
+      <Card className="fx-card bg-red-50 border-red-200">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium flex items-center text-red-400">
+          <CardTitle className="text-lg font-medium flex items-center text-red-700">
             <AlertTriangle className="mr-2 h-5 w-5" />
             NGN/{currencyCode} Comparison
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-4 text-center text-red-400">
+          <div className="p-4 text-center text-red-700">
             <p>Error displaying comparison data</p>
           </div>
         </CardContent>
