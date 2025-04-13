@@ -3,7 +3,8 @@ import React from 'react';
 import ComparisonTable from '@/components/ComparisonTable';
 import { VertoFXRates } from '@/services/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, WifiOff } from 'lucide-react';
+import { AlertTriangle, WifiOff, Info } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MarketComparisonPanelProps {
   currencies: string[];
@@ -39,6 +40,12 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
     (rate?.buy > 0 || rate?.sell > 0)
   );
   
+  // Check if we're using defaults by comparing with our DEFAULT_VERTOFX_RATES
+  const isUsingDefaults = currencies.every(currency => 
+    safeVertoRates[currency]?.buy === DEFAULT_VERTOFX_RATES[currency]?.buy &&
+    safeVertoRates[currency]?.sell === DEFAULT_VERTOFX_RATES[currency]?.sell
+  );
+  
   // Count how many currencies have valid buy rates
   const validBuyRateCount = Object.values(safeVertoRates).filter(rate => rate?.buy > 0).length;
   const validSellRateCount = Object.values(safeVertoRates).filter(rate => rate?.sell > 0).length;
@@ -49,7 +56,16 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   
   return (
     <div className="space-y-4">
-      {usingCachedRates && (
+      {isUsingDefaults && (
+        <Alert variant="destructive" className="bg-red-50 border-red-200">
+          <WifiOff className="h-4 w-4 text-red-500" />
+          <AlertDescription className="text-red-800">
+            <strong>Market comparison data unavailable.</strong> VertoFX API connection failed. Showing default rates.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {usingCachedRates && !isUsingDefaults && (
         <Alert variant="default" className="bg-amber-50 border-amber-200">
           <WifiOff className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-800">
@@ -58,7 +74,7 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
         </Alert>
       )}
       
-      {hasPartialData && (
+      {hasPartialData && !isUsingDefaults && (
         <Alert variant="default" className="bg-blue-50 border-blue-200">
           <AlertTriangle className="h-4 w-4 text-blue-500" />
           <AlertDescription className="text-blue-800">
@@ -94,10 +110,23 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
               oneremitRates={oneremitRates}
               vertoFxRates={vertoRates}
               isLoading={isLoading}
+              isUsingDefaultRates={isUsingDefaults}
             />
           );
         })}
       </div>
+      
+      {isUsingDefaults && (
+        <div className="mt-4">
+          <Alert variant="default" className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-blue-800">
+              Default rates are based on typical market spreads and may not reflect current conditions. 
+              Please refresh to attempt reconnection to VertoFX API.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
     </div>
   );
 };
