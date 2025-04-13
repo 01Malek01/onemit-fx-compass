@@ -24,10 +24,13 @@ export async function createAdminUser(email: string, password: string) {
       };
     }
     
-    // Create the user if they don't exist
-    const { data: signUpData, error } = await supabase.auth.signUp({
+    // Create the user if they don't exist with admin privileges and auto-confirm
+    // Use the admin API to create a user directly
+    const { data: adminUserData, error } = await supabase.auth.admin.createUser({
       email: formattedEmail,
       password,
+      email_confirm: true, // This automatically confirms the email
+      user_metadata: { is_admin: true }
     });
 
     if (error) {
@@ -37,8 +40,8 @@ export async function createAdminUser(email: string, password: string) {
 
     return { 
       success: true, 
-      message: "Admin user created successfully. Please verify the email if required.",
-      user: signUpData.user 
+      message: "Admin user created successfully. You can now log in.",
+      user: adminUserData.user 
     };
   } catch (error: any) {
     console.error("Unexpected error creating admin user:", error.message);
