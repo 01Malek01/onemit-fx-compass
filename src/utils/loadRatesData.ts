@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { 
   CurrencyRates,
@@ -14,7 +13,7 @@ import {
   fetchCurrencyRates, 
   saveCurrencyRates,
   fetchExchangeRates
-} from '@/services/currency-rates-service';
+} from '@/services/currency-rates';
 
 // Local cache for last successful rate data
 let lastSuccessfulFxRates: CurrencyRates = {};

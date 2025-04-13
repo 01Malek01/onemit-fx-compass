@@ -15,7 +15,7 @@ import {
   saveCurrencyRates, 
   fetchCurrencyRates,
   type CurrencyRate
-} from './currency-rates-service';
+} from './currency-rates';
 
 import { 
   saveHistoricalRates, 
