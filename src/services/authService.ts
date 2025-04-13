@@ -10,11 +10,10 @@ export async function createAdminUser(email: string, password: string) {
     const formattedEmail = email.includes('@') ? email : `${email}@admin.com`;
     
     // First check if the user already exists
-    const { data } = await supabase.auth.admin.listUsers();
+    const { data: { users } } = await supabase.auth.admin.listUsers();
     
     // Check if the admin user already exists in the returned users array
-    // Use optional chaining and properly type the users array
-    const existingAdmin = data?.users?.find((user: User) => user.email === formattedEmail);
+    const existingAdmin = users?.find((user: User) => user.email === formattedEmail);
     
     if (existingAdmin) {
       return { 
@@ -24,13 +23,15 @@ export async function createAdminUser(email: string, password: string) {
       };
     }
     
-    // Create the user if they don't exist with admin privileges and auto-confirm
-    // Use the admin API to create a user directly
-    const { data: adminUserData, error } = await supabase.auth.admin.createUser({
+    // Create the user with the standard auth API instead of admin API
+    const { data, error } = await supabase.auth.signUp({
       email: formattedEmail,
       password,
-      email_confirm: true, // This automatically confirms the email
-      user_metadata: { is_admin: true }
+      options: {
+        data: {
+          is_admin: true
+        }
+      }
     });
 
     if (error) {
@@ -40,8 +41,8 @@ export async function createAdminUser(email: string, password: string) {
 
     return { 
       success: true, 
-      message: "Admin user created successfully. You can now log in.",
-      user: adminUserData.user 
+      message: "Admin user created successfully. You can now log in with the provided credentials.",
+      user: data.user 
     };
   } catch (error: any) {
     console.error("Unexpected error creating admin user:", error.message);

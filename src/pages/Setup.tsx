@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from '@/hooks/use-toast';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Setup = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showEmailVerificationInfo, setShowEmailVerificationInfo] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,13 +37,11 @@ const Setup = () => {
       if (result.success) {
         toast({
           title: "Success",
-          description: `Admin account ready! You can now log in with username "admin" and password "spark1@"`,
+          description: `Admin account created! ${result.message}`,
         });
         
-        // Redirect to login page after creating admin
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        // Show email verification info dialog
+        setShowEmailVerificationInfo(true);
       } else {
         toast({
           title: "Error",
@@ -58,6 +58,11 @@ const Setup = () => {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const closeDialog = () => {
+    setShowEmailVerificationInfo(false);
+    navigate('/login');
   };
 
   // Redirect if already authenticated
@@ -105,6 +110,23 @@ const Setup = () => {
           </CardFooter>
         </Card>
       </div>
+
+      <Dialog open={showEmailVerificationInfo} onOpenChange={setShowEmailVerificationInfo}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Email Verification Required</DialogTitle>
+            <DialogDescription>
+              The admin account has been created but you may need to verify the email address before logging in.
+              Check the inbox for admin@admin.com or check your Supabase dashboard to confirm the user.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center flex-col sm:flex-row">
+            <Button onClick={closeDialog}>
+              Continue to Login
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
