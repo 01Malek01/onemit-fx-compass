@@ -52,20 +52,24 @@ serve(async (req) => {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     };
     
-    // Prepare the payload for Bybit API
+    // Prepare the payload for Bybit API with updated parameters
     const payload = {
       userId: "",
       tokenId,
       currencyId,
       payment: [],
-      side: "1", // Buy side
+      side: "0", // Changed from "1" to "0"
       size: "10",
-      page: "1",
-      rows: "10",
+      page: "2", // Changed from "1" to "2"
+      rows: "10", 
       amount: "",
       canTrade: true,
+      bulkMaker: false, // Added parameter
       sortType: "TRADE_PRICE",
       vaMaker: verifiedOnly,
+      verificationFilter: 0, // Added parameter
+      itemRegion: 1, // Added parameter
+      paymentPeriod: [] // Added parameter
     };
     
     console.log("Sending request to Bybit API:", JSON.stringify(payload));

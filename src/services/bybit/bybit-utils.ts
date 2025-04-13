@@ -20,8 +20,8 @@ export const fetchBybitRateWithRetry = async (
       const response = await getBybitP2PRate();
       
       if (response && response.success && response.market_summary.total_traders > 0) {
-        // Use median price as it's more stable against outliers
-        const rate = response.market_summary.price_range.min; // TODO: use min price 
+        // Use min price as it's more conservative for rate calculations
+        const rate = response.market_summary.price_range.min; 
         
         if (rate && rate > 0) {
           console.log(`[BybitAPI] Successfully fetched rate on attempt ${attempt}: ${rate}`);
