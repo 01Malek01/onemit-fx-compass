@@ -47,11 +47,9 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
       const rawRate = data.rate;
       const spreadRate = data.rateAfterSpread ?? rawRate;
 
-      const isNgnBase = fromCurrency === "NGN";
-
-      return {
-        rate: isNgnBase ? spreadRate : 1 / spreadRate,
-        inverse_rate: isNgnBase ? 1 / spreadRate : spreadRate,
+      const result: VertoFxRate = {
+        rate: spreadRate,
+        inverse_rate: data.reversedRate,
         raw_rate: rawRate,
         raw_inverse: data.reversedRate,
         rate_after_spread: spreadRate,
@@ -60,6 +58,9 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
         rate_type: data.rateType,
         percent_change: data.overnightPercentChange,
       };
+      
+      console.log(`[VertoFX API] Processed rate for ${fromCurrency}/${toCurrency}:`, result);
+      return result;
     }
 
     console.warn(`[VertoFX API] Invalid response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
@@ -80,6 +81,8 @@ export async function getAllNgnRates(): Promise<Record<string, VertoFxRate>> {
 
   for (const currency of currencies) {
     console.log(`[VertoFX API] Processing ${currency}`);
+    
+    // NGN to Currency (Buy rate)
     const ngnToCurr = await getVertoFxRate("NGN", currency);
     if (ngnToCurr) {
       results[`NGN-${currency}`] = ngnToCurr;
@@ -88,6 +91,7 @@ export async function getAllNgnRates(): Promise<Record<string, VertoFxRate>> {
       console.warn(`[VertoFX API] Failed to fetch NGN-${currency} rate`);
     }
 
+    // Currency to NGN (Sell rate)
     const currToNgn = await getVertoFxRate(currency, "NGN");
     if (currToNgn) {
       results[`${currency}-NGN`] = currToNgn;
@@ -97,6 +101,12 @@ export async function getAllNgnRates(): Promise<Record<string, VertoFxRate>> {
     }
   }
 
-  console.log("[VertoFX API] All rates fetched:", Object.keys(results).length);
+  console.log("[VertoFX API] All rates fetched:", Object.keys(results).length, "rates");
+  
+  // Log the full results for debugging
+  for (const [key, value] of Object.entries(results)) {
+    console.log(`[VertoFX API] Rate for ${key}:`, value.rate);
+  }
+  
   return results;
 }

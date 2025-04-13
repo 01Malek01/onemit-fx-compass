@@ -44,21 +44,19 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
       CAD: { buy: 0, sell: 0 }
     };
     
-    // Process NGN-XXX rates (buy rates from our perspective)
-    // This is when our customers buy foreign currency using NGN
+    // Process rates
     for (const currency of ['USD', 'EUR', 'GBP', 'CAD']) {
+      // Process NGN-XXX rates (NGN to foreign currency - this is our "buy" rate)
       const ngnToForeignKey = `NGN-${currency}`;
       if (vertoRates[ngnToForeignKey]) {
-        console.log(`[API] Processing NGN-${currency} buy rate:`, vertoRates[ngnToForeignKey]);
-        // When converting from NGN to foreign currency, we need the inverse rate
+        console.log(`[API] Processing ${ngnToForeignKey} rate:`, vertoRates[ngnToForeignKey]);
         formattedRates[currency].buy = vertoRates[ngnToForeignKey].rate;
       }
       
-      // Process XXX-NGN rates (sell rates from our perspective)
-      // This is when our customers sell foreign currency to get NGN
+      // Process XXX-NGN rates (foreign currency to NGN - this is our "sell" rate)
       const foreignToNgnKey = `${currency}-NGN`;
       if (vertoRates[foreignToNgnKey]) {
-        console.log(`[API] Processing ${currency}-NGN sell rate:`, vertoRates[foreignToNgnKey]);
+        console.log(`[API] Processing ${foreignToNgnKey} rate:`, vertoRates[foreignToNgnKey]);
         formattedRates[currency].sell = vertoRates[foreignToNgnKey].rate;
       }
     }

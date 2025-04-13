@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,12 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   vertoFxRates,
   isLoading = false
 }) => {
+  // Log the incoming rates for debugging
+  console.log(`ComparisonTable for ${currencyCode}:`, {
+    oneremitRates,
+    vertoFxRates
+  });
+
   const getBuyRateComparison = () => {
     // If either rate is 0 or missing, show the rate without comparison
     if (!vertoFxRates.buy || !oneremitRates.buy) {
@@ -36,7 +43,10 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              
+              <Badge className={`text-xs ${isBetter ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'}`}>
+                {isBetter ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
+                {Math.abs(diff).toFixed(2)}%
+              </Badge>
             </TooltipTrigger>
             <TooltipContent>
               <p>{isBetter ? 'Better than' : 'Worse than'} VertoFX by {Math.abs(diff).toFixed(2)}%</p>
