@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { User } from '@supabase/supabase-js';
 
 // This function should be run once to create the admin user
 // It's recommended to remove this function after creating the admin user
@@ -12,7 +13,8 @@ export async function createAdminUser(email: string, password: string) {
     const { data } = await supabase.auth.admin.listUsers();
     
     // Check if the admin user already exists in the returned users array
-    const existingAdmin = data?.users.find(user => user.email === formattedEmail);
+    // Use optional chaining and properly type the users array
+    const existingAdmin = data?.users?.find((user: User) => user.email === formattedEmail);
     
     if (existingAdmin) {
       return { 
