@@ -1,10 +1,9 @@
-
 import { toast } from "sonner";
 import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { fetchLatestUsdtNgnRate, DEFAULT_RATE, saveUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 import { loadRatesData, loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils/index';
-import { fetchBybitRateWithRetry } from '@/services/bybit';
+import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
