@@ -57,7 +57,7 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   return (
     <div className="space-y-4">
       {isUsingDefaults && (
-        <Alert className="bg-red-50/10 border-red-500/20 text-red-100">
+        <Alert className="bg-red-50/10 border-red-500/20 text-red-100 animate-fade-in">
           <WifiOff className="h-4 w-4 text-red-400" />
           <AlertDescription className="text-red-100">
             <strong>Market comparison data unavailable.</strong> VertoFX API connection failed. Showing default rates.
@@ -66,7 +66,7 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
       )}
       
       {usingCachedRates && !isUsingDefaults && (
-        <Alert variant="default" className="bg-amber-50/10 border-amber-500/20 text-amber-100">
+        <Alert variant="default" className="bg-amber-50/10 border-amber-500/20 text-amber-100 animate-fade-in">
           <WifiOff className="h-4 w-4 text-amber-400" />
           <AlertDescription className="text-amber-100">
             Market comparison data may be outdated or incomplete. Using cached rates.
@@ -75,7 +75,7 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
       )}
       
       {hasPartialData && !isUsingDefaults && (
-        <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100">
+        <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100 animate-fade-in">
           <AlertTriangle className="h-4 w-4 text-blue-400" />
           <AlertDescription className="text-blue-100">
             Some market comparison data may be incomplete. Showing available rates.
@@ -84,7 +84,7 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {currencies.map((currency) => {
+        {currencies.map((currency, index) => {
           // Make sure we have valid rates, otherwise use fallback values
           const oneremitRates = oneremitRatesFn(currency);
           
@@ -104,20 +104,21 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
           });
           
           return (
-            <ComparisonTable
-              key={currency}
-              currencyCode={currency}
-              oneremitRates={oneremitRates}
-              vertoFxRates={vertoRates}
-              isLoading={isLoading}
-              isUsingDefaultRates={isUsingDefaults}
-            />
+            <div key={currency} className="animate-slide-up" style={{animationDelay: `${index * 100}ms`}}>
+              <ComparisonTable
+                currencyCode={currency}
+                oneremitRates={oneremitRates}
+                vertoFxRates={vertoRates}
+                isLoading={isLoading}
+                isUsingDefaultRates={isUsingDefaults}
+              />
+            </div>
           );
         })}
       </div>
       
       {isUsingDefaults && (
-        <div className="mt-4">
+        <div className="mt-4 animate-fade-in" style={{animationDelay: '300ms'}}>
           <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100">
             <Info className="h-4 w-4 text-blue-400" />
             <AlertDescription className="text-blue-100">

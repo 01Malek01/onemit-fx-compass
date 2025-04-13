@@ -64,10 +64,10 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   };
   
   return (
-    <div>
+    <div className="animate-fade-in">
       <h2 className="text-xl font-medium mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-primary"></span>
+          <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
           Market Comparison
         </div>
         
@@ -75,15 +75,15 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
           onClick={handleRefreshVertoFxRates} 
           variant="outline" 
           size="sm" 
-          className="gap-1.5 text-gray-300 border-gray-700 hover:bg-gray-800"
+          className="gap-1.5 text-gray-300 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:shadow-md"
           disabled={cooldownRemaining > 0 || retryLoading}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className={`h-4 w-4 ${retryLoading ? 'animate-spin' : ''}`} />
           {retryLoading 
             ? 'Refreshing...' 
             : cooldownRemaining > 0 
               ? `Retry in ${Math.ceil(cooldownRemaining / 1000)}s` 
-              : 'Retry in 30s'
+              : 'Refresh rates'
           }
         </Button>
       </h2>
