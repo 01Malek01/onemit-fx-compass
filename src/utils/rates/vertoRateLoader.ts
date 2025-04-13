@@ -41,6 +41,8 @@ export const loadVertoFxRates = async (
           }
         } catch (error) {
           console.log("[vertoRateLoader] Background update of VertoFX rates failed:", error);
+          // Ensure we use default rates if fetch fails
+          setVertoFxRates({ ...lastSuccessfulVertoFxRates });
         }
       }, 100);
       
@@ -58,9 +60,10 @@ export const loadVertoFxRates = async (
     );
     
     // Check if we got valid rates
-    const hasValidRates = Object.values(vertoRates).some(rate => 
-      (rate.buy > 0 || rate.sell > 0)
-    );
+    const hasValidRates = vertoRates && Object.keys(vertoRates).length > 0 && 
+      Object.values(vertoRates).some(rate => 
+        (rate.buy > 0 || rate.sell > 0)
+      );
     
     if (hasValidRates) {
       lastSuccessfulVertoFxRates = { ...vertoRates };
@@ -77,10 +80,9 @@ export const loadVertoFxRates = async (
     }
   } catch (error) {
     console.error("[vertoRateLoader] Error fetching VertoFX rates:", error);
+    // Always return valid default rates on error
+    return { ...lastSuccessfulVertoFxRates };
   }
-  
-  // Return cached rates if we have them
-  return { ...lastSuccessfulVertoFxRates };
 };
 
 /**
@@ -94,5 +96,11 @@ export const getLastSuccessfulVertoFxRates = (): VertoFXRates => {
  * Reset the last successful VertoFX rates
  */
 export const resetLastSuccessfulVertoFxRates = (): void => {
-  lastSuccessfulVertoFxRates = {};
+  // Don't completely empty, just reset to defaults
+  lastSuccessfulVertoFxRates = {
+    USD: { buy: 1635, sell: 1600 },
+    EUR: { buy: 1870, sell: 1805 },
+    GBP: { buy: 2150, sell: 2080 },
+    CAD: { buy: 1190, sell: 1140 }
+  };
 };

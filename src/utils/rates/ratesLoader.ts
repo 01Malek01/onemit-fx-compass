@@ -60,10 +60,18 @@ export const loadRatesData = async (
     // Set core data immediately to improve perceived performance
     setFxRates(rates);
     
-    // Load VertoFX rates immediately, but handle separately
+    // Load VertoFX rates immediately to ensure we have them
     const vertoRates = await loadVertoFxRates(isMobile, setVertoFxRates).catch(error => {
       console.warn("[ratesLoader] Error loading VertoFX rates:", error);
-      return {};
+      // Return default rates on error
+      const defaultRates = {
+        USD: { buy: 1635, sell: 1600 },
+        EUR: { buy: 1870, sell: 1805 },
+        GBP: { buy: 2150, sell: 2080 },
+        CAD: { buy: 1190, sell: 1140 }
+      };
+      setVertoFxRates(defaultRates); // Make sure UI gets updated
+      return defaultRates;
     });
     
     // Cache this initial data for future fast loads
@@ -85,6 +93,15 @@ export const loadRatesData = async (
     // Simplified error handling for faster recovery
     const fallbackRates = { USD: 1.0, EUR: 0.88, GBP: 0.76, CAD: 1.38 };
     setFxRates(fallbackRates);
+    
+    // Make sure we have default verto rates if main loading fails
+    const defaultVertoRates = {
+      USD: { buy: 1635, sell: 1600 },
+      EUR: { buy: 1870, sell: 1805 },
+      GBP: { buy: 2150, sell: 2080 },
+      CAD: { buy: 1190, sell: 1140 }
+    };
+    setVertoFxRates(defaultVertoRates);
     
     return { 
       usdtRate: 1580, 

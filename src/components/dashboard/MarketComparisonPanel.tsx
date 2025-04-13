@@ -21,15 +21,18 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   // Log the VertoFX rates for debugging
   console.log("MarketComparisonPanel received vertoFxRates:", vertoFxRates);
   
+  // Ensure vertoFxRates is never undefined by providing default empty object
+  const safeVertoRates = vertoFxRates || {};
+  
   // Check if we have valid VertoFX rates
-  const hasVertoRates = Object.keys(vertoFxRates).length > 0 && 
-    Object.values(vertoFxRates).some(rate => 
-      (rate.buy > 0 || rate.sell > 0)
+  const hasVertoRates = Object.keys(safeVertoRates).length > 0 && 
+    Object.values(safeVertoRates).some(rate => 
+      (rate?.buy > 0 || rate?.sell > 0)
     );
   
   // Count how many currencies have valid buy rates
-  const validBuyRateCount = Object.values(vertoFxRates).filter(rate => rate.buy > 0).length;
-  const validSellRateCount = Object.values(vertoFxRates).filter(rate => rate.sell > 0).length;
+  const validBuyRateCount = Object.values(safeVertoRates).filter(rate => rate?.buy > 0).length;
+  const validSellRateCount = Object.values(safeVertoRates).filter(rate => rate?.sell > 0).length;
   
   // Determine if we're using cached rates or have partial data
   const usingCachedRates = !hasVertoRates && !isLoading;
@@ -59,7 +62,10 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
         {currencies.map((currency) => {
           // Make sure we have valid rates, otherwise use fallback values
           const oneremitRates = oneremitRatesFn(currency);
-          const vertoRates = vertoFxRates[currency] || { buy: 0, sell: 0 };
+          
+          // Provide default values if currency not found in vertoFxRates
+          const defaultRate = { buy: 0, sell: 0 };
+          const vertoRates = safeVertoRates[currency] || defaultRate;
           
           console.log(`MarketComparisonPanel: Currency ${currency}`, {
             oneremitRates,

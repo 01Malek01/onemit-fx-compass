@@ -7,16 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import CurrencyFlag from '@/components/CurrencyFlag';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowDown, ArrowUp, AlertTriangle } from 'lucide-react';
+
 interface Rate {
   buy: number;
   sell: number;
 }
+
 interface ComparisonTableProps {
   currencyCode: string;
   oneremitRates: Rate;
   vertoFxRates: Rate;
   isLoading?: boolean;
 }
+
 const ComparisonTable: React.FC<ComparisonTableProps> = ({
   currencyCode,
   oneremitRates,
@@ -29,7 +32,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
     vertoFxRates
   });
 
-  // Safety check for valid rates
+  // Safety check for valid rates with defaults
   const safeOneremitRates = {
     buy: oneremitRates?.buy || 0,
     sell: oneremitRates?.sell || 0
@@ -42,15 +45,22 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
 
   const getBuyRateComparison = () => {
     try {
-      // If either rate is 0 or missing, show the rate without comparison
-      if (!safeVertoRates.buy || !safeOneremitRates.buy) {
-        return <div>
-            <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
-          </div>;
+      // If oneremit rate is 0 or missing, just show placeholder
+      if (!safeOneremitRates.buy) {
+        return <div className="text-lg font-medium">-</div>;
       }
+      
+      // If verto rate is 0 or missing, just show the oneremit rate without comparison
+      if (!safeVertoRates.buy) {
+        return <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>;
+      }
+      
+      // Both rates available, do the comparison
       const isBetter = compareRates(safeOneremitRates.buy, safeVertoRates.buy, true);
       const diff = calculateDifference(safeOneremitRates.buy, safeVertoRates.buy);
-      return <div className={isBetter ? 'rate-better' : 'rate-worse'}>
+      
+      return (
+        <div className={isBetter ? 'rate-better' : 'rate-worse'}>
           <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
           <TooltipProvider>
             <Tooltip>
@@ -65,12 +75,11 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>;
+        </div>
+      );
     } catch (error) {
       console.error(`Error rendering buy rate comparison for ${currencyCode}:`, error);
-      return <div>
-          <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
-        </div>;
+      return <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy || 0, 'NGN')}</div>;
     }
   };
   
@@ -89,7 +98,8 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   
   // Handle errors in the entire component render
   try {
-    return <Card className="fx-card">
+    return (
+      <Card className="fx-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-medium flex items-center">
             <CurrencyFlag currency={currencyCode} className="mr-2" />
@@ -97,10 +107,13 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? <div className="space-y-2">
+          {isLoading ? (
+            <div className="space-y-2">
               <div className="h-6 w-full skeleton-pulse"></div>
               <div className="h-20 w-full skeleton-pulse"></div>
-            </div> : <Table>
+            </div>
+          ) : (
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[30%]">Provider</TableHead>
@@ -120,13 +133,16 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
                   <TableCell>{formatVertoRate(safeVertoRates.sell)}</TableCell>
                 </TableRow>
               </TableBody>
-            </Table>}
+            </Table>
+          )}
         </CardContent>
-      </Card>;
+      </Card>
+    );
   } catch (error) {
     console.error(`Critical error rendering ComparisonTable for ${currencyCode}:`, error);
     // Fallback UI that won't crash
-    return <Card className="fx-card bg-red-50 border-red-200">
+    return (
+      <Card className="fx-card bg-red-50 border-red-200">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-medium flex items-center text-red-700">
             <AlertTriangle className="mr-2 h-5 w-5" />
@@ -138,7 +154,9 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
             <p>Error displaying comparison data</p>
           </div>
         </CardContent>
-      </Card>;
+      </Card>
+    );
   }
 };
+
 export default ComparisonTable;
