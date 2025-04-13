@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, Clock, Wifi, Info } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LiveRateDisplayProps {
@@ -30,11 +29,14 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       }).format(rate) : '₦0.00';
   }, [rate]);
   
-  // Format the last updated time - memoized to avoid re-renders
-  const lastUpdatedText = useMemo(() => {
-    return lastUpdated ? 
-      formatDistanceToNow(lastUpdated, { addSuffix: true }) : 
-      'never';
+  // Format the timestamp in the user's local timezone
+  const formattedTimestamp = useMemo(() => {
+    if (!lastUpdated) return 'never';
+    
+    return lastUpdated.toLocaleString('en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
   }, [lastUpdated]);
 
   // Check if the rate is stale (more than 1 hour old)
@@ -84,7 +86,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
             </div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
               <Clock className="h-3 w-3" />
-              Last updated: {lastUpdatedText}
+              Last updated: {formattedTimestamp}
               {!rate && lastUpdated && 
                 <span className="inline-flex items-center gap-0.5 text-amber-400">
                   <AlertTriangle className="h-3 w-3" />
