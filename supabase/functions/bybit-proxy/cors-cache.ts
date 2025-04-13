@@ -9,7 +9,7 @@ export const corsHeaders = {
 
 // In-memory cache for Bybit responses
 const responseCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 20 * 1000; // 20 second cache TTL (reduced for more frequent updates)
+const CACHE_TTL = 15 * 1000; // 15 second cache TTL (reduced for more frequent updates)
 
 /**
  * Checks cache for existing response

@@ -90,6 +90,8 @@ export const getBybitP2PRate = async (
       errorMessage = "Request timed out";
     } else if (error.code === "ERR_NETWORK") {
       errorMessage = "Network error - check your internet connection";
+    } else if (error.message && error.message.includes("Failed to fetch")) {
+      errorMessage = "Network connection error - edge function may be unavailable";
     } else if (error.response) {
       // The request was made and the server responded with a status code
       errorMessage = `Server responded with error ${error.response.status}: ${error.response.statusText}`;

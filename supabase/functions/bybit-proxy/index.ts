@@ -28,6 +28,7 @@ serve(async (req) => {
     // Create a cache key and check for cached response
     const cacheKey = createCacheKey(params);
     const { data: cachedResponse, found: isCached } = checkCache(cacheKey);
+    
     if (isCached) {
       console.log("Returning cached Bybit response");
       return new Response(JSON.stringify(cachedResponse), {
@@ -47,7 +48,15 @@ serve(async (req) => {
     // Handle errors from API call
     if (error) {
       console.error("API call returned an error");
-      return error;
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Failed to connect to Bybit API",
+        details: error.message || "Connection failed",
+        timestamp: new Date().toISOString()
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
     
     // Handle API response

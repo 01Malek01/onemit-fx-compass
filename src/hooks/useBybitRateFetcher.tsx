@@ -18,7 +18,7 @@ export const useBybitRateFetcher = ({
   const fetchBybitRate = async (): Promise<number | null> => {
     try {
       console.log("[useBybitRateFetcher] Fetching Bybit P2P rate with improved retry logic");
-      const { rate, error } = await fetchBybitRateWithRetry(3, 2500); // 3 retries with 2.5s delay
+      const { rate, error } = await fetchBybitRateWithRetry(5, 2000); // Increased to 5 retries with 2s delay
       
       if (!rate || rate <= 0) {
         console.warn(`[useBybitRateFetcher] Failed to get valid Bybit rate: ${error || "Unknown error"}`);
@@ -69,7 +69,7 @@ export const useBybitRateFetcher = ({
         
         toast.dismiss();
         toast.error("Failed to update USDT/NGN rate from Bybit", {
-          description: "Using last saved rate instead"
+          description: "Network connection issue. Using last saved rate instead."
         });
         
         return false;

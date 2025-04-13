@@ -12,8 +12,8 @@ const BYBIT_RATE_CACHE_KEY = 'bybit_rate_cache';
  * @param delayMs Delay in ms between retries
  */
 export const fetchBybitRateWithRetry = async (
-  maxRetries: number = 3,
-  delayMs: number = 2500
+  maxRetries: number = 5,
+  delayMs: number = 2000
 ): Promise<{rate: number | null, error?: string}> => {
   // Check cache first for ultra-fast response
   const cachedRate = cacheWithExpiration.get(BYBIT_RATE_CACHE_KEY);
@@ -52,8 +52,8 @@ export const fetchBybitRateWithRetry = async (
             // Continue anyway as this is not critical
           });
           
-          // Cache the rate for 10 minutes
-          cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 10 * 60 * 1000);
+          // Cache the rate for 5 minutes (reduced from 10 to get more frequent updates)
+          cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 5 * 60 * 1000);
           
           return { rate };
         } else {
@@ -69,10 +69,15 @@ export const fetchBybitRateWithRetry = async (
       console.error(`[BybitAPI] Error on attempt ${attempt}: ${lastError}`);
     }
     
+    // Implement exponential backoff strategy
+    const backoffDelay = delayMs * Math.pow(1.5, attempt - 1);
+    const jitter = Math.random() * 300; // Add some randomness (0-300ms)
+    const totalDelay = Math.min(backoffDelay + jitter, 10000); // Cap at 10 seconds
+    
     // Don't wait after the last attempt
     if (attempt < maxRetries) {
-      console.log(`[BybitAPI] Waiting ${delayMs}ms before retry...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+      console.log(`[BybitAPI] Waiting ${Math.round(totalDelay)}ms before retry ${attempt + 1}...`);
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
     }
   }
   

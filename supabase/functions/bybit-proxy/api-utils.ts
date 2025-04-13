@@ -76,7 +76,7 @@ export const callBybitApi = async (payload: any): Promise<ApiCallResult> => {
   
   // Make request to Bybit API with increased timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased from 4s to 8s
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased from 8s to 15s for better reliability
   
   try {
     const response = await fetch(BYBIT_API_URL, {
@@ -88,7 +88,7 @@ export const callBybitApi = async (payload: any): Promise<ApiCallResult> => {
     
     clearTimeout(timeoutId);
     return { response, error: null };
-  } catch (error) {
+  } catch (error: any) {
     clearTimeout(timeoutId);
     console.error("Error calling Bybit API:", error.message || "Unknown error");
     
@@ -96,27 +96,13 @@ export const callBybitApi = async (payload: any): Promise<ApiCallResult> => {
       console.error("Bybit API request timed out");
       return { 
         response: null, 
-        error: new Response(JSON.stringify({
-          success: false,
-          error: "Request to Bybit API timed out",
-          timestamp: new Date().toISOString(),
-        }), {
-          status: 504, // Gateway Timeout
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        })
+        error: new Error("Request to Bybit API timed out after 15 seconds")
       };
     }
     
     return { 
       response: null, 
-      error: new Response(JSON.stringify({
-        success: false,
-        error: error.message || "Unknown error occurred",
-        timestamp: new Date().toISOString(),
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      })
+      error: new Error(error.message || "Unknown error occurred")
     };
   }
 };
