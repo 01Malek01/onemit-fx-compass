@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
@@ -10,6 +11,7 @@ interface RateRefresherProps {
   fxRates: CurrencyRates;
   refreshBybitRate: () => Promise<boolean>;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
+  isMobile?: boolean; // Add isMobile as an optional property
 }
 
 export const useRateRefresher = ({
@@ -19,7 +21,8 @@ export const useRateRefresher = ({
   costPrices,
   fxRates,
   refreshBybitRate,
-  calculateAllCostPrices
+  calculateAllCostPrices,
+  isMobile = false // Default to false if not provided
 }: RateRefresherProps) => {
   // Reference to store timer
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);

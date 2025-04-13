@@ -24,7 +24,7 @@ export const useDashboardState = () => {
     calculateAllCostPrices,
     usdMargin: 2.5, // Default value, will be updated in useEffect
     otherCurrenciesMargin: 3.0, // Default value, will be updated in useEffect
-    isMobile // Pass mobile status to optimize refresh intervals
+    isMobile // Pass isMobile to the hook
   });
 
   // Use our margin manager hook
@@ -124,4 +124,3 @@ export const useDashboardState = () => {
     isUltraLightMode
   };
 };
-
