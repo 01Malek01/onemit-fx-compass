@@ -8,7 +8,7 @@ interface CurrencyInputPanelProps {
   lastUpdated: Date | null;
   usdMargin: number;
   otherCurrenciesMargin: number;
-  onBybitRateRefresh: () => Promise<void>;
+  onBybitRateRefresh: () => Promise<boolean>;
   onMarginUpdate: (usdMargin: number, otherMargin: number) => void;
   isLoading: boolean;
 }

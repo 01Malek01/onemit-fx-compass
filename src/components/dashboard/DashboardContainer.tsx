@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
@@ -60,12 +59,6 @@ const DashboardContainer = () => {
   
   // State for real-time indicator
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
-  
-  // Create a wrapper for handleBybitRateRefresh that returns void
-  const handleBybitRateRefreshWrapper = async (): Promise<void> => {
-    await handleBybitRateRefresh();
-    // Ignoring the boolean return value
-  };
   
   // Optimized effect to track changes
   useEffect(() => {

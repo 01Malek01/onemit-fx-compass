@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface LiveRateDisplayProps {
   rate: number | null;
   lastUpdated: Date | null;
-  onRefresh: () => Promise<void>;
+  onRefresh: () => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -18,17 +17,12 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   onRefresh,
   isLoading
 }) => {
-  // State for countdown to next auto-refresh
   const [nextRefreshIn, setNextRefreshIn] = useState<number>(60);
   
-  // Ref to track the last timestamp for animation triggering
   const lastTimestampRef = useRef<string | null>(null);
-  // Ref to track last rate value
   const lastRateRef = useRef<number | null>(null);
-  // State to control flash animation
   const [showUpdateFlash, setShowUpdateFlash] = useState(false);
   
-  // Format the rate with comma separators - memoized to avoid re-renders
   const formattedRate = useMemo(() => {
     return rate ? 
       new Intl.NumberFormat('en-NG', { 
@@ -39,7 +33,6 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       }).format(rate) : '₦0.00';
   }, [rate]);
   
-  // Format the timestamp in the user's local timezone
   const formattedTimestamp = useMemo(() => {
     if (!lastUpdated) return 'never';
     
@@ -49,47 +42,37 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     });
   }, [lastUpdated]);
 
-  // Check if the rate is stale (more than 1 hour old)
   const isStale = useMemo(() => {
     return lastUpdated && 
       (new Date().getTime() - lastUpdated.getTime() > 3600000);
   }, [lastUpdated]);
   
-  // Trigger animation when timestamp or rate changes
   useEffect(() => {
-    // Don't trigger animation on initial load
     if (!formattedTimestamp || formattedTimestamp === 'never') return;
     
     const isTimestampChanged = lastTimestampRef.current && lastTimestampRef.current !== formattedTimestamp;
     const isRateChanged = lastRateRef.current !== null && lastRateRef.current !== rate;
     
-    // Only trigger animation if either timestamp or rate changed (but not on first load)
     if (isTimestampChanged || isRateChanged) {
       console.log("LiveRateDisplay: Rate or timestamp changed, triggering animation");
       setShowUpdateFlash(true);
       
-      // Remove animation class after animation completes
       const timer = setTimeout(() => {
         setShowUpdateFlash(false);
-      }, 1500); // Animation duration
+      }, 1500);
       
       return () => clearTimeout(timer);
     }
     
-    // Update refs to current values
     lastTimestampRef.current = formattedTimestamp;
     lastRateRef.current = rate;
   }, [formattedTimestamp, rate]);
   
-  // Countdown timer for next refresh
   useEffect(() => {
-    // Reset countdown when rate is refreshed
     setNextRefreshIn(60);
     
-    // Set up countdown timer
     const timer = setInterval(() => {
       setNextRefreshIn(prev => {
-        // When we reach 0, reset to 60
         if (prev <= 1) {
           return 60;
         }
@@ -106,7 +89,6 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
         className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" 
         aria-hidden="true"
       />
-      {/* Flash animation overlay */}
       {showUpdateFlash && (
         <div 
           className="absolute inset-0 bg-primary/10 animate-fade-out pointer-events-none z-10" 
