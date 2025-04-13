@@ -18,18 +18,21 @@ interface ComparisonTableProps {
   oneremitRates: Rate;
   vertoFxRates: Rate;
   isLoading?: boolean;
+  isUsingDefaultRates?: boolean;
 }
 
 const ComparisonTable: React.FC<ComparisonTableProps> = ({
   currencyCode,
   oneremitRates,
   vertoFxRates,
-  isLoading = false
+  isLoading = false,
+  isUsingDefaultRates = false
 }) => {
   // Log the incoming rates for debugging
   console.log(`ComparisonTable for ${currencyCode}:`, {
     oneremitRates,
-    vertoFxRates
+    vertoFxRates,
+    isUsingDefaultRates
   });
 
   // Define default values based on currency
@@ -121,6 +124,11 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
           <CardTitle className="text-lg font-medium flex items-center">
             <CurrencyFlag currency={currencyCode} className="mr-2" />
             NGN/{currencyCode} Comparison
+            {isUsingDefaultRates && (
+              <Badge variant="outline" className="ml-2 bg-red-50 text-red-700 border-red-200 text-xs">
+                Default data
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
