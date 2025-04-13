@@ -7,7 +7,7 @@ import './index.css';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import Auth from './pages/Auth';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from './components/ui/sonner';
