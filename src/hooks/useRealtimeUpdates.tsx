@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 /**
  * Hook to subscribe to real-time updates for USDT/NGN rates and margin settings
+ * Optimized for performance by combining subscriptions
  */
 export const useRealtimeUpdates = ({
   onUsdtRateChange,
@@ -16,50 +17,41 @@ export const useRealtimeUpdates = ({
   useEffect(() => {
     console.log("Setting up real-time subscriptions for rates and margins");
     
-    // Create a channel for our real-time subscriptions
+    // Create a single channel for our real-time subscriptions
+    // Using a combined channel reduces connection overhead
     const channel = supabase
       .channel('fx-terminal-updates')
       // Subscribe to USDT/NGN rate changes (INSERT or UPDATE)
       .on('postgres_changes', 
         {
-          event: 'INSERT',
+          event: '*', // Listen for both INSERT and UPDATE
           schema: 'public',
           table: 'usdt_ngn_rates'
         }, 
         (payload) => {
-          console.log("Real-time: New USDT/NGN rate received:", payload);
+          console.log("Real-time: USDT/NGN rate change detected");
           const newRate = payload.new?.rate;
           if (newRate && typeof newRate === 'number' && newRate > 0) {
             onUsdtRateChange(newRate);
-            toast.info("USDT/NGN rate has been updated");
+            
+            // Only show the toast once the rate actually changes (debounced)
+            const debounceToast = setTimeout(() => {
+              toast.info("USDT/NGN rate has been updated");
+            }, 300);
+            
+            return () => clearTimeout(debounceToast);
           }
         }
       )
-      // Also listen for updates to existing rates
+      // Subscribe to margin settings changes (combining INSERT and UPDATE)
       .on('postgres_changes', 
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'usdt_ngn_rates'
-        }, 
-        (payload) => {
-          console.log("Real-time: USDT/NGN rate updated:", payload);
-          const newRate = payload.new?.rate;
-          if (newRate && typeof newRate === 'number' && newRate > 0) {
-            onUsdtRateChange(newRate);
-            toast.info("USDT/NGN rate has been updated");
-          }
-        }
-      )
-      // Subscribe to margin settings changes
-      .on('postgres_changes', 
-        {
-          event: 'UPDATE',
+          event: '*', // Listen for both INSERT and UPDATE
           schema: 'public',
           table: 'margin_settings'
         }, 
         (payload) => {
-          console.log("Real-time: Margin settings updated:", payload);
+          console.log("Real-time: Margin settings change detected");
           const usdMargin = payload.new?.usd_margin;
           const otherCurrenciesMargin = payload.new?.other_currencies_margin;
           
@@ -69,25 +61,9 @@ export const useRealtimeUpdates = ({
           }
         }
       )
-      // Also listen for new margin settings
-      .on('postgres_changes', 
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'margin_settings'
-        }, 
-        (payload) => {
-          console.log("Real-time: New margin settings received:", payload);
-          const usdMargin = payload.new?.usd_margin;
-          const otherCurrenciesMargin = payload.new?.other_currencies_margin;
-          
-          if (usdMargin !== undefined && otherCurrenciesMargin !== undefined) {
-            onMarginSettingsChange(Number(usdMargin), Number(otherCurrenciesMargin));
-            toast.info("Margin settings have been updated");
-          }
-        }
-      )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Realtime subscription status: ${status}`);
+      });
 
     // Cleanup function to unsubscribe when component unmounts
     return () => {

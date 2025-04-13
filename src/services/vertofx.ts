@@ -1,5 +1,6 @@
 
 import axios from "axios";
+import { cacheWithExpiration } from '@/utils/cacheUtils';
 
 export interface VertoFxRate {
   rate: number;
@@ -13,10 +14,23 @@ export interface VertoFxRate {
   percent_change?: number;
 }
 
+// Cache key for VertoFX rates
+const VERTOFX_CACHE_KEY = 'vertofx_rates_cache';
+
 /**
  * Get the exchange rate between two currencies from VertoFX
+ * Optimized with improved caching
  */
 export async function getVertoFxRate(fromCurrency: string, toCurrency: string): Promise<VertoFxRate | null> {
+  // Check cache first
+  const cacheKey = `${VERTOFX_CACHE_KEY}_${fromCurrency}_${toCurrency}`;
+  const cachedRate = cacheWithExpiration.get(cacheKey);
+  
+  if (cachedRate) {
+    console.log(`[VertoFX API] Using cached rate for ${fromCurrency}/${toCurrency}`);
+    return cachedRate;
+  }
+  
   console.log(`[VertoFX API] Fetching rate from ${fromCurrency} to ${toCurrency}`);
   const url = "https://api-currency-beta.vertofx.com/p/currencies/exchange-rate";
 
@@ -38,15 +52,13 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
   };
 
   try {
-    console.log(`[VertoFX API] Sending request to ${url} with payload:`, JSON.stringify(payload));
-    // Set a 10-second timeout to avoid hanging requests
+    // Set a shorter 5-second timeout to avoid hanging requests
     const response = await axios.post(url, payload, { 
       headers,
-      timeout: 10000 // 10 second timeout
+      timeout: 5000 // Reduced from 10s to 5s
     });
     
     const data = response.data;
-    console.log(`[VertoFX API] Response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
 
     if (data?.success) {
       const rawRate = data.rate;
@@ -64,17 +76,19 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
         percent_change: data.overnightPercentChange,
       };
       
-      console.log(`[VertoFX API] Processed rate for ${fromCurrency}/${toCurrency}:`, result);
+      // Cache the result for 5 minutes
+      cacheWithExpiration.set(cacheKey, result, 5 * 60 * 1000);
+      
       return result;
     }
 
-    console.warn(`[VertoFX API] Invalid response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
+    console.warn(`[VertoFX API] Invalid response for ${fromCurrency}/${toCurrency}`);
     return null;
   } catch (error) {
     if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
       console.error(`[VertoFX API] Request timed out for ${fromCurrency}/${toCurrency}`);
     } else {
-      console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}:`, error);
+      console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}`);
     }
     return null;
   }
@@ -82,61 +96,49 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
 
 /**
  * Fetch both NGN → XXX and XXX → NGN rates for a predefined set of currencies
- * with improved error handling and retries
+ * with improved caching and performance
  */
 export async function getAllNgnRates(): Promise<Record<string, VertoFxRate>> {
+  // Check for cached full results
+  const cachedRates = cacheWithExpiration.get(VERTOFX_CACHE_KEY);
+  if (cachedRates) {
+    console.log("[VertoFX API] Using cached rates for all currencies");
+    return cachedRates;
+  }
+  
   console.log("[VertoFX API] Fetching all NGN rates");
   const currencies = ["USD", "EUR", "GBP", "CAD"];
   const results: Record<string, VertoFxRate> = {};
   
-  // Process currencies with retry mechanism
-  for (const currency of currencies) {
-    console.log(`[VertoFX API] Processing ${currency}`);
-    
-    // NGN to Currency (Buy rate) - with retry
-    let ngnToCurr = null;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      ngnToCurr = await getVertoFxRate("NGN", currency);
-      if (ngnToCurr) break;
-      
-      if (attempt < 2) {
-        console.log(`[VertoFX API] Retrying NGN-${currency} after failed attempt ${attempt}`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
-      }
-    }
-    
-    if (ngnToCurr) {
-      results[`NGN-${currency}`] = ngnToCurr;
-      console.log(`[VertoFX API] Added NGN-${currency} rate:`, ngnToCurr.rate);
-    } else {
-      console.warn(`[VertoFX API] Failed to fetch NGN-${currency} rate after retries`);
-    }
-
-    // Currency to NGN (Sell rate) - with retry
-    let currToNgn = null;
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      currToNgn = await getVertoFxRate(currency, "NGN");
-      if (currToNgn) break;
-      
-      if (attempt < 2) {
-        console.log(`[VertoFX API] Retrying ${currency}-NGN after failed attempt ${attempt}`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay before retry
-      }
-    }
-    
-    if (currToNgn) {
-      results[`${currency}-NGN`] = currToNgn;
-      console.log(`[VertoFX API] Added ${currency}-NGN rate:`, currToNgn.rate);
-    } else {
-      console.warn(`[VertoFX API] Failed to fetch ${currency}-NGN rate after retries`);
-    }
-  }
-
-  console.log("[VertoFX API] All rates fetched:", Object.keys(results).length, "rates");
+  // Create all promises first then resolve with Promise.allSettled
+  const ratePromises: Array<Promise<void>> = [];
   
-  // Log the full results for debugging
-  for (const [key, value] of Object.entries(results)) {
-    console.log(`[VertoFX API] Rate for ${key}:`, value.rate);
+  for (const currency of currencies) {
+    // NGN to Currency (Buy rate)
+    ratePromises.push(
+      getVertoFxRate("NGN", currency)
+        .then(rate => {
+          if (rate) results[`NGN-${currency}`] = rate;
+        })
+        .catch(() => {}) // Ignore errors in individual currencies
+    );
+    
+    // Currency to NGN (Sell rate)
+    ratePromises.push(
+      getVertoFxRate(currency, "NGN")
+        .then(rate => {
+          if (rate) results[`${currency}-NGN`] = rate;
+        })
+        .catch(() => {}) // Ignore errors in individual currencies
+    );
+  }
+  
+  // Wait for all promises to settle (either resolve or reject)
+  await Promise.allSettled(ratePromises);
+  
+  // Cache the full results for 5 minutes
+  if (Object.keys(results).length > 0) {
+    cacheWithExpiration.set(VERTOFX_CACHE_KEY, results, 5 * 60 * 1000);
   }
   
   return results;

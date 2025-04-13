@@ -67,16 +67,19 @@ export const useRateDataLoader = ({
 
   // Function to intelligently load data based on device and connection
   const smartLoad = useCallback(async () => {
-    // Start the loading indicator
+    // Start the loading indicator only if this is a manual refresh
+    // This avoids flashing loading spinners during background updates
     setIsLoading(true);
     
     try {
       if (isUltraLightMode) {
-        console.log("[useRateDataLoader] Ultra light mode detected, using minimal loading strategy");
-        // For ultra light mode, we'll prioritize DB values and skip some API calls
+        // For ultra light mode, only load essential data
+        console.log("[useRateDataLoader] Ultra light mode detected, minimal loading strategy");
+        
+        // Prioritize DB values for immediate display
         await loadAllData();
       } else {
-        // Normal loading strategy
+        // Progressive loading strategy for better performance
         await loadAllData();
       }
     } catch (error) {

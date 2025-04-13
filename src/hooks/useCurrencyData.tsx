@@ -1,5 +1,5 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRateState } from './useRateState';
 import { useCostPriceCalculator } from './useCostPriceCalculator';
 import { useRateDataLoader } from './useRateDataLoader';
@@ -24,6 +24,9 @@ export interface CurrencyDataActions {
 }
 
 const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
+  // Minimal initialization state to improve first render time
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
   // Use our state management hook
   const [
     { usdtNgnRate, fxRates, vertoFxRates, costPrices, previousCostPrices, lastUpdated, isLoading },
@@ -32,8 +35,9 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
 
   // Track initialization attempts
   const initAttempts = useRef(0);
-  const maxInitAttempts = 3;
+  const maxInitAttempts = 2; // Reduced from 3 to 2 to speed up initialization
   const initialized = useRef(false);
+  const initTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Use cost price calculator hook
   const { calculateAllCostPrices } = useCostPriceCalculator({
@@ -56,12 +60,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     usdtNgnRate
   });
 
-  // Debug log for tracking usdtNgnRate changes
-  useEffect(() => {
-    console.log("👀 useCurrencyData: usdtNgnRate value in state:", usdtNgnRate);
-  }, [usdtNgnRate]);
-
-  // Initialize data on mount with retry logic
+  // Initialize data on mount with optimized retry logic
   useEffect(() => {
     const initialize = async () => {
       console.log(`[useCurrencyData] Initialization attempt ${initAttempts.current + 1}/${maxInitAttempts}`);
@@ -69,22 +68,31 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       try {
         await loadAllData();
         initialized.current = true;
+        setHasInitialized(true);
         console.log("[useCurrencyData] Initialization successful");
+        
+        // Clear any existing timer
+        if (initTimer.current) {
+          clearTimeout(initTimer.current);
+          initTimer.current = null;
+        }
       } catch (error) {
         console.error(`[useCurrencyData] Initialization attempt ${initAttempts.current + 1} failed:`, error);
         
         initAttempts.current += 1;
         
         if (initAttempts.current < maxInitAttempts) {
-          // Retry with exponential backoff
-          const backoffDelay = Math.pow(2, initAttempts.current) * 1000;
+          // Retry with shorter backoff (500ms instead of exponential)
+          // This helps get data faster even with errors
+          const backoffDelay = 500; 
           console.log(`[useCurrencyData] Retrying in ${backoffDelay}ms`);
           
-          setTimeout(initialize, backoffDelay);
+          initTimer.current = setTimeout(initialize, backoffDelay);
         } else {
           console.error(`[useCurrencyData] All ${maxInitAttempts} initialization attempts failed`);
-          toast.error("Failed to initialize application data", {
-            description: "Try refreshing the page"
+          setHasInitialized(true); // Mark as initialized even with failure to show UI
+          toast.error("Failed to initialize all data", {
+            description: "Some features may be limited"
           });
         }
       }
@@ -95,7 +103,10 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     }
     
     return () => {
-      // Clean up logic if needed
+      // Clean up timers
+      if (initTimer.current) {
+        clearTimeout(initTimer.current);
+      }
     };
   }, []);
 

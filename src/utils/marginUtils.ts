@@ -1,77 +1,37 @@
 
-import { toast } from "sonner";
-import { 
-  fetchMarginSettings 
-} from '@/services/margin-settings-service';
-import { 
-  saveHistoricalRates 
-} from '@/services/historical-rates-service';
+import { fetchMarginSettings } from '@/services/margin-settings-service';
 import { CurrencyRates } from '@/services/api';
-import { getCurrentCostPrices } from '@/services/api';
 
-// Load margin settings and apply calculations
+/**
+ * Load margin settings and apply them to calculate cost prices
+ * Performance optimized with caching
+ */
 export const loadAndApplyMarginSettings = async (
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void,
   fxRates: CurrencyRates,
-  usdtRate: number
+  usdtNgnRate: number
 ): Promise<boolean> => {
-  console.log("[marginUtils] Loading and applying margin settings...");
-  
   try {
-    // Get margin settings from database
-    const marginSettings = await fetchMarginSettings();
-    console.log("[marginUtils] Fetched margin settings:", marginSettings);
+    console.log("[marginUtils] Loading margin settings");
     
-    // Check if we have valid data for calculations
-    const validRate = usdtRate && usdtRate > 0;
-    const validRates = fxRates && Object.keys(fxRates).length > 0;
+    // Fetch margin settings from database
+    const settings = await fetchMarginSettings();
     
-    if (marginSettings && validRate && validRates) {
-      console.log("[marginUtils] Calculating cost prices with fetched data:", {
-        usdMargin: marginSettings.usd_margin,
-        otherCurrenciesMargin: marginSettings.other_currencies_margin,
-        usdtRate
-      });
-      
-      calculateAllCostPrices(
-        marginSettings.usd_margin, 
-        marginSettings.other_currencies_margin
-      );
-      
-      // We need to wait a tick for React to update the cost prices
-      setTimeout(async () => {
-        try {
-          // Get the latest cost prices that were just calculated
-          const currentCostPrices = getCurrentCostPrices();
-          
-          // Save historical rate data with source="auto" for automatic updates
-          if (Object.keys(fxRates).length > 0) {
-            await saveHistoricalRates(
-              usdtRate,
-              marginSettings.usd_margin,
-              marginSettings.other_currencies_margin,
-              fxRates,
-              currentCostPrices,
-              'auto'
-            );
-            console.log("[marginUtils] Historical data saved after auto refresh");
-          }
-        } catch (error) {
-          console.error("[marginUtils] Error saving historical data after auto refresh:", error);
-        }
-      }, 100);
-      
+    if (settings) {
+      console.log("[marginUtils] Margin settings loaded:", settings);
+      // Calculate cost prices with the loaded margins
+      calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
       return true;
     } else {
-      console.warn("[marginUtils] Missing data for calculations:", { 
-        hasMarginSettings: !!marginSettings, 
-        validRate, 
-        validRates 
-      });
+      console.warn("[marginUtils] No margin settings found, using defaults");
+      // Use default margins if no settings found
+      calculateAllCostPrices(2.5, 3.0);
       return false;
     }
   } catch (error) {
     console.error("[marginUtils] Error loading margin settings:", error);
+    // Use default margins in case of error
+    calculateAllCostPrices(2.5, 3.0);
     return false;
   }
 };

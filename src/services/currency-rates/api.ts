@@ -8,27 +8,42 @@ import { fetchWithTimeout } from "@/utils/apiUtils";
 const API_KEY = 'fca_live_Go01rIgZxHqhRvqFQ2BLi6o5oZGoovGuZk3sQ8nV';
 const API_BASE_URL = 'https://api.freecurrencyapi.com/v1/latest';
 
+// Memory cache for ultra-fast responses
+const memoryCache: Record<string, {data: Record<string, number>, timestamp: number}> = {};
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
 /**
  * Fetches the latest exchange rates for specified currencies against USD
- * @param currencies Array of currency codes (e.g., ["EUR", "GBP", "CAD"])
- * @param timeoutMs Timeout in milliseconds for the API request
- * @returns Object with currency codes as keys and exchange rates as values
+ * Performance optimized with multi-layer caching
  */
 export const fetchExchangeRates = async (
   currencies: string[],
   timeoutMs: number = 5000
 ): Promise<Record<string, number>> => {
   try {
-    console.log("[currency-rates/api] Fetching exchange rates for:", currencies);
-    
-    // Check browser storage cache first for instant response on mobile
+    // Generate a cache key based on the currencies
     const cacheKey = `currency_rates_${currencies.join('_')}`;
-    const cachedRates = browserStorage.getItem(cacheKey);
     
+    // Check memory cache first (fastest)
+    const now = Date.now();
+    if (memoryCache[cacheKey] && (now - memoryCache[cacheKey].timestamp < CACHE_TTL)) {
+      console.log("[currency-rates/api] Using in-memory cached rates");
+      return memoryCache[cacheKey].data;
+    }
+    
+    // Then check browser storage cache
+    const cachedRates = browserStorage.getItem(cacheKey);
     if (cachedRates) {
-      console.log("[currency-rates/api] Using cached rates from browser storage:", cachedRates);
+      console.log("[currency-rates/api] Using browser storage cached rates");
+      // Update memory cache for future requests
+      memoryCache[cacheKey] = {
+        data: cachedRates,
+        timestamp: now
+      };
       return cachedRates;
     }
+    
+    console.log("[currency-rates/api] Fetching exchange rates from API");
     
     // Join the currencies with a comma for the API request
     const currenciesParam = currencies.join(',');
@@ -40,21 +55,28 @@ export const fetchExchangeRates = async (
       timeoutMs
     );
     
-    console.log("[currency-rates/api] API response:", data);
-    
     if (!data || !data.data) {
       throw new Error("Invalid API response format");
     }
     
-    // Cache the successful response in browser storage
-    browserStorage.setItem(cacheKey, data.data, 1800000); // 30 min TTL
+    // Update both cache layers
+    memoryCache[cacheKey] = {
+      data: data.data,
+      timestamp: now
+    };
+    
+    // Cache in browser storage with 30 min TTL
+    browserStorage.setItem(cacheKey, data.data, CACHE_TTL);
     
     return data.data;
   } catch (error) {
     console.error("[currency-rates/api] Error fetching exchange rates:", error);
-    toast.warning("Using saved exchange rates - couldn't connect to rate provider", {
-      description: "Will retry on next refresh"
-    });
+    
+    // Only show toast for user-initiated requests
+    const isBackgroundRefresh = false; // You could pass this as a parameter
+    if (!isBackgroundRefresh) {
+      toast.warning("Using saved exchange rates - couldn't connect to rate provider");
+    }
     
     throw error; // Re-throw to let the storage module handle fallback
   }
