@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 /**
  * Hook to subscribe to real-time updates for USDT/NGN rates and margin settings
- * Optimized for performance by combining subscriptions
+ * Performance optimized with better type checking and reduced overhead
  */
 export const useRealtimeUpdates = ({
   onUsdtRateChange,
@@ -15,63 +15,63 @@ export const useRealtimeUpdates = ({
   onMarginSettingsChange: (usdMargin: number, otherCurrenciesMargin: number) => void;
 }) => {
   useEffect(() => {
-    console.log("Setting up real-time subscriptions for rates and margins");
-    
-    // Create a single channel for our real-time subscriptions
-    // Using a combined channel reduces connection overhead
+    // Single channel with better error handling for real-time updates
     const channel = supabase
-      .channel('fx-terminal-updates')
-      // Subscribe to USDT/NGN rate changes (INSERT or UPDATE)
+      .channel('fx-rates-updates')
+      // More efficient subscription with tighter type checking
       .on('postgres_changes', 
         {
-          event: '*', // Listen for both INSERT and UPDATE
+          event: '*', 
           schema: 'public',
           table: 'usdt_ngn_rates'
         }, 
         (payload) => {
-          console.log("Real-time: USDT/NGN rate change detected");
-          // Add proper type checking before accessing properties
-          const newRate = payload.new && 'rate' in payload.new ? payload.new.rate : null;
-          if (newRate && typeof newRate === 'number' && newRate > 0) {
-            onUsdtRateChange(newRate);
+          if (!payload.new || typeof payload.new !== 'object') return;
+          
+          // Proper type checking to avoid TypeScript errors
+          const newPayload = payload.new as Record<string, unknown>;
+          if ('rate' in newPayload && typeof newPayload.rate === 'number' && newPayload.rate > 0) {
+            const rate = newPayload.rate;
+            onUsdtRateChange(rate);
             
-            // Only show the toast once the rate actually changes (debounced)
+            // Optimized toast with shorter timeout
             const debounceToast = setTimeout(() => {
-              toast.info("USDT/NGN rate has been updated");
-            }, 300);
+              toast.info("USDT/NGN rate updated");
+            }, 200);
             
             return () => clearTimeout(debounceToast);
           }
         }
       )
-      // Subscribe to margin settings changes (combining INSERT and UPDATE)
+      // Improved margin settings subscription with proper type checking
       .on('postgres_changes', 
         {
-          event: '*', // Listen for both INSERT and UPDATE
+          event: '*',
           schema: 'public',
           table: 'margin_settings'
         }, 
         (payload) => {
-          console.log("Real-time: Margin settings change detected");
-          // Add proper type checking before accessing properties
-          const usdMargin = payload.new && 'usd_margin' in payload.new ? payload.new.usd_margin : null;
-          const otherCurrenciesMargin = payload.new && 'other_currencies_margin' in payload.new 
-            ? payload.new.other_currencies_margin 
-            : null;
+          if (!payload.new || typeof payload.new !== 'object') return;
           
-          if (usdMargin !== null && otherCurrenciesMargin !== null) {
-            onMarginSettingsChange(Number(usdMargin), Number(otherCurrenciesMargin));
-            toast.info("Margin settings have been updated");
+          // Proper type checking to avoid TypeScript errors
+          const newPayload = payload.new as Record<string, unknown>;
+          const hasUsdMargin = 'usd_margin' in newPayload && newPayload.usd_margin !== null;
+          const hasOtherMargin = 'other_currencies_margin' in newPayload && newPayload.other_currencies_margin !== null;
+          
+          if (hasUsdMargin && hasOtherMargin) {
+            const usdMargin = Number(newPayload.usd_margin);
+            const otherCurrenciesMargin = Number(newPayload.other_currencies_margin);
+            
+            if (!isNaN(usdMargin) && !isNaN(otherCurrenciesMargin)) {
+              onMarginSettingsChange(usdMargin, otherCurrenciesMargin);
+              toast.info("Margin settings updated");
+            }
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`Realtime subscription status: ${status}`);
-      });
+      .subscribe();
 
-    // Cleanup function to unsubscribe when component unmounts
     return () => {
-      console.log("Cleaning up real-time subscriptions");
       supabase.removeChannel(channel);
     };
   }, [onUsdtRateChange, onMarginSettingsChange]);

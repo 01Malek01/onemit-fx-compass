@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { fetchLatestUsdtNgnRate, DEFAULT_RATE } from '@/services/usdt-ngn-service';
 import { loadRatesData } from '@/utils/rates/ratesLoader';
 import { CurrencyRates } from '@/services/api';
-import { loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils';
+import { loadAndApplyMarginSettings } from '@/utils';
+import { cacheWithExpiration } from '@/utils/cacheUtils';
 
 interface RatesLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -15,6 +16,9 @@ interface RatesLoaderProps {
   fetchBybitRate: () => Promise<number | null>;
   isMobile?: boolean;
 }
+
+// Cache key for loading status
+const LOADING_STATUS_KEY = 'rates_loading_status';
 
 export const useRatesLoader = ({
   setUsdtNgnRate,
@@ -28,140 +32,78 @@ export const useRatesLoader = ({
 }: RatesLoaderProps) => {
   
   const loadAllData = async () => {
-    console.log(`[useRatesLoader] Loading all data... (mobile: ${isMobile})`);
+    // Use cached loading status to prevent duplicate loads
+    if (cacheWithExpiration.get(LOADING_STATUS_KEY)) {
+      console.log("[useRatesLoader] Loading already in progress, skipping");
+      return;
+    }
+    
+    cacheWithExpiration.set(LOADING_STATUS_KEY, true, 5000); // Prevent multiple loads for 5 seconds
     setIsLoading(true);
     
     try {
-      // Track components loaded successfully for detailed error reporting
-      const loadStatus = {
-        bybitRate: false,
-        fxRates: false,
-        margins: false
-      };
+      // Fetch database rate in parallel but with low priority
+      const dbRatePromise = fetchLatestUsdtNgnRate().catch(() => null);
       
-      // Store cached database rate for later use
-      let cachedDatabaseRate: number | null = null;
-      
-      // Prioritize critical data first on mobile
-      if (isMobile) {
-        // On mobile, prioritize database rates first for faster initial load
-        console.log("[useRatesLoader] Mobile detected, prioritizing cached rates");
-        cachedDatabaseRate = await fetchLatestUsdtNgnRate().catch(error => {
-          console.error("[useRatesLoader] Error fetching from database:", error);
-          return null;
-        });
-        
-        if (cachedDatabaseRate && cachedDatabaseRate > 0) {
-          console.log("[useRatesLoader] Setting USDT/NGN rate from database:", cachedDatabaseRate);
-          setUsdtNgnRate(cachedDatabaseRate);
-          
-          // Show toast that we're using cached data initially
-          toast.info("Using cached rates", {
-            description: "Live rates are loading in background"
-          });
-        }
-      }
-      
-      // First fetch live Bybit rate - but with timeout optimization for mobile
-      const bybitRatePromise = fetchBybitRate();
-      const bybitRate = isMobile 
-        ? await Promise.race([
-            bybitRatePromise, 
-            new Promise<null>(resolve => setTimeout(() => resolve(null), 2000)) // Reduced timeout to 2s for mobile
-          ])
-        : await bybitRatePromise;
-      
-      loadStatus.bybitRate = !!bybitRate;
-      
-      // Load other FX rates with mobile optimization
-      const { fxRates: loadedFxRates, success } = await loadRatesData(
+      // First, load core rates data with optimized loader
+      const { usdtRate, fxRates, success } = await loadRatesData(
         setFxRates,
         setVertoFxRates,
-        setIsLoading,
+        () => {}, // Handle loading state separately
         isMobile
       );
       
-      loadStatus.fxRates = success;
-      
-      // Use Bybit rate if available, otherwise fall back to database or default
-      if (bybitRate && bybitRate > 0) {
-        console.log("[useRatesLoader] Setting USDT/NGN rate from Bybit:", bybitRate);
-        setUsdtNgnRate(bybitRate);
-      } else if (!isMobile || !cachedDatabaseRate) {
-        // Only try to fetch from database again if we're not on mobile
-        // or if we didn't already set a database rate
-        console.log("[useRatesLoader] Bybit rate unavailable, fetching from database");
-        const databaseRate = await fetchLatestUsdtNgnRate().catch(error => {
-          console.error("[useRatesLoader] Error fetching from database:", error);
-          return null;
-        });
-        
-        if (databaseRate && databaseRate > 0) {
-          console.log("[useRatesLoader] Setting USDT/NGN rate from database:", databaseRate);
-          setUsdtNgnRate(databaseRate);
-        } else {
-          console.warn("[useRatesLoader] No valid rate found, using default:", DEFAULT_RATE);
-          setUsdtNgnRate(DEFAULT_RATE);
-        }
+      // Set USDT rate immediately for faster UI update
+      if (usdtRate && usdtRate > 0) {
+        setUsdtNgnRate(usdtRate);
       }
       
-      // Apply margin settings and calculate cost prices
-      const calculationsApplied = await loadAndApplyMarginSettings(
+      // Try to get Bybit rate in parallel with short timeout
+      const bybitRate = await Promise.race([
+        fetchBybitRate(),
+        new Promise<null>(resolve => setTimeout(() => resolve(null), 1500))
+      ]);
+      
+      // Use the best rate available
+      const finalRate = (bybitRate && bybitRate > 0) ? bybitRate : 
+                        (usdtRate && usdtRate > 0) ? usdtRate :
+                        await dbRatePromise || DEFAULT_RATE;
+      
+      setUsdtNgnRate(finalRate);
+      
+      // Apply margin settings in parallel
+      loadAndApplyMarginSettings(
         calculateAllCostPrices,
-        loadedFxRates,
-        bybitRate || cachedDatabaseRate || DEFAULT_RATE
+        fxRates,
+        finalRate
       ).catch(error => {
-        console.error("[useRatesLoader] Error applying margin settings:", error);
-        return false;
+        console.warn("[useRatesLoader] Error applying margin settings:", error);
+        // Still use default margins to show something
+        calculateAllCostPrices(2.5, 3.0);
       });
-      
-      loadStatus.margins = calculationsApplied;
-      
-      // On non-mobile or after initial mobile load is complete, save historical data
-      if (!isMobile && calculationsApplied) {
-        try {
-          await saveHistoricalRatesData(loadedFxRates, bybitRate || DEFAULT_RATE);
-        } catch (error) {
-          console.error("[useRatesLoader] Error saving historical data:", error);
-        }
-      }
       
       setLastUpdated(new Date());
       
-      // Check if any data sources failed and show appropriate notifications
-      // On mobile, show fewer and simpler toasts
-      if (!loadStatus.bybitRate && !loadStatus.fxRates && !isMobile) {
-        toast.warning("Using cached rates - external data sources unavailable", {
-          description: "Check your network connection"
-        });
-      } else if (!loadStatus.bybitRate && !isMobile) {
-        toast.info("Using fallback USDT/NGN rate", {
-          description: "Bybit rates unavailable"
-        });
-      } else if (!loadStatus.fxRates && !isMobile) {
-        toast.info("Using cached exchange rates", {
-          description: "Currency API unavailable"
-        });
-      } else if (!isMobile) {
-        toast.success("All rates loaded successfully");
-      }
-      
-      console.log("[useRatesLoader] All rates loaded with status:", loadStatus);
+      // Only save historical data in background after UI is ready
+      setTimeout(() => {
+        try {
+          import('@/utils').then(({ saveHistoricalRatesData }) => {
+            saveHistoricalRatesData(fxRates, finalRate).catch(() => {});
+          });
+        } catch (error) {
+          // Ignore background tasks errors
+        }
+      }, 2000);
     } catch (error) {
       console.error("[useRatesLoader] Error loading data:", error);
-      
-      // Simpler error toast for mobile
-      if (isMobile) {
-        toast.error("Failed to load data");
-      } else {
-        toast.error("Failed to load some data", {
-          description: "Using cached values where possible"
-        });
-      }
-      
       setUsdtNgnRate(DEFAULT_RATE);
+      calculateAllCostPrices(2.5, 3.0);
     } finally {
       setIsLoading(false);
+      // Clear loading status after completion
+      setTimeout(() => {
+        cacheWithExpiration.set(LOADING_STATUS_KEY, false, 0);
+      }, 1000);
     }
   };
 

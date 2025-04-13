@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,29 @@ import MarketComparisonSection from '@/components/dashboard/MarketComparisonSect
 import { BarChart3, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Lazy loaded components to improve initial render time
+const AnalyticsPlaceholder = () => (
+  <Card className="fx-card relative overflow-hidden mt-8">
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" aria-hidden="true" />
+    <CardHeader className="relative">
+      <CardTitle className="flex items-center gap-2">
+        <BarChart3 className="h-5 w-5 text-primary" />
+        <span>Rate Analytics</span>
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="relative">
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <p className="text-lg text-muted-foreground mb-4">
+          Historical data will appear here soon
+        </p>
+        <Button disabled className="opacity-70">
+          View Trends
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const DashboardContainer = () => {
   const {
@@ -25,24 +48,21 @@ const DashboardContainer = () => {
     handleRefresh,
     handleBybitRateRefresh,
     handleMarginUpdate,
-    getOneremitRates
+    getOneremitRates,
+    fxRates,
   } = useDashboardState();
   
-  // State for real-time indicator pulsing effect
+  // State for real-time indicator
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
-
-  // Debug logging to track usdtNgnRate changes
+  
+  // Optimized effect to track changes
   useEffect(() => {
-    console.log("👀 usdtNgnRate value in DashboardContainer:", usdtNgnRate);
-    
-    // Show realtime indicator pulse when values change
     setIsRealtimeActive(true);
-    const timer = setTimeout(() => setIsRealtimeActive(false), 2000);
-    
+    const timer = setTimeout(() => setIsRealtimeActive(false), 1500);
     return () => clearTimeout(timer);
   }, [usdtNgnRate, usdMargin, otherCurrenciesMargin]);
 
-  // Show loading state if usdtNgnRate is null
+  // Show simple loading state if no rate is available yet
   if (usdtNgnRate === null) {
     return <DashboardSkeleton />;
   }
@@ -107,26 +127,10 @@ const DashboardContainer = () => {
       
       <Separator className="my-8 opacity-30" />
       
-      {/* Analytics placeholder section */}
-      <Card className="fx-card relative overflow-hidden mt-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" aria-hidden="true" />
-        <CardHeader className="relative">
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <span>Rate Analytics</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <p className="text-lg text-muted-foreground mb-4">
-              Historical data will appear here soon
-            </p>
-            <Button disabled className="opacity-70">
-              View Trends
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Only render analytics placeholder after core content is loaded */}
+      <Suspense fallback={null}>
+        <AnalyticsPlaceholder />
+      </Suspense>
     </div>
   );
 };

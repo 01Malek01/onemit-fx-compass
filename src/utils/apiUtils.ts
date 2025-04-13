@@ -1,19 +1,15 @@
-
 /**
- * Utilities for API requests and timeout handling
+ * Performance-optimized utilities for API requests and timeout handling
  */
 
 /**
- * Execute a fetch request with timeout
- * @param url The URL to fetch
- * @param options Fetch options
- * @param timeoutMs Timeout in milliseconds
- * @returns Promise with response
+ * Execute a fetch request with timeout and abort controller
+ * Optimized to reduce memory usage and improve response time
  */
 export const fetchWithTimeout = async <T>(
   url: string, 
   options?: RequestInit, 
-  timeoutMs: number = 5000
+  timeoutMs: number = 3000 // Reduced default timeout
 ): Promise<T> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -23,11 +19,17 @@ export const fetchWithTimeout = async <T>(
       ...options,
       signal: controller.signal,
       // Set high priority fetch for critical resources
-      priority: 'high'
+      priority: 'high',
+      // Disable keep-alive for faster connection setup
+      headers: {
+        ...options?.headers,
+        'Connection': 'close'
+      },
+      cache: 'default' // Let browser handle caching for performance
     });
     
     if (!response.ok) {
-      throw new Error(`API returned status ${response.status}`);
+      throw new Error(`API error: ${response.status}`);
     }
     
     return await response.json() as T;
@@ -37,32 +39,39 @@ export const fetchWithTimeout = async <T>(
 };
 
 /**
- * Create a promise that rejects after a timeout
- * @param timeoutMs Timeout in milliseconds
- * @returns Promise that rejects after timeout
+ * Create a timeout promise with immediate cleanup
  */
 export const createTimeout = (timeoutMs: number): Promise<never> => {
-  return new Promise((_, reject) => 
-    setTimeout(() => reject(new Error(`Request timed out after ${timeoutMs}ms`)), timeoutMs)
-  );
+  let timeoutId: NodeJS.Timeout;
+  
+  const promise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  
+  // Add a cleanup method to the promise
+  (promise as any).cleanup = () => clearTimeout(timeoutId);
+  
+  return promise;
 };
 
 /**
- * Race a promise against a timeout
- * @param promise Promise to race
- * @param timeoutMs Timeout in milliseconds
- * @param timeoutMessage Optional message for timeout error
- * @returns Promise result or timeout error
+ * Race with timeout and auto-cleanup to prevent memory leaks
  */
 export const raceWithTimeout = async <T>(
   promise: Promise<T>, 
   timeoutMs: number, 
   timeoutMessage?: string
 ): Promise<T> => {
-  const timeoutError = new Error(timeoutMessage || `Request timed out after ${timeoutMs}ms`);
-  const timeoutPromise = new Promise<never>((_, reject) => 
-    setTimeout(() => reject(timeoutError), timeoutMs)
-  );
+  const timeoutPromise = createTimeout(timeoutMs);
   
-  return Promise.race([promise, timeoutPromise]);
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    // Clean up the timeout to prevent memory leaks
+    if ((timeoutPromise as any).cleanup) {
+      (timeoutPromise as any).cleanup();
+    }
+  }
 };
