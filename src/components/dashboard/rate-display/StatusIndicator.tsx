@@ -15,10 +15,10 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
 }) => {
   if (hasNetworkError) {
     return (
-      <>
-        <div className="absolute -left-1 -top-1 w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
-        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-      </>
+      <div className="relative">
+        <div className="absolute -left-1 -top-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping opacity-70"></div>
+        <div className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-glow"></div>
+      </div>
     );
   }
   
@@ -27,10 +27,10 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
   }
 
   return (
-    <>
-      <div className={`absolute -left-1 -top-1 w-2 h-2 ${isStale ? "bg-amber-500" : "bg-green-500"} rounded-full animate-ping`}></div>
-      <div className={`w-2 h-2 ${isStale ? "bg-amber-500" : "bg-green-500"} rounded-full`}></div>
-    </>
+    <div className="relative">
+      <div className={`absolute -left-1 -top-1 w-2.5 h-2.5 ${isStale ? "bg-amber-500" : "bg-green-500"} rounded-full animate-ping opacity-70`}></div>
+      <div className={`w-2.5 h-2.5 ${isStale ? "bg-amber-500" : "bg-green-500"} rounded-full shadow-glow`}></div>
+    </div>
   );
 };
 
