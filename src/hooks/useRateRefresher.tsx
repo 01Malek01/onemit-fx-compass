@@ -65,11 +65,34 @@ export const useRateRefresher = ({
     }
     
     // Set up a new timer for auto-refresh every minute (60000ms)
-    autoRefreshTimerRef.current = setInterval(() => {
+    autoRefreshTimerRef.current = setInterval(async () => {
       console.log("RateRefresher: Auto-refreshing Bybit rate");
-      handleBybitRateRefresh().catch(error => {
+      try {
+        // Important: Use await to ensure we get the result
+        const success = await refreshBybitRate();
+        
+        // Only recalculate if the refresh was successful
+        if (success) {
+          calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+          
+          // Save historical data after auto-refresh with source="auto"
+          if (usdtNgnRate && Object.keys(costPrices).length > 0) {
+            await saveHistoricalRates(
+              usdtNgnRate,
+              usdMargin,
+              otherCurrenciesMargin,
+              fxRates,
+              costPrices,
+              'auto'
+            );
+            console.log("Historical data saved after auto-refresh");
+          }
+        } else {
+          console.warn("RateRefresher: Auto-refresh did not update the rate");
+        }
+      } catch (error) {
         console.error("Auto-refresh failed:", error);
-      });
+      }
     }, 60000); // 1 minute interval
     
     // Cleanup on unmount
@@ -79,7 +102,7 @@ export const useRateRefresher = ({
         autoRefreshTimerRef.current = null;
       }
     };
-  }, [handleBybitRateRefresh]);
+  }, [handleBybitRateRefresh, refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin, usdtNgnRate, costPrices, fxRates]);
 
   return {
     handleRefresh,

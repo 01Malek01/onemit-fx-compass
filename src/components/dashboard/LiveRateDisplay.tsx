@@ -1,5 +1,5 @@
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, Clock, Wifi, Info } from 'lucide-react';
@@ -20,6 +20,11 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
 }) => {
   // State for countdown to next auto-refresh
   const [nextRefreshIn, setNextRefreshIn] = useState<number>(60);
+  
+  // Ref to track the last timestamp for animation triggering
+  const lastTimestampRef = useRef<string | null>(null);
+  // State to control flash animation
+  const [showUpdateFlash, setShowUpdateFlash] = useState(false);
   
   // Format the rate with comma separators - memoized to avoid re-renders
   const formattedRate = useMemo(() => {
@@ -48,6 +53,26 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       (new Date().getTime() - lastUpdated.getTime() > 3600000);
   }, [lastUpdated]);
   
+  // Trigger animation when timestamp changes
+  useEffect(() => {
+    if (!formattedTimestamp || formattedTimestamp === 'never') return;
+    
+    // Only trigger animation if this isn't the first load and the timestamp actually changed
+    if (lastTimestampRef.current && lastTimestampRef.current !== formattedTimestamp) {
+      setShowUpdateFlash(true);
+      
+      // Remove animation class after animation completes
+      const timer = setTimeout(() => {
+        setShowUpdateFlash(false);
+      }, 1500); // Animation duration
+      
+      return () => clearTimeout(timer);
+    }
+    
+    // Update the reference to current timestamp
+    lastTimestampRef.current = formattedTimestamp;
+  }, [formattedTimestamp]);
+  
   // Countdown timer for next refresh
   useEffect(() => {
     // Reset countdown when rate is refreshed
@@ -73,6 +98,13 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
         className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" 
         aria-hidden="true"
       />
+      {/* Flash animation overlay */}
+      {showUpdateFlash && (
+        <div 
+          className="absolute inset-0 bg-primary/10 animate-fade-out pointer-events-none z-10" 
+          aria-hidden="true"
+        />
+      )}
       <CardHeader className="pb-2 relative">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <div className="relative">
@@ -103,7 +135,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       <CardContent className="relative">
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <div className="text-2xl font-bold">
+            <div className={`text-2xl font-bold ${showUpdateFlash ? 'text-primary' : ''} transition-colors duration-500`}>
               {rate ? formattedRate : 'Unavailable'}
             </div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
