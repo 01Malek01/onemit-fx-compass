@@ -23,6 +23,8 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   
   // Ref to track the last timestamp for animation triggering
   const lastTimestampRef = useRef<string | null>(null);
+  // Ref to track last rate value
+  const lastRateRef = useRef<number | null>(null);
   // State to control flash animation
   const [showUpdateFlash, setShowUpdateFlash] = useState(false);
   
@@ -53,12 +55,17 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       (new Date().getTime() - lastUpdated.getTime() > 3600000);
   }, [lastUpdated]);
   
-  // Trigger animation when timestamp changes
+  // Trigger animation when timestamp or rate changes
   useEffect(() => {
+    // Don't trigger animation on initial load
     if (!formattedTimestamp || formattedTimestamp === 'never') return;
     
-    // Only trigger animation if this isn't the first load and the timestamp actually changed
-    if (lastTimestampRef.current && lastTimestampRef.current !== formattedTimestamp) {
+    const isTimestampChanged = lastTimestampRef.current && lastTimestampRef.current !== formattedTimestamp;
+    const isRateChanged = lastRateRef.current !== null && lastRateRef.current !== rate;
+    
+    // Only trigger animation if either timestamp or rate changed (but not on first load)
+    if (isTimestampChanged || isRateChanged) {
+      console.log("LiveRateDisplay: Rate or timestamp changed, triggering animation");
       setShowUpdateFlash(true);
       
       // Remove animation class after animation completes
@@ -69,9 +76,10 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       return () => clearTimeout(timer);
     }
     
-    // Update the reference to current timestamp
+    // Update refs to current values
     lastTimestampRef.current = formattedTimestamp;
-  }, [formattedTimestamp]);
+    lastRateRef.current = rate;
+  }, [formattedTimestamp, rate]);
   
   // Countdown timer for next refresh
   useEffect(() => {

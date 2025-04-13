@@ -28,32 +28,42 @@ export const useRateRefresher = ({
   // Handle manual Bybit rate refresh
   const handleBybitRateRefresh = useCallback(async () => {
     console.log("RateRefresher: Manually refreshing Bybit rate");
-    await refreshBybitRate();
+    const success = await refreshBybitRate();
     
-    // After refreshing the rate, recalculate with current margins
-    calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+    if (success) {
+      console.log("RateRefresher: Manual refresh was successful");
+      // After refreshing the rate, recalculate with current margins
+      calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+      return true;
+    } else {
+      console.warn("RateRefresher: Manual refresh did not update the rate");
+      return false;
+    }
   }, [refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin]);
 
   // Handle refresh button click
   const handleRefresh = async () => {
     console.log("RateRefresher: Handling refresh button click");
-    await handleBybitRateRefresh();
+    const success = await handleBybitRateRefresh();
     
-    // Save historical data after refresh with source="refresh"
-    try {
-      if (usdtNgnRate && Object.keys(costPrices).length > 0) {
-        await saveHistoricalRates(
-          usdtNgnRate,
-          usdMargin,
-          otherCurrenciesMargin,
-          fxRates,
-          costPrices,
-          'refresh'
-        );
-        console.log("Historical data saved after refresh");
+    // Only save historical data if refresh was successful
+    if (success) {
+      // Save historical data after refresh with source="refresh"
+      try {
+        if (usdtNgnRate && Object.keys(costPrices).length > 0) {
+          await saveHistoricalRates(
+            usdtNgnRate,
+            usdMargin,
+            otherCurrenciesMargin,
+            fxRates,
+            costPrices,
+            'refresh'
+          );
+          console.log("Historical data saved after refresh");
+        }
+      } catch (error) {
+        console.error("Error saving historical data after refresh:", error);
       }
-    } catch (error) {
-      console.error("Error saving historical data after refresh:", error);
     }
   };
 
@@ -73,6 +83,7 @@ export const useRateRefresher = ({
         
         // Only recalculate if the refresh was successful
         if (success) {
+          console.log("RateRefresher: Auto-refresh was successful, recalculating prices");
           calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
           
           // Save historical data after auto-refresh with source="auto"
@@ -93,7 +104,7 @@ export const useRateRefresher = ({
       } catch (error) {
         console.error("Auto-refresh failed:", error);
       }
-    }, 60000); // 1 minute interval
+    }, 60000); // 1 minute interval (or lower to 10000 for testing - 10 seconds)
     
     // Cleanup on unmount
     return () => {
@@ -102,7 +113,7 @@ export const useRateRefresher = ({
         autoRefreshTimerRef.current = null;
       }
     };
-  }, [handleBybitRateRefresh, refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin, usdtNgnRate, costPrices, fxRates]);
+  }, [refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin, usdtNgnRate, costPrices, fxRates]);
 
   return {
     handleRefresh,
