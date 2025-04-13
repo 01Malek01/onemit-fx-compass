@@ -28,7 +28,7 @@ export const getBybitP2PRate = async (
         verifiedOnly,
         requestTimestamp: new Date().toISOString() // Add timestamp for cache busting
       },
-      signal: abortController.signal
+      // Remove signal which is not supported in FunctionInvokeOptions
     });
     
     clearTimeout(timeoutId);
