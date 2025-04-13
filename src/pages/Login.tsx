@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { signInUser } from '@/services/authService';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Eye, EyeOff, Lock, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('admin@admin.com');
+  const [email, setEmail] = useState('admin');  // Changed to just 'admin' for simplicity
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,20 +30,22 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // Use our dedicated sign-in function
+      const result = await signInUser(email, password);
       
-      if (error) throw error;
-      
-      if (data.user) {
+      if (result.success && result.user) {
         toast({
           title: "Login successful",
           description: "Welcome to Oneremit FX Terminal",
           variant: "default"
         });
         navigate('/');
+      } else {
+        toast({
+          title: "Login failed",
+          description: result.message || "Invalid credentials",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       toast({
@@ -76,7 +78,7 @@ const Login = () => {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium text-foreground">
-                  Email
+                  Username
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -85,12 +87,12 @@ const Login = () => {
                   <Input
                     id="email"
                     name="email"
-                    type="email"
+                    type="text"
                     autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
-                    placeholder="admin@admin.com"
+                    placeholder="admin"
                     required
                   />
                 </div>
@@ -125,6 +127,10 @@ const Login = () => {
                     }
                   </div>
                 </div>
+              </div>
+
+              <div className="text-sm mt-2 text-center p-2 bg-primary/10 rounded-md">
+                <p>Use username <span className="font-bold">admin</span> and password <span className="font-bold">spark1@</span></p>
               </div>
 
               <Button 

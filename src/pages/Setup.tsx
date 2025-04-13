@@ -35,7 +35,7 @@ const Setup = () => {
       if (result.success) {
         toast({
           title: "Success",
-          description: `${result.message} You will use admin@admin.com as your login email.`,
+          description: `Admin account ready! You can now log in with username "admin" and password "spark1@"`,
         });
         
         // Redirect to login page after creating admin
@@ -83,7 +83,7 @@ const Setup = () => {
                   This will create an admin user with the following credentials:
                 </p>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Email: <span className="font-mono">admin@admin.com</span></li>
+                  <li>Username: <span className="font-mono">admin</span></li>
                   <li>Password: <span className="font-mono">spark1@</span></li>
                 </ul>
               </div>
