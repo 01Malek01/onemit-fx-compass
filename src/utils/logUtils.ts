@@ -1,145 +1,128 @@
-
-/**
- * Utility for more organized console logging
- */
-
-// Log levels
-export enum LogLevel {
+// Define log levels
+enum LogLevel {
   DEBUG = 0,
   INFO = 1,
   WARN = 2,
   ERROR = 3,
-  NONE = 99
+  NONE = 4
 }
 
-// Default minimum level for production and development
-const DEFAULT_PROD_LEVEL = LogLevel.WARN;
-const DEFAULT_DEV_LEVEL = LogLevel.DEBUG;
+// Current log level setting - can be changed dynamically
+let currentLogLevel = process.env.NODE_ENV === 'production' ? LogLevel.WARN : LogLevel.DEBUG;
 
-// Current minimum log level
-let currentLogLevel = process.env.NODE_ENV === 'production' 
-  ? DEFAULT_PROD_LEVEL 
-  : DEFAULT_DEV_LEVEL;
+// Keep track of message counts to avoid console spam
+const messageCounts: Record<string, number> = {};
 
-// Log counts for grouping repeated logs
-const logCounts: Record<string, number> = {};
+// Maximum logs of the same message to show
+const MAX_REPEAT_LOGS = 5;
 
-// Generate a string hash from any log content
-const getLogHash = (args: any[]): string => {
-  try {
-    return JSON.stringify(args)
-      .replace(/\s+/g, '')
-      .slice(0, 100);
-  } catch (e) {
-    return String(args[0]);
-  }
-};
+// Cache for grouped logs (to avoid showing the same group repeatedly)
+const groupCache = new Set<string>();
 
 /**
- * Set the minimum log level
- */
-export const setLogLevel = (level: LogLevel): void => {
-  currentLogLevel = level;
-};
-
-/**
- * Structured logger with deduplication
+ * Logger with filtering and grouping capabilities
  */
 export const logger = {
-  debug: (message: string, ...args: any[]): void => {
+  debug: (message: string, ...data: any[]) => {
     if (currentLogLevel <= LogLevel.DEBUG) {
-      if (shouldSkipDuplicateLog('debug', message, args)) return;
-      console.debug(`[DEBUG] ${message}`, ...args);
+      logWithDeduplication('debug', message, data);
     }
   },
   
-  info: (message: string, ...args: any[]): void => {
+  info: (message: string, ...data: any[]) => {
     if (currentLogLevel <= LogLevel.INFO) {
-      if (shouldSkipDuplicateLog('info', message, args)) return;
-      console.info(`[INFO] ${message}`, ...args);
+      logWithDeduplication('info', message, data);
     }
   },
   
-  warn: (message: string, ...args: any[]): void => {
+  warn: (message: string, ...data: any[]) => {
     if (currentLogLevel <= LogLevel.WARN) {
-      console.warn(`[WARN] ${message}`, ...args);
+      console.warn(message, ...data);
     }
   },
   
-  error: (message: string, ...args: any[]): void => {
+  error: (message: string, ...data: any[]) => {
     if (currentLogLevel <= LogLevel.ERROR) {
-      console.error(`[ERROR] ${message}`, ...args);
+      console.error(message, ...data);
     }
   },
   
-  // For measuring performance
-  time: (label: string): void => {
-    if (currentLogLevel <= LogLevel.DEBUG) {
-      console.time(`⏱️ ${label}`);
+  // Group related logs together
+  group: (key: string, message: string, callback: () => void) => {
+    if (currentLogLevel !== LogLevel.NONE && !groupCache.has(key)) {
+      console.groupCollapsed(message);
+      callback();
+      console.groupEnd();
+      groupCache.add(key);
+    } else if (currentLogLevel !== LogLevel.NONE) {
+      callback();
     }
   },
   
-  timeEnd: (label: string): void => {
-    if (currentLogLevel <= LogLevel.DEBUG) {
-      console.timeEnd(`⏱️ ${label}`);
-    }
+  // Set the logger level
+  setLevel: (level: LogLevel) => {
+    currentLogLevel = level;
   }
 };
 
-/**
- * Check if we should skip a duplicate log
- */
-const shouldSkipDuplicateLog = (level: string, message: string, args: any[]): boolean => {
-  // Generate a unique key for this log message
-  const logHash = `${level}:${message}:${getLogHash(args)}`;
+// Helper function to deduplicate logs
+function logWithDeduplication(method: 'log' | 'info' | 'debug', message: string, data: any[]) {
+  const key = `${method}-${message}`;
   
-  // Check if we've seen this log before
-  if (logCounts[logHash]) {
-    logCounts[logHash]++;
+  if (!messageCounts[key]) {
+    messageCounts[key] = 1;
+    console[method](message, ...data);
+  } else if (messageCounts[key] < MAX_REPEAT_LOGS) {
+    messageCounts[key]++;
+    console[method](message, ...data);
+  } else if (messageCounts[key] === MAX_REPEAT_LOGS) {
+    messageCounts[key]++;
+    console[method](`${message} (further logs suppressed)`, ...data);
+  }
+  // If over MAX_REPEAT_LOGS, don't log
+}
+
+/**
+ * Apply console filters to clean up the console in production
+ */
+export const applyConsoleFilters = () => {
+  // In production, limit console output
+  if (process.env.NODE_ENV === 'production') {
+    const originalConsoleLog = console.log;
+    const originalConsoleDebug = console.debug;
+    const originalConsoleInfo = console.info;
     
-    // Only show repeated messages every 5th occurrence
-    if (logCounts[logHash] % 5 !== 0) {
-      return true;
-    } else {
-      console.log(`[Repeated ${logCounts[logHash]} times] ${message}`);
-      return true;
-    }
+    console.log = (...args) => {
+      // Only show logs in production if they contain important keywords
+      if (args[0] && typeof args[0] === 'string' && 
+          (args[0].includes('error') || 
+           args[0].includes('critical') || 
+           args[0].includes('warn'))) {
+        originalConsoleLog.apply(console, args);
+      }
+    };
+    
+    console.debug = () => {};  // Disable debug in production
+    console.info = () => {};   // Disable info in production
   } else {
-    // First time seeing this log
-    logCounts[logHash] = 1;
-    return false;
+    // In development, organize console output
+    const seenMessages = new Set();
+    const originalConsoleLog = console.log;
+    
+    console.log = function(...args) {
+      // Detect repeated messages
+      const message = JSON.stringify(args);
+      if (seenMessages.has(message)) {
+        return;  // Don't log repeated messages
+      }
+      seenMessages.add(message);
+      
+      // Limit the size of seenMessages to prevent memory leaks
+      if (seenMessages.size > 1000) {
+        seenMessages.clear();
+      }
+      
+      originalConsoleLog.apply(console, args);
+    };
   }
-};
-
-/**
- * Apply console filters to clean up production logs
- */
-export const applyConsoleFilters = (): void => {
-  if (process.env.NODE_ENV !== 'production') return;
-  
-  // Store original methods
-  const originalLog = console.log;
-  const originalDebug = console.debug;
-  const originalInfo = console.info;
-  
-  // Replace with filtered versions
-  console.debug = function(...args: any[]) {
-    // Disable in production
-  };
-  
-  console.info = function(...args: any[]) {
-    // Disable in production
-  };
-  
-  console.log = function(...args: any[]) {
-    // Only allow important logs in production
-    if (args[0] && typeof args[0] === 'string' && 
-       (args[0].includes('[ERROR]') || 
-        args[0].includes('[WARN]') || 
-        args[0].includes('error:') || 
-        args[0].includes('warning:') ||
-        args[0].includes('critical'))) {
-      originalLog.apply(console, args);
-    }
-  };
 };

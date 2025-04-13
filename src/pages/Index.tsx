@@ -2,44 +2,13 @@
 import React from 'react';
 import DashboardContainer from '@/components/dashboard/DashboardContainer';
 import { UserMenu } from '@/components/auth/UserMenu';
-
-// Create a utility to set global console settings
-const setupConsoleSettings = () => {
-  // In production, limit console output to warnings and errors only
-  if (process.env.NODE_ENV === 'production') {
-    const originalConsoleLog = console.log;
-    const originalConsoleDebug = console.debug;
-    const originalConsoleInfo = console.info;
-    
-    console.log = (...args) => {
-      // Only show logs in production if they are important
-      if (args[0] && typeof args[0] === 'string' && 
-          (args[0].includes('error') || 
-           args[0].includes('critical') || 
-           args[0].includes('warn'))) {
-        originalConsoleLog.apply(console, args);
-      }
-    };
-    
-    console.debug = (...args) => {
-      // Disable debug in production
-    };
-    
-    console.info = (...args) => {
-      // Disable info in production
-    };
-  }
-  
-  // In development, group repeated logs
-  if (process.env.NODE_ENV === 'development') {
-    // Add logic for better development logs if needed
-  }
-};
+import { applyConsoleFilters } from '@/utils/logUtils';
 
 const Index = () => {
   // Set up console settings on initial render
   React.useEffect(() => {
-    setupConsoleSettings();
+    // Apply console filtering for a cleaner experience
+    applyConsoleFilters();
   }, []);
   
   return (

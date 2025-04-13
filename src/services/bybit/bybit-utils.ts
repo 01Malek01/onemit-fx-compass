@@ -38,7 +38,12 @@ export const fetchBybitRateWithRetry = async (
           console.log(`[BybitAPI] Successfully fetched rate on attempt ${attempt}: ${rate}`);
           
           // Save successful rate to database
-          await saveBybitRate(rate);
+          try {
+            await saveBybitRate(rate);
+          } catch (dbError) {
+            // Log but continue if saving to DB fails
+            console.warn(`[BybitAPI] Failed to save rate to database: ${dbError}`);
+          }
           
           // Cache the rate for 5 minutes
           cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 5 * 60 * 1000);
