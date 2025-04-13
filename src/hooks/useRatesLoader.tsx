@@ -1,8 +1,9 @@
 
 import { toast } from "sonner";
 import { fetchLatestUsdtNgnRate, DEFAULT_RATE } from '@/services/usdt-ngn-service';
-import { loadRatesData, loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils/index';
+import { loadRatesData } from '@/utils/rates/ratesLoader';
 import { CurrencyRates } from '@/services/api';
+import { loadAndApplyMarginSettings, saveHistoricalRatesData } from '@/utils';
 
 interface RatesLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
