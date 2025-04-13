@@ -21,7 +21,7 @@ export const fetchBybitRateWithRetry = async (
       
       if (response && response.success && response.market_summary.total_traders > 0) {
         // Use median price as it's more stable against outliers
-        const rate = response.market_summary.price_range.median;
+        const rate = response.market_summary.price_range.min; // TODO: use min price 
         
         if (rate && rate > 0) {
           console.log(`[BybitAPI] Successfully fetched rate on attempt ${attempt}: ${rate}`);
