@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
@@ -82,7 +83,16 @@ const DashboardContainer = () => {
         <CardContent className="p-0">
           <Header
             lastUpdated={lastUpdated}
-            onRefresh={handleRefresh}
+            onRefresh={async () => {
+              // Wrap the handleRefresh call and return its result or false if it throws
+              try {
+                await handleRefresh();
+                return true;
+              } catch (error) {
+                console.error("Error during refresh:", error);
+                return false;
+              }
+            }}
             isLoading={isLoading}
           />
           <div className="px-4 pb-2 flex justify-end">
