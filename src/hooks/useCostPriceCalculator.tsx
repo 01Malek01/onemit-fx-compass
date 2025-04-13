@@ -26,9 +26,8 @@ export const useCostPriceCalculator = ({
 }: CostPriceCalculatorProps) => {
   
   const calculateAllCostPrices = (usdMargin: number, otherCurrenciesMargin: number) => {
-    console.log("Calculating cost prices with margins:", { usdMargin, otherCurrenciesMargin });
-    console.log("Using USDT/NGN rate:", usdtNgnRate);
-    console.log("Using FX rates:", fxRates);
+    // Log only once at the beginning with all parameters
+    console.debug("Calculating cost prices with margins:", { usdMargin, otherCurrenciesMargin });
     
     if (!usdtNgnRate || usdtNgnRate <= 0) {
       console.warn("Invalid USDT/NGN rate for calculations:", usdtNgnRate);
@@ -48,12 +47,6 @@ export const useCostPriceCalculator = ({
     // Calculate USD price using formula: USD/NGN = USDT/NGN × (1 + USD_margin)
     newCostPrices.USD = calculateUsdPrice(usdtNgnRate, usdMargin);
     
-    console.log("USD cost price calculated:", { 
-      usdtNgnRate: usdtNgnRate,
-      usdMargin: usdMargin,
-      result: newCostPrices.USD
-    });
-    
     // Calculate other currencies using formula:
     // TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
     for (const [currency, rate] of Object.entries(fxRates)) {
@@ -65,17 +58,13 @@ export const useCostPriceCalculator = ({
         otherCurrenciesMargin,
         USDT_TO_USD_FEE
       );
-      
-      console.log(`${currency} cost price calculated:`, { 
-        usdtNgnRate: usdtNgnRate,
-        currencyFxRate: rate,
-        otherCurrenciesMargin: otherCurrenciesMargin,
-        usdtToUsdFee: USDT_TO_USD_FEE,
-        result: newCostPrices[currency]
-      });
     }
     
-    console.log("All cost prices calculated:", newCostPrices);
+    // Log results once at the end
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug("All cost prices calculated:", newCostPrices);
+    }
+    
     setCostPrices(newCostPrices);
     
     // Update global cost prices for API access

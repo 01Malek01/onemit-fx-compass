@@ -27,14 +27,12 @@ export const fetchExchangeRates = async (
     // Check memory cache first (fastest)
     const now = Date.now();
     if (memoryCache[cacheKey] && (now - memoryCache[cacheKey].timestamp < CACHE_TTL)) {
-      console.log("[currency-rates/api] Using in-memory cached rates");
       return memoryCache[cacheKey].data;
     }
     
     // Then check browser storage cache
     const cachedRates = browserStorage.getItem(cacheKey);
     if (cachedRates) {
-      console.log("[currency-rates/api] Using browser storage cached rates");
       // Update memory cache for future requests
       memoryCache[cacheKey] = {
         data: cachedRates,
@@ -42,8 +40,6 @@ export const fetchExchangeRates = async (
       };
       return cachedRates;
     }
-    
-    console.log("[currency-rates/api] Fetching exchange rates from API");
     
     // Join the currencies with a comma for the API request
     const currenciesParam = currencies.join(',');

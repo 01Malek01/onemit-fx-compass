@@ -28,13 +28,6 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   isLoading = false,
   isUsingDefaultRates = false
 }) => {
-  // Log the incoming rates for debugging
-  console.log(`ComparisonTable for ${currencyCode}:`, {
-    oneremitRates,
-    vertoFxRates,
-    isUsingDefaultRates
-  });
-
   // Define default values based on currency
   const getDefaultRates = (currency: string): Rate => {
     switch (currency) {

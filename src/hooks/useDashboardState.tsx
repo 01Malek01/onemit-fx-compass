@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
@@ -46,14 +47,12 @@ export const useDashboardState = () => {
 
   // Handler for real-time USDT/NGN rate updates
   const handleRealtimeUsdtRateUpdate = (rate: number) => {
-    console.log("Received real-time USDT/NGN rate update:", rate);
     setUsdtNgnRate(rate);
     calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
   };
 
   // Handler for real-time margin settings updates
   const handleRealtimeMarginUpdate = (newUsdMargin: number, newOtherMargin: number) => {
-    console.log("Received real-time margin settings update:", { newUsdMargin, newOtherMargin });
     setUsdMargin(newUsdMargin);
     setOtherCurrenciesMargin(newOtherMargin);
     calculateAllCostPrices(newUsdMargin, newOtherMargin);
@@ -67,17 +66,15 @@ export const useDashboardState = () => {
 
   // Load initial data - make sure this runs only once and correctly loads the data
   useEffect(() => {
-    console.log("DashboardContainer: Running initial data loading effect");
+    // Use a more concise log for initialization
     const initialize = async () => {
       try {
         // Load all currency data including Bybit rate
-        console.log("DashboardContainer: Initializing and loading all data");
         await loadAllData();
 
         // Fetch margin settings from database
         const settings = await fetchMarginSettings();
         if (settings) {
-          console.log("Initial margin settings loaded:", settings);
           setUsdMargin(settings.usd_margin);
           setOtherCurrenciesMargin(settings.other_currencies_margin);
 
@@ -87,7 +84,7 @@ export const useDashboardState = () => {
           console.warn("No margin settings found, using defaults");
         }
       } catch (error) {
-        console.error("DashboardContainer: Error during initialization:", error);
+        console.error("Error during dashboard initialization:", error);
       }
     };
 
@@ -97,7 +94,6 @@ export const useDashboardState = () => {
   // Recalculate cost prices when rates or margins change
   useEffect(() => {
     if (usdtNgnRate !== null && usdtNgnRate > 0) {
-      console.log("DashboardContainer: Recalculating with USDT rate:", usdtNgnRate);
       calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
     }
   }, [usdtNgnRate, usdMargin, otherCurrenciesMargin, calculateAllCostPrices]);

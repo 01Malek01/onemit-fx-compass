@@ -12,6 +12,7 @@ import {
   saveHistoricalRates 
 } from '@/services/historical-rates-service';
 import { getCurrentCostPrices, CurrencyRates } from '@/services/api';
+import { logger } from '@/utils/logUtils';
 
 interface UsdtRateUpdaterProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -34,7 +35,7 @@ export const useUsdtRateUpdater = ({
   
   // Handle USDT/NGN rate update - now uses the passed rate parameter
   const updateUsdtRate = async (rate: number): Promise<boolean> => {
-    console.log("[useUsdtRateUpdater] Updating USDT/NGN rate with explicitly passed value:", rate);
+    logger.debug("Updating USDT/NGN rate:", rate);
     
     if (!rate || isNaN(rate) || rate <= 0) {
       toast.error("Please enter a valid rate");
@@ -49,14 +50,13 @@ export const useUsdtRateUpdater = ({
       
       // Save the new rate to database
       const success = await saveUsdtNgnRate(rate);
-      console.log("[useUsdtRateUpdater] USDT/NGN rate saved to database:", success);
       
       if (success) {
         setLastUpdated(new Date());
         
         // Get margin settings from database
         const marginSettings = await fetchMarginSettings();
-        console.log("[useUsdtRateUpdater] Fetched margin settings for recalculation:", marginSettings);
+        logger.debug("Fetched margin settings for recalculation:", marginSettings);
         
         let usdMargin = 2.5;
         let otherCurrenciesMargin = 3.0;
@@ -71,7 +71,7 @@ export const useUsdtRateUpdater = ({
             otherCurrenciesMargin
           );
         } else {
-          console.warn("[useUsdtRateUpdater] Could not fetch margin settings, using defaults");
+          logger.warn("Could not fetch margin settings, using defaults");
           calculateAllCostPrices(usdMargin, otherCurrenciesMargin); // Use default values if no settings found
         }
         
@@ -91,16 +91,16 @@ export const useUsdtRateUpdater = ({
               currentCostPrices || {},
               'manual'
             );
-            console.log("[useUsdtRateUpdater] Historical data saved after rate update");
+            logger.debug("Historical data saved after rate update");
           } catch (error) {
-            console.error("[useUsdtRateUpdater] Error saving historical data:", error);
+            logger.error("Error saving historical data:", error);
           }
         }, 100);
         
         toast.success("Rate updated and prices recalculated");
         return true;
       } else {
-        console.error("[useUsdtRateUpdater] Failed to save USDT/NGN rate");
+        logger.error("Failed to save USDT/NGN rate");
         toast.error("Failed to update USDT/NGN rate");
         
         // Revert the local state if save failed
@@ -113,7 +113,7 @@ export const useUsdtRateUpdater = ({
         return false;
       }
     } catch (error) {
-      console.error("[useUsdtRateUpdater] Error updating USDT/NGN rate:", error);
+      logger.error("Error updating USDT/NGN rate:", error);
       toast.error("Failed to update USDT/NGN rate");
       return false;
     } finally {

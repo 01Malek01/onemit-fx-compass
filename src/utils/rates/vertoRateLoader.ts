@@ -32,7 +32,6 @@ export const loadVertoFxRates = async (
     const cachedRates = cacheWithExpiration.get('vertoRates');
     
     if (cachedRates) {
-      console.log("[vertoRateLoader] Using cached VertoFX rates for immediate display");
       // Use the cached rates for UI
       setVertoFxRates(cachedRates);
       
@@ -54,7 +53,7 @@ export const loadVertoFxRates = async (
             lastApiSuccess = false;
           }
         } catch (error) {
-          console.log("[vertoRateLoader] Background update of VertoFX rates failed:", error);
+          console.error("[vertoRateLoader] Background update of VertoFX rates failed:", error);
           lastApiSuccess = false;
           // Ensure we use default rates if fetch fails
           setVertoFxRates({ ...lastSuccessfulVertoFxRates });
@@ -100,7 +99,7 @@ export const loadVertoFxRates = async (
         // If we had previously shown an error toast, show a success toast
         const isFirstSuccess = !lastApiSuccess;
         if (isFirstSuccess) {
-          toast.success("VertoFX market comparison data refreshed", {
+          toast.success("Market comparison data refreshed", {
             id: "vertofx-api-status",
           });
         }
@@ -109,13 +108,12 @@ export const loadVertoFxRates = async (
         return vertoRates;
       } else {
         // If API returned no valid rates, use default values
-        console.log("[vertoRateLoader] API returned no valid rates, using defaults");
         lastApiSuccess = false;
         
         // Show toast about API failure
-        toast.error("VertoFX API connection failed", {
+        toast.error("Market data API connection failed", {
           id: "vertofx-api-status",
-          description: "Using default market comparison rates"
+          description: "Using default comparison rates"
         });
         
         setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
@@ -124,7 +122,6 @@ export const loadVertoFxRates = async (
       }
     } else {
       // If we recently tried and failed, don't spam the API
-      console.log("[vertoRateLoader] Skipping API call (cooling down)");
       if (Object.keys(lastSuccessfulVertoFxRates).length > 0 && 
           JSON.stringify(lastSuccessfulVertoFxRates) !== JSON.stringify(DEFAULT_VERTOFX_RATES)) {
         setVertoFxRates({ ...lastSuccessfulVertoFxRates });
@@ -135,13 +132,13 @@ export const loadVertoFxRates = async (
       }
     }
   } catch (error) {
-    console.error("[vertoRateLoader] Error fetching VertoFX rates:", error);
+    console.error("[vertoRateLoader] Error fetching market comparison rates:", error);
     lastApiSuccess = false;
     
     // Show toast about API failure
-    toast.error("VertoFX API connection failed", {
+    toast.error("Market data API connection failed", {
       id: "vertofx-api-status",
-      description: "Using default market comparison rates"
+      description: "Using default comparison rates"
     });
     
     // Always return valid default rates on error
