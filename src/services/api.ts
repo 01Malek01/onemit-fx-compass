@@ -31,10 +31,10 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
 // Fetch VertoFX rates - now using the real API
 export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
   try {
-    console.log("Fetching live VertoFX rates...");
+    console.log("[API] Fetching live VertoFX rates...");
     
     const vertoRates = await getAllNgnRates();
-    console.log("Live VertoFX rates loaded:", vertoRates);
+    console.log("[API] Live VertoFX rates loaded:", vertoRates);
     
     // Convert the API response format to our app's expected format
     const formattedRates: VertoFXRates = {
@@ -49,28 +49,33 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
     for (const currency of ['USD', 'EUR', 'GBP', 'CAD']) {
       const ngnToForeignKey = `NGN-${currency}`;
       if (vertoRates[ngnToForeignKey]) {
-        formattedRates[currency].buy = 1 / vertoRates[ngnToForeignKey].rate;
+        console.log(`[API] Processing NGN-${currency} buy rate:`, vertoRates[ngnToForeignKey]);
+        // When converting from NGN to foreign currency, we need the inverse rate
+        formattedRates[currency].buy = vertoRates[ngnToForeignKey].rate;
       }
       
       // Process XXX-NGN rates (sell rates from our perspective)
       // This is when our customers sell foreign currency to get NGN
       const foreignToNgnKey = `${currency}-NGN`;
       if (vertoRates[foreignToNgnKey]) {
+        console.log(`[API] Processing ${currency}-NGN sell rate:`, vertoRates[foreignToNgnKey]);
         formattedRates[currency].sell = vertoRates[foreignToNgnKey].rate;
       }
     }
+    
+    console.log("[API] Formatted VertoFX rates:", formattedRates);
     
     // Save historical VertoFX rates to database
     try {
       await saveVertoFxHistoricalRates(vertoRates);
     } catch (error) {
-      console.error("Error saving historical VertoFX rates:", error);
+      console.error("[API] Error saving historical VertoFX rates:", error);
       // Continue execution even if saving fails
     }
     
     return formattedRates;
   } catch (error) {
-    console.error("Error fetching VertoFX rates:", error);
+    console.error("[API] Error fetching VertoFX rates:", error);
     // Return fallback rates with placeholder values
     return {
       USD: { buy: 0, sell: 0 },

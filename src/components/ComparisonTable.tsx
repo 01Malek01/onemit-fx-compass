@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,29 +50,9 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
       </div>;
   };
   const getSellRateComparison = () => {
-    // If either rate is 0 or missing, show the rate without comparison
-    if (!vertoFxRates.sell || !oneremitRates.sell) {
-      return <div>
-          
-        </div>;
-    }
-    const isBetter = compareRates(oneremitRates.sell, vertoFxRates.sell, false);
-    const diff = calculateDifference(oneremitRates.sell, vertoFxRates.sell);
-    return <div className={isBetter ? 'rate-better' : 'rate-worse'}>
-        <div className="text-lg font-medium">{formatCurrency(oneremitRates.sell, 'NGN')}</div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge variant={isBetter ? "success" : "destructive"} className="mt-1 gap-1 cursor-help">
-                {isBetter ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                {Math.abs(diff).toFixed(2)}%
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isBetter ? 'Better than' : 'Worse than'} VertoFX by {Math.abs(diff).toFixed(2)}%</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+    // Display 0 NGN for sell rates as requested
+    return <div>
+        <div className="text-lg font-medium">{formatCurrency(0, 'NGN')}</div>
       </div>;
   };
 

@@ -17,6 +17,7 @@ export interface VertoFxRate {
  * Get the exchange rate between two currencies from VertoFX
  */
 export async function getVertoFxRate(fromCurrency: string, toCurrency: string): Promise<VertoFxRate | null> {
+  console.log(`[VertoFX API] Fetching rate from ${fromCurrency} to ${toCurrency}`);
   const url = "https://api-currency-beta.vertofx.com/p/currencies/exchange-rate";
 
   const headers = {
@@ -37,8 +38,10 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
   };
 
   try {
+    console.log(`[VertoFX API] Sending request to ${url} with payload:`, JSON.stringify(payload));
     const response = await axios.post(url, payload, { headers });
     const data = response.data;
+    console.log(`[VertoFX API] Response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
 
     if (data?.success) {
       const rawRate = data.rate;
@@ -59,9 +62,10 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
       };
     }
 
+    console.warn(`[VertoFX API] Invalid response for ${fromCurrency}/${toCurrency}:`, JSON.stringify(data));
     return null;
   } catch (error) {
-    console.error("VertoFX fetch error:", error);
+    console.error(`[VertoFX API] Error fetching ${fromCurrency}/${toCurrency}:`, error);
     return null;
   }
 }
@@ -70,20 +74,29 @@ export async function getVertoFxRate(fromCurrency: string, toCurrency: string): 
  * Fetch both NGN → XXX and XXX → NGN rates for a predefined set of currencies
  */
 export async function getAllNgnRates(): Promise<Record<string, VertoFxRate>> {
+  console.log("[VertoFX API] Fetching all NGN rates");
   const currencies = ["USD", "EUR", "GBP", "CAD"];
   const results: Record<string, VertoFxRate> = {};
 
   for (const currency of currencies) {
+    console.log(`[VertoFX API] Processing ${currency}`);
     const ngnToCurr = await getVertoFxRate("NGN", currency);
     if (ngnToCurr) {
       results[`NGN-${currency}`] = ngnToCurr;
+      console.log(`[VertoFX API] Added NGN-${currency} rate:`, ngnToCurr.rate);
+    } else {
+      console.warn(`[VertoFX API] Failed to fetch NGN-${currency} rate`);
     }
 
     const currToNgn = await getVertoFxRate(currency, "NGN");
     if (currToNgn) {
       results[`${currency}-NGN`] = currToNgn;
+      console.log(`[VertoFX API] Added ${currency}-NGN rate:`, currToNgn.rate);
+    } else {
+      console.warn(`[VertoFX API] Failed to fetch ${currency}-NGN rate`);
     }
   }
 
+  console.log("[VertoFX API] All rates fetched:", Object.keys(results).length);
   return results;
 }
