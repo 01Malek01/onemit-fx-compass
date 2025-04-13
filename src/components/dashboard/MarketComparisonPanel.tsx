@@ -3,7 +3,7 @@ import React from 'react';
 import ComparisonTable from '@/components/ComparisonTable';
 import { VertoFXRates } from '@/services/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, WifiOff } from 'lucide-react';
 
 interface MarketComparisonPanelProps {
   currencies: string[];
@@ -26,13 +26,30 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
     (rate.buy > 0 || rate.sell > 0)
   );
   
+  // Count how many currencies have valid buy rates
+  const validBuyRateCount = Object.values(vertoFxRates).filter(rate => rate.buy > 0).length;
+  const validSellRateCount = Object.values(vertoFxRates).filter(rate => rate.sell > 0).length;
+  
+  // Determine if we're using cached rates or have partial data
+  const usingCachedRates = !hasVertoRates && !isLoading;
+  const hasPartialData = hasVertoRates && (validBuyRateCount < currencies.length || validSellRateCount < currencies.length);
+  
   return (
     <div className="space-y-4">
-      {!hasVertoRates && !isLoading && (
+      {usingCachedRates && (
         <Alert variant="default" className="bg-amber-50 border-amber-200">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <WifiOff className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-800">
             Market comparison data may be outdated or incomplete. Using cached rates.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {hasPartialData && (
+        <Alert variant="default" className="bg-blue-50 border-blue-200">
+          <AlertTriangle className="h-4 w-4 text-blue-500" />
+          <AlertDescription className="text-blue-800">
+            Some market comparison data may be incomplete. Showing available rates.
           </AlertDescription>
         </Alert>
       )}

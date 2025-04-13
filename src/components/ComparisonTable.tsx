@@ -6,7 +6,7 @@ import { formatCurrency, compareRates, calculateDifference } from '@/utils/curre
 import { Badge } from '@/components/ui/badge';
 import CurrencyFlag from '@/components/CurrencyFlag';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, AlertTriangle } from 'lucide-react';
 interface Rate {
   buy: number;
   sell: number;
@@ -29,32 +29,51 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
     vertoFxRates
   });
 
+  // Safety check for valid rates
+  const safeOneremitRates = {
+    buy: oneremitRates?.buy || 0,
+    sell: oneremitRates?.sell || 0
+  };
+  
+  const safeVertoRates = {
+    buy: vertoFxRates?.buy || 0,
+    sell: vertoFxRates?.sell || 0
+  };
+
   const getBuyRateComparison = () => {
-    // If either rate is 0 or missing, show the rate without comparison
-    if (!vertoFxRates.buy || !oneremitRates.buy) {
+    try {
+      // If either rate is 0 or missing, show the rate without comparison
+      if (!safeVertoRates.buy || !safeOneremitRates.buy) {
+        return <div>
+            <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
+          </div>;
+      }
+      const isBetter = compareRates(safeOneremitRates.buy, safeVertoRates.buy, true);
+      const diff = calculateDifference(safeOneremitRates.buy, safeVertoRates.buy);
+      return <div className={isBetter ? 'rate-better' : 'rate-worse'}>
+          <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge className={`text-xs ${isBetter ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'}`}>
+                  {isBetter ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
+                  {isNaN(diff) ? '0.00' : Math.abs(diff).toFixed(2)}%
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isBetter ? 'Better than' : 'Worse than'} VertoFX by {isNaN(diff) ? '0.00' : Math.abs(diff).toFixed(2)}%</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>;
+    } catch (error) {
+      console.error(`Error rendering buy rate comparison for ${currencyCode}:`, error);
       return <div>
-          <div className="text-lg font-medium">{formatCurrency(oneremitRates.buy, 'NGN')}</div>
+          <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
         </div>;
     }
-    const isBetter = compareRates(oneremitRates.buy, vertoFxRates.buy, true);
-    const diff = calculateDifference(oneremitRates.buy, vertoFxRates.buy);
-    return <div className={isBetter ? 'rate-better' : 'rate-worse'}>
-        <div className="text-lg font-medium">{formatCurrency(oneremitRates.buy, 'NGN')}</div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge className={`text-xs ${isBetter ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'}`}>
-                {isBetter ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                {Math.abs(diff).toFixed(2)}%
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isBetter ? 'Better than' : 'Worse than'} VertoFX by {Math.abs(diff).toFixed(2)}%</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>;
   };
+  
   const getSellRateComparison = () => {
     // Display 0 NGN for sell rates as requested
     return <div>
@@ -67,39 +86,59 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
     if (!rate) return "-"; // Show dash for missing rates
     return formatCurrency(rate, 'NGN');
   };
-  return <Card className="fx-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium flex items-center">
-          <CurrencyFlag currency={currencyCode} className="mr-2" />
-          NGN/{currencyCode} Comparison
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? <div className="space-y-2">
-            <div className="h-6 w-full skeleton-pulse"></div>
-            <div className="h-20 w-full skeleton-pulse"></div>
-          </div> : <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[30%]">Provider</TableHead>
-                <TableHead>Buy Rate (NGN → {currencyCode})</TableHead>
-                <TableHead>Sell Rate ({currencyCode} → NGN)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow className="hover:bg-secondary/20">
-                <TableCell className="font-medium">Oneremit</TableCell>
-                <TableCell>{getBuyRateComparison()}</TableCell>
-                <TableCell>{getSellRateComparison()}</TableCell>
-              </TableRow>
-              <TableRow className="hover:bg-secondary/20">
-                <TableCell className="font-medium">VertoFX</TableCell>
-                <TableCell>{formatVertoRate(vertoFxRates.buy)}</TableCell>
-                <TableCell>{formatVertoRate(vertoFxRates.sell)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>}
-      </CardContent>
-    </Card>;
+  
+  // Handle errors in the entire component render
+  try {
+    return <Card className="fx-card">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-medium flex items-center">
+            <CurrencyFlag currency={currencyCode} className="mr-2" />
+            NGN/{currencyCode} Comparison
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? <div className="space-y-2">
+              <div className="h-6 w-full skeleton-pulse"></div>
+              <div className="h-20 w-full skeleton-pulse"></div>
+            </div> : <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">Provider</TableHead>
+                  <TableHead>Buy Rate (NGN → {currencyCode})</TableHead>
+                  <TableHead>Sell Rate ({currencyCode} → NGN)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="hover:bg-secondary/20">
+                  <TableCell className="font-medium">Oneremit</TableCell>
+                  <TableCell>{getBuyRateComparison()}</TableCell>
+                  <TableCell>{getSellRateComparison()}</TableCell>
+                </TableRow>
+                <TableRow className="hover:bg-secondary/20">
+                  <TableCell className="font-medium">VertoFX</TableCell>
+                  <TableCell>{formatVertoRate(safeVertoRates.buy)}</TableCell>
+                  <TableCell>{formatVertoRate(safeVertoRates.sell)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>}
+        </CardContent>
+      </Card>;
+  } catch (error) {
+    console.error(`Critical error rendering ComparisonTable for ${currencyCode}:`, error);
+    // Fallback UI that won't crash
+    return <Card className="fx-card bg-red-50 border-red-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg font-medium flex items-center text-red-700">
+            <AlertTriangle className="mr-2 h-5 w-5" />
+            NGN/{currencyCode} Comparison
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 text-center text-red-700">
+            <p>Error displaying comparison data</p>
+          </div>
+        </CardContent>
+      </Card>;
+  }
 };
 export default ComparisonTable;
