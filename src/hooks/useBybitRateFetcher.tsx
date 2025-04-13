@@ -28,9 +28,9 @@ export const useBybitRateFetcher = ({
       
       logger.info("Bybit P2P rate fetched successfully:", rate);
       
-      // Save to the standard rate service for compatibility
+      // Save to the standard rate service with 'bybit' as source
       try {
-        await saveUsdtNgnRate(rate);
+        await saveUsdtNgnRate(rate, 'bybit');
       } catch (err) {
         logger.error("Failed to save Bybit rate to database:", err);
         // Continue execution even if save fails

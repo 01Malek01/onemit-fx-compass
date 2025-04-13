@@ -8,12 +8,12 @@ export const saveBybitRate = async (rate: number): Promise<boolean> => {
   try {
     console.log("[BybitAPI] Saving rate to Supabase:", rate);
     
-    // Only include columns that actually exist in the table
     const { error } = await supabase.from("usdt_ngn_rates").insert([
       {
         rate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        source: 'bybit' // Explicitly set source to 'bybit'
       },
     ]);
 

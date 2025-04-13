@@ -7,6 +7,7 @@ import { logger } from '@/utils/logUtils';
 export interface UsdtNgnRate {
   id?: string;
   rate: number;
+  source?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -56,8 +57,8 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
   }
 };
 
-// Update or insert USDT/NGN rate
-export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
+// Update or insert USDT/NGN rate with optional source parameter
+export const saveUsdtNgnRate = async (rate: number, source: string = 'manual'): Promise<boolean> => {
   try {
     if (!rate || isNaN(rate) || rate <= 0) {
       logger.error("Invalid rate value:", rate);
@@ -65,13 +66,14 @@ export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
       throw new Error("Invalid rate value");
     }
 
-    logger.debug("Saving USDT/NGN rate to Supabase:", rate);
+    logger.debug(`Saving USDT/NGN rate to Supabase (source: ${source}):`, rate);
     
-    // Always insert a new rate to maintain history - using only fields that exist in the table
+    // Always insert a new rate to maintain history
     const { error } = await supabase
       .from('usdt_ngn_rates')
       .insert([{ 
         rate: Number(rate),
+        source,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }]);
@@ -82,7 +84,7 @@ export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
       throw error;
     }
     
-    logger.debug("USDT/NGN rate saved successfully:", rate);
+    logger.debug(`USDT/NGN rate saved successfully (source: ${source}):`, rate);
     toast.success("USDT/NGN rate updated successfully");
     return true;
   } catch (error) {

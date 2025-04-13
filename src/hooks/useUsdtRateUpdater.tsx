@@ -48,8 +48,8 @@ export const useUsdtRateUpdater = ({
       // First update local state so UI shows the change immediately
       setUsdtNgnRate(rate);
       
-      // Save the new rate to database
-      const success = await saveUsdtNgnRate(rate);
+      // Save the new rate to database with explicit 'manual' source
+      const success = await saveUsdtNgnRate(rate, 'manual');
       
       if (success) {
         setLastUpdated(new Date());
