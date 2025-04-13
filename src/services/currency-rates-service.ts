@@ -5,9 +5,12 @@
  */
 
 // Re-export everything from the refactored modules
-export {
+export type {
   CurrencyRate,
-  CurrencyRateResponse,
+  CurrencyRateResponse
+} from './currency-rates';
+
+export {
   fetchExchangeRates,
   fetchSingleExchangeRate,
   saveCurrencyRates,
