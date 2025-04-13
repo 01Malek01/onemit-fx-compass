@@ -78,7 +78,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
           className="gap-1.5 text-gray-300 border-gray-700 hover:bg-gray-800"
           disabled={cooldownRemaining > 0 || retryLoading}
         >
-          <RefreshCw className={`h-4 w-4 ${retryLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className="h-4 w-4" />
           {retryLoading 
             ? 'Refreshing...' 
             : cooldownRemaining > 0 

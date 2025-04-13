@@ -134,8 +134,8 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">
-              <div className="h-6 w-full skeleton-pulse"></div>
-              <div className="h-20 w-full skeleton-pulse"></div>
+              <div className="h-6 w-full bg-muted/30 rounded"></div>
+              <div className="h-20 w-full bg-muted/30 rounded"></div>
             </div>
           ) : (
             <div className="text-sm">
