@@ -4,6 +4,11 @@
  * with optimized expiration and memory management
  */
 
+type CacheItem = {
+  value: any;
+  expiry: number;
+};
+
 // A memory-efficient in-memory cache with LRU features
 export const cacheWithExpiration = {
   data: {} as Record<string, any>,
@@ -15,6 +20,11 @@ export const cacheWithExpiration = {
    * Set a value in the cache with expiration and LRU management
    */
   set(key: string, value: any, expiryMs = 300000) { // Default 5 minute expiry
+    if (value === undefined || value === null) {
+      console.warn(`[Cache] Attempted to cache undefined/null value for key: ${key}`);
+      return;
+    }
+    
     // Check if we need to evict entries
     if (!this.timestamps[key] && this.keyOrder.length >= this.maxEntries) {
       const oldestKey = this.keyOrder.shift();
@@ -37,7 +47,7 @@ export const cacheWithExpiration = {
     
     // Set data and timestamp
     this.data[key] = value;
-    this.timestamps[key] = Date.now() + expiryMs;
+    this.timestamps[key] = expiryMs > 0 ? Date.now() + expiryMs : Infinity;
   },
   
   /**
@@ -57,15 +67,22 @@ export const cacheWithExpiration = {
     
     // Remove expired item
     if (this.timestamps[key]) {
-      delete this.data[key];
-      delete this.timestamps[key];
-      const index = this.keyOrder.indexOf(key);
-      if (index !== -1) {
-        this.keyOrder.splice(index, 1);
-      }
+      this.remove(key);
     }
     
     return null;
+  },
+  
+  /**
+   * Remove a specific item from cache
+   */
+  remove(key: string) {
+    delete this.data[key];
+    delete this.timestamps[key];
+    const index = this.keyOrder.indexOf(key);
+    if (index !== -1) {
+      this.keyOrder.splice(index, 1);
+    }
   },
   
   /**
@@ -84,19 +101,25 @@ export const cacheWithExpiration = {
     const expiredKeys = [];
     
     for (const key of this.keyOrder) {
-      if (now >= this.timestamps[key]) {
+      if (this.timestamps[key] !== Infinity && now >= this.timestamps[key]) {
         expiredKeys.push(key);
       }
     }
     
     for (const key of expiredKeys) {
-      delete this.data[key];
-      delete this.timestamps[key];
-      const index = this.keyOrder.indexOf(key);
-      if (index !== -1) {
-        this.keyOrder.splice(index, 1);
-      }
+      this.remove(key);
     }
+    
+    return expiredKeys.length; // Return number of items cleaned up
+  },
+  
+  /**
+   * Clear all cache entries
+   */
+  clear() {
+    this.data = {};
+    this.timestamps = {};
+    this.keyOrder = [];
   }
 };
 
@@ -110,12 +133,12 @@ export const browserStorage = {
       const item = localStorage.getItem(key);
       if (!item) return null;
       
-      const { value, expiry } = JSON.parse(item);
-      if (expiry && Date.now() > expiry) {
+      const parsed = JSON.parse(item) as CacheItem;
+      if (!parsed.expiry || Date.now() > parsed.expiry) {
         localStorage.removeItem(key);
         return null;
       }
-      return value;
+      return parsed.value;
     } catch {
       // Silent failure for better performance
       return null;
@@ -126,15 +149,33 @@ export const browserStorage = {
    * Set an item in localStorage with expiry
    */
   setItem(key: string, value: any, ttlMs = 3600000) { // 1 hour default TTL
+    if (value === undefined || value === null) {
+      console.warn(`[browserStorage] Attempted to cache undefined/null value for key: ${key}`);
+      return false;
+    }
+    
     try {
-      const item = {
+      const item: CacheItem = {
         value,
-        expiry: Date.now() + ttlMs
+        expiry: ttlMs > 0 ? Date.now() + ttlMs : Infinity
       };
       localStorage.setItem(key, JSON.stringify(item));
       return true;
-    } catch {
-      // Silent failure for better performance
+    } catch (error) {
+      // Handle quota exceeded errors
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.warn('[browserStorage] Storage quota exceeded, trying to clean up');
+        this.cleanup();
+        
+        // Try again after cleanup
+        try {
+          const item: CacheItem = { value, expiry: Date.now() + ttlMs };
+          localStorage.setItem(key, JSON.stringify(item));
+          return true;
+        } catch {
+          return false;
+        }
+      }
       return false;
     }
   },
@@ -147,12 +188,31 @@ export const browserStorage = {
       const expiry = Date.now() + ttlMs;
       
       for (const [key, value] of Object.entries(items)) {
-        const item = {
+        if (value === undefined || value === null) continue;
+        
+        const item: CacheItem = {
           value,
           expiry
         };
         localStorage.setItem(key, JSON.stringify(item));
       }
+      return true;
+    } catch (error) {
+      // Handle quota exceeded errors
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        this.cleanup();
+        return this.setItems(items, ttlMs); // Retry after cleanup
+      }
+      return false;
+    }
+  },
+  
+  /**
+   * Remove a specific item
+   */
+  removeItem(key: string) {
+    try {
+      localStorage.removeItem(key);
       return true;
     } catch {
       return false;
@@ -161,10 +221,14 @@ export const browserStorage = {
   
   /**
    * Clean up expired items to free localStorage space
+   * Returns the number of items removed
    */
   cleanup() {
     try {
       const now = Date.now();
+      let cleanupCount = 0;
+      
+      const keysToDelete: string[] = [];
       
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -174,22 +238,51 @@ export const browserStorage = {
         if (!item) continue;
         
         try {
-          const parsed = JSON.parse(item);
-          if (parsed.expiry && now > parsed.expiry) {
-            localStorage.removeItem(key);
+          const parsed = JSON.parse(item) as CacheItem;
+          if (parsed.expiry && parsed.expiry !== Infinity && now > parsed.expiry) {
+            keysToDelete.push(key);
           }
         } catch {
           // Skip invalid items
         }
       }
+      
+      // Batch remove to improve performance
+      for (const key of keysToDelete) {
+        localStorage.removeItem(key);
+        cleanupCount++;
+      }
+      
+      return cleanupCount;
     } catch {
       // Silent failure
+      return 0;
+    }
+  },
+  
+  /**
+   * Clear all items
+   */
+  clear() {
+    try {
+      localStorage.clear();
+      return true;
+    } catch {
+      return false;
     }
   }
 };
 
-// Run cleanup once on module import
+// Improved initialization - Run cleanup once on module import with error handling
 setTimeout(() => {
-  cacheWithExpiration.cleanup();
-  browserStorage.cleanup();
+  try {
+    const memoryItemsCleared = cacheWithExpiration.cleanup();
+    const storageItemsCleared = browserStorage.cleanup();
+    
+    if (memoryItemsCleared + storageItemsCleared > 0) {
+      console.log(`[Cache] Initial cleanup: removed ${memoryItemsCleared} memory items and ${storageItemsCleared} storage items`);
+    }
+  } catch (error) {
+    console.error('[Cache] Error during initial cleanup:', error);
+  }
 }, 0);

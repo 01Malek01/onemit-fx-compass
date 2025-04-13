@@ -20,8 +20,10 @@ export interface RateDataLoaderProps {
   usdtNgnRate: number | null;
 }
 
-// Loading debounce flag
+// Loading debounce flag - Add a timeout to prevent double loading
 const LOADING_IN_PROGRESS = 'loading_in_progress';
+const LOADING_TIMEOUT_MS = 10000; // 10 seconds to prevent deadlock
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 export const useRateDataLoader = ({
   setUsdtNgnRate,
@@ -74,14 +76,14 @@ export const useRateDataLoader = ({
 
   // Function to intelligently load data based on device and connection
   const smartLoad = useCallback(async () => {
-    // Prevent duplicate loads
+    // Improved race condition handling with automatic timeout clearing
     if (cacheWithExpiration.get(LOADING_IN_PROGRESS)) {
       console.log("[useRateDataLoader] Loading already in progress, skipping");
       return;
     }
 
-    // Set loading flag for 10 seconds max
-    cacheWithExpiration.set(LOADING_IN_PROGRESS, true, 10000);
+    // Set loading flag with automatic timeout to prevent deadlock
+    cacheWithExpiration.set(LOADING_IN_PROGRESS, true, LOADING_TIMEOUT_MS);
     
     // Start the loading indicator only if this is a manual refresh
     setIsLoading(true);
@@ -92,14 +94,27 @@ export const useRateDataLoader = ({
         console.log("[useRateDataLoader] Ultra light mode detected, minimal loading strategy");
         
         // Use immediate cache if available
-        const cachedRates = cacheWithExpiration.get('essential_rates');
-        if (cachedRates) {
-          setUsdtNgnRate(cachedRates.usdtRate);
-          setFxRates(cachedRates.fxRates);
-          setLastUpdated(new Date(cachedRates.timestamp));
+        const cachedData = cacheWithExpiration.get('essential_rates');
+        if (cachedData && cachedData.usdtRate > 0) { // Validate cache data
+          console.log("[useRateDataLoader] Using cached essential data");
+          setUsdtNgnRate(cachedData.usdtRate);
           
-          // Still load data in background for future use
-          setTimeout(() => loadAllData().catch(console.error), 2000);
+          // Validate FX rates before using
+          if (cachedData.fxRates && Object.keys(cachedData.fxRates).length > 0) {
+            setFxRates(cachedData.fxRates);
+          }
+          
+          if (cachedData.timestamp) {
+            setLastUpdated(new Date(cachedData.timestamp));
+          }
+          
+          // Still load data in background for future use, with error handling
+          setTimeout(() => {
+            loadAllData().catch(error => {
+              console.error("[useRateDataLoader] Background data load failed:", error);
+            });
+          }, 2000);
+          
           return;
         }
         
@@ -110,12 +125,15 @@ export const useRateDataLoader = ({
         await loadAllData();
       }
       
-      // Cache essential rates for ultra-light mode
-      cacheWithExpiration.set('essential_rates', {
-        usdtRate: usdtNgnRate,
-        fxRates,
-        timestamp: Date.now()
-      }, 5 * 60 * 1000); // 5 minute cache
+      // Only cache valid data
+      if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(fxRates).length > 0) {
+        // Cache essential rates for ultra-light mode with improved structure
+        cacheWithExpiration.set('essential_rates', {
+          usdtRate: usdtNgnRate,
+          fxRates,
+          timestamp: Date.now()
+        }, CACHE_DURATION_MS);
+      }
     } catch (error) {
       console.error("[useRateDataLoader] Error in smart loading:", error);
       toast.error("Failed to load data", {
@@ -123,12 +141,12 @@ export const useRateDataLoader = ({
       });
     } finally {
       setIsLoading(false);
-      // Clear loading flag after a short delay
+      // Clear loading flag after a short delay, always ensuring it's cleared
       setTimeout(() => {
         cacheWithExpiration.set(LOADING_IN_PROGRESS, false, 0);
       }, 1000);
     }
-  }, [loadAllData, isUltraLightMode, setIsLoading, usdtNgnRate, fxRates]);
+  }, [loadAllData, isUltraLightMode, setIsLoading, usdtNgnRate, fxRates, setUsdtNgnRate, setFxRates, setLastUpdated]);
 
   return { 
     loadAllData: smartLoad, 
