@@ -11,9 +11,11 @@ export const useOneremitRates = ({ costPrices }: OneremitRatesProps) => {
   const getOneremitRates = useCallback((currencyCode: string): { buy: number; sell: number } => {
     const costPrice = costPrices[currencyCode] || 0;
     
+    // In a real scenario, buy/sell would be calculated based on spread
+    // For now, using a simple 2% spread for demonstration
     return {
       buy: costPrice,
-      sell: 0, // Setting sell rate to 0 for all currencies as requested
+      sell: costPrice * 0.98, // 2% lower for sell rate
     };
   }, [costPrices]);
 
