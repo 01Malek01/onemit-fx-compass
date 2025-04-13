@@ -41,8 +41,8 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
 }) => {
   // Calculate if the rate is stale (more than 1 hour old)
   const isStale = useMemo(() => {
-    if (!lastUpdated) return false;
-    return (new Date().getTime() - lastUpdated.getTime() > 3600000); // 1 hour
+    return lastUpdated && 
+      (new Date().getTime() - lastUpdated.getTime() > 3600000);
   }, [lastUpdated]);
   
   // Format the timestamp in the user's local timezone
@@ -55,7 +55,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     });
   }, [lastUpdated]);
   
-  // Use our custom hooks with memoized dependencies
+  // Use our custom hooks
   const { showUpdateFlash } = useRateAnimation({ 
     rate, 
     formattedTimestamp 
@@ -63,57 +63,45 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   
   const { nextRefreshIn } = useRefreshCountdown({ lastUpdated });
 
-  // Pick a random emoji when the rate updates - memoized to prevent unnecessary recalculations
+  // Pick a random emoji when the rate updates
   const updateEmoji = useMemo(() => {
-    if (!showUpdateFlash) return null;
-    
-    // Use a secure random generator to avoid predictability
-    const randomIndex = Math.floor(Math.random() * RATE_UPDATE_EMOJIS.length);
-    return RATE_UPDATE_EMOJIS[randomIndex];
+    return showUpdateFlash 
+      ? RATE_UPDATE_EMOJIS[Math.floor(Math.random() * RATE_UPDATE_EMOJIS.length)] 
+      : null;
   }, [showUpdateFlash]);
 
   return (
-    <Card className="fx-card relative overflow-hidden" data-testid="live-rate-display">
-      {/* Background gradient */}
+    <Card className="fx-card relative overflow-hidden">
       <div 
         className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" 
         aria-hidden="true"
       />
-      
-      {/* Update flash animation */}
       {showUpdateFlash && (
         <div 
           className="absolute inset-0 bg-primary/10 animate-fade-out pointer-events-none z-10" 
           aria-hidden="true"
         />
       )}
-      
-      {/* Card header */}
       <CardHeader className="pb-2 relative">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <div className="relative">
             <StatusIndicator rate={rate} isStale={isStale} />
           </div>
-          <span id="rate-title">USDT/NGN Rate (Live from Bybit)</span>
+          USDT/NGN Rate (Live from Bybit)
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="ml-auto cursor-help" aria-describedby="rate-source-tooltip">
-                  <Wifi 
-                    className="h-3.5 w-3.5 text-muted-foreground opacity-70" 
-                    aria-label="Real-time connection indicator"
-                  />
+                <div className="ml-auto cursor-help">
+                  <Wifi className="h-3.5 w-3.5 text-muted-foreground opacity-70" />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" id="rate-source-tooltip">
+              <TooltipContent side="top">
                 <p className="text-xs">Live rates via secure server proxy to Bybit P2P exchange</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </CardTitle>
       </CardHeader>
-      
-      {/* Card content */}
       <CardContent className="relative">
         <div className="flex items-center gap-2">
           <div className="flex-1">
@@ -123,7 +111,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
                 <span 
                   className="text-2xl animate-bounce" 
                   role="img" 
-                  aria-label="Rate update indicator"
+                  aria-label="Rate update emoji"
                 >
                   {updateEmoji}
                 </span>

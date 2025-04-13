@@ -13,8 +13,8 @@ export interface HistoricalRate {
   currency_code?: string; // Added to match DB schema
   rate?: number; // Added to match DB schema
   // Additional fields for our application logic
-  margin_usd?: number;
-  margin_others?: number;
+  margin_usd: number;
+  margin_others: number;
   eur_usd?: number;
   gbp_usd?: number;
   cad_usd?: number;
@@ -59,49 +59,72 @@ export const saveHistoricalRates = async (
     }
 
     // Now we need to save multiple records - one for each currency
+    const insertPromises: Promise<any>[] = [];
     const timestamp = new Date().toISOString();
-    const recordsToInsert = [];
 
-    // Prepare USD data
-    if (costPrices.USD) {
-      recordsToInsert.push({
-        currency_code: 'USD',
-        rate: costPrices.USD,
-        usdt_ngn_rate: usdtNgnRate,
-        date: timestamp
-      });
-    }
+    // Save USD data
+    insertPromises.push(
+      new Promise((resolve, reject) => {
+        supabase
+          .from('historical_rates')
+          .insert({
+            currency_code: 'USD',
+            rate: costPrices.USD,
+            usdt_ngn_rate: usdtNgnRate,
+            date: timestamp
+          })
+          .then(result => {
+            if (result.error) {
+              reject(result.error);
+            } else {
+              resolve(result);
+            }
+          })
+          // Remove .catch() here as it's causing the TypeScript error
+          // Instead, handle errors in the Promise executor
+      })
+    );
 
-    // Prepare other currencies data
+    // Save other currencies data
     const otherCurrencies = ['EUR', 'GBP', 'CAD'];
     otherCurrencies.forEach(currencyCode => {
       if (costPrices[currencyCode]) {
-        recordsToInsert.push({
-          currency_code: currencyCode,
-          rate: costPrices[currencyCode],
-          usdt_ngn_rate: usdtNgnRate,
-          date: timestamp
-        });
+        insertPromises.push(
+          new Promise((resolve, reject) => {
+            supabase
+              .from('historical_rates')
+              .insert({
+                currency_code: currencyCode,
+                rate: costPrices[currencyCode],
+                usdt_ngn_rate: usdtNgnRate,
+                date: timestamp
+              })
+              .then(result => {
+                if (result.error) {
+                  reject(result.error);
+                } else {
+                  resolve(result);
+                }
+              })
+              // Remove .catch() here as it's causing the TypeScript error
+              // Instead, handle errors in the Promise executor
+          })
+        );
       }
     });
 
-    // Batch insert all records at once for better performance
-    if (recordsToInsert.length > 0) {
-      const { error } = await supabase
-        .from('historical_rates')
-        .insert(recordsToInsert);
-        
-      if (error) {
-        console.error("[historical-rates] Error saving historical data:", error);
-        return false;
-      }
-      
-      console.log("[historical-rates] Historical rate data saved successfully");
-      return true;
-    } else {
-      console.warn("[historical-rates] No data to save");
+    // Wait for all inserts to complete
+    const results = await Promise.all(insertPromises);
+    const errors = results.filter(result => result.error);
+
+    if (errors.length > 0) {
+      console.error("[historical-rates] Errors saving historical data:", errors);
+      toast.error("Failed to save some historical rate data");
       return false;
     }
+    
+    console.log("[historical-rates] Historical rate data saved successfully");
+    return true;
   } catch (error) {
     console.error("[historical-rates] Error in saveHistoricalRates:", error);
     toast.error("Failed to save historical rate data");
@@ -109,41 +132,32 @@ export const saveHistoricalRates = async (
   }
 };
 
-// Fetch historical rates for analytics with better error handling
+// Fetch historical rates for analytics
 export const fetchHistoricalRates = async (
   limit: number = 30
 ): Promise<HistoricalRate[]> => {
   try {
-    console.log(`[historical-rates] Fetching historical rates, limit: ${limit}`);
+    console.log(`Fetching historical rates, limit: ${limit}`);
     
     const { data, error } = await supabase
       .from('historical_rates')
       .select('*')
       .order('date', { ascending: false })
-      .limit(Math.max(1, Math.min(limit, 100))); // Ensure limit is between 1 and 100
+      .limit(limit);
     
     if (error) {
-      console.error(`[historical-rates] Supabase error fetching historical rates:`, error);
+      console.error(`Supabase error fetching historical rates:`, error);
       throw error;
     }
     
-    console.log(`[historical-rates] Fetched ${data?.length || 0} historical rates`);
-    
-    if (!data || data.length === 0) {
-      return [];
-    }
+    console.log(`Fetched ${data?.length || 0} historical rates`);
     
     // Convert the raw data to our application's HistoricalRate type
-    const historicalRates: HistoricalRate[] = data.map(item => ({
-      ...item,
-      // Ensure item.date is properly interpreted as a string
-      date: item.date ? String(item.date) : undefined,
-      usdt_ngn_rate: Number(item.usdt_ngn_rate)
-    }));
-    
+    // We need to explicitly cast because the DB schema and our application schema are different
+    const historicalRates: HistoricalRate[] = (data as unknown) as HistoricalRate[];
     return historicalRates;
   } catch (error) {
-    console.error(`[historical-rates] Error fetching historical rates:`, error);
+    console.error(`Error fetching historical rates:`, error);
     toast.error(`Failed to fetch historical data`);
     return [];
   }

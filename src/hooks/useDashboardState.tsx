@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
@@ -9,10 +8,10 @@ import { useMarginManager } from '@/hooks/useMarginManager';
 import { useOneremitRates } from '@/hooks/useOneremitRates';
 
 export const useDashboardState = () => {
-  // Use our custom hook for currency data with device awareness
+  // Use our custom hook for currency data
   const [
     { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading, fxRates },
-    { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate, isMobile, isUltraLightMode }
+    { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate }
   ] = useCurrencyData();
 
   // Use our rate refresher hook with countdown
@@ -23,8 +22,7 @@ export const useDashboardState = () => {
     refreshBybitRate,
     calculateAllCostPrices,
     usdMargin: 2.5, // Default value, will be updated in useEffect
-    otherCurrenciesMargin: 3.0, // Default value, will be updated in useEffect
-    isMobile // Pass isMobile to the hook
+    otherCurrenciesMargin: 3.0 // Default value, will be updated in useEffect
   });
 
   // Use our margin manager hook
@@ -67,9 +65,9 @@ export const useDashboardState = () => {
     onMarginSettingsChange: handleRealtimeMarginUpdate
   });
 
-  // Load initial data with mobile-awareness
+  // Load initial data - make sure this runs only once and correctly loads the data
   useEffect(() => {
-    console.log(`DashboardContainer: Running initial data loading effect (${isMobile ? 'mobile' : 'desktop'} mode)`);
+    console.log("DashboardContainer: Running initial data loading effect");
     const initialize = async () => {
       try {
         // Load all currency data including Bybit rate
@@ -120,7 +118,5 @@ export const useDashboardState = () => {
     getOneremitRates,
     fxRates,
     nextRefreshIn,
-    isMobile,
-    isUltraLightMode
   };
 };

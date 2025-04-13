@@ -18,8 +18,6 @@ const DEFAULT_USDT_NGN_RATE = 1580;
 export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
   try {
     console.log("[usdt-ngn-service] Fetching latest USDT/NGN rate from Supabase");
-    
-    // Use the new index we created for better performance
     const { data, error } = await supabase
       .from('usdt_ngn_rates')
       .select('*')
@@ -58,7 +56,7 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
   }
 };
 
-// Update or insert USDT/NGN rate - improved to work with our database triggers
+// Update or insert USDT/NGN rate
 export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
   try {
     if (!rate || isNaN(rate) || rate <= 0) {
@@ -70,12 +68,12 @@ export const saveUsdtNgnRate = async (rate: number): Promise<boolean> => {
     console.log("[usdt-ngn-service] Saving USDT/NGN rate to Supabase:", rate);
     
     // Always insert a new rate to maintain history
-    // We don't need to specify updated_at as our trigger will handle it
     const { data, error } = await supabase
       .from('usdt_ngn_rates')
       .insert([{ 
-        rate: Number(rate)
-        // created_at and updated_at will be set by database defaults
+        rate: Number(rate),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }]);
     
     if (error) {

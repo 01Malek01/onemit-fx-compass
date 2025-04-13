@@ -20,11 +20,8 @@ export interface RateDataLoaderProps {
   usdtNgnRate: number | null;
 }
 
-// Loading debounce flag - Add a timeout to prevent double loading
+// Loading debounce flag
 const LOADING_IN_PROGRESS = 'loading_in_progress';
-const LOADING_TIMEOUT_MS = 15000; // 15 seconds to prevent deadlock
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-const MOBILE_CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
 export const useRateDataLoader = ({
   setUsdtNgnRate,
@@ -37,14 +34,14 @@ export const useRateDataLoader = ({
   usdtNgnRate
 }: RateDataLoaderProps) => {
   // Enhanced device detection with connection quality awareness
-  const { isMobile, width } = useDeviceDetect();
+  const { isMobile } = useDeviceDetect();
   const connectionInfo = useMemo(() => getConnectionInfo(), []);
   
   // Determine if we should use ultra-light mode for very slow connections
   const isUltraLightMode = useMemo(() => {
     return (isMobile && isLikelySlowDevice()) || 
            (connectionInfo.effectiveType === '2g') ||
-           (connectionInfo.downlink && connectionInfo.downlink < 1.0);
+           (connectionInfo.downlink && connectionInfo.downlink < 0.5);
   }, [isMobile, connectionInfo]);
   
   // Use the USDT rate updater hook
@@ -77,14 +74,14 @@ export const useRateDataLoader = ({
 
   // Function to intelligently load data based on device and connection
   const smartLoad = useCallback(async () => {
-    // Improved race condition handling with automatic timeout clearing
+    // Prevent duplicate loads
     if (cacheWithExpiration.get(LOADING_IN_PROGRESS)) {
       console.log("[useRateDataLoader] Loading already in progress, skipping");
       return;
     }
 
-    // Set loading flag with automatic timeout to prevent deadlock
-    cacheWithExpiration.set(LOADING_IN_PROGRESS, true, LOADING_TIMEOUT_MS);
+    // Set loading flag for 10 seconds max
+    cacheWithExpiration.set(LOADING_IN_PROGRESS, true, 10000);
     
     // Start the loading indicator only if this is a manual refresh
     setIsLoading(true);
@@ -95,33 +92,14 @@ export const useRateDataLoader = ({
         console.log("[useRateDataLoader] Ultra light mode detected, minimal loading strategy");
         
         // Use immediate cache if available
-        const cachedData = cacheWithExpiration.get('essential_rates');
-        if (cachedData && cachedData.usdtRate > 0) { // Validate cache data
-          console.log("[useRateDataLoader] Using cached essential data");
-          setUsdtNgnRate(cachedData.usdtRate);
+        const cachedRates = cacheWithExpiration.get('essential_rates');
+        if (cachedRates) {
+          setUsdtNgnRate(cachedRates.usdtRate);
+          setFxRates(cachedRates.fxRates);
+          setLastUpdated(new Date(cachedRates.timestamp));
           
-          // Validate FX rates before using
-          if (cachedData.fxRates && Object.keys(cachedData.fxRates).length > 0) {
-            setFxRates(cachedData.fxRates);
-          }
-          
-          if (cachedData.timestamp) {
-            setLastUpdated(new Date(cachedData.timestamp));
-          }
-          
-          // Still load data in background for future use after a delay
-          // but only if we're not on a very slow connection
-          if (connectionInfo.downlink && connectionInfo.downlink > 0.5) {
-            setTimeout(() => {
-              loadAllData().catch(error => {
-                console.error("[useRateDataLoader] Background data load failed:", error);
-              });
-            }, 5000); // More generous delay for mobile
-          }
-          
-          // Release loading lock early
-          cacheWithExpiration.set(LOADING_IN_PROGRESS, false, 0);
-          setIsLoading(false);
+          // Still load data in background for future use
+          setTimeout(() => loadAllData().catch(console.error), 2000);
           return;
         }
         
@@ -132,37 +110,25 @@ export const useRateDataLoader = ({
         await loadAllData();
       }
       
-      // Only cache valid data
-      if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(fxRates).length > 0) {
-        // Cache essential rates with mobile-optimized duration
-        const cacheDuration = isMobile ? MOBILE_CACHE_DURATION_MS : CACHE_DURATION_MS;
-        cacheWithExpiration.set('essential_rates', {
-          usdtRate: usdtNgnRate,
-          fxRates,
-          timestamp: Date.now()
-        }, cacheDuration);
-      }
+      // Cache essential rates for ultra-light mode
+      cacheWithExpiration.set('essential_rates', {
+        usdtRate: usdtNgnRate,
+        fxRates,
+        timestamp: Date.now()
+      }, 5 * 60 * 1000); // 5 minute cache
     } catch (error) {
       console.error("[useRateDataLoader] Error in smart loading:", error);
-      
-      // More user-friendly toast for mobile
-      if (isMobile) {
-        toast.error("Could not update rates", {
-          description: "Using cached data instead"
-        });
-      } else {
-        toast.error("Failed to load data", {
-          description: "Please check your connection and try again"
-        });
-      }
+      toast.error("Failed to load data", {
+        description: "Please check your connection and try again"
+      });
     } finally {
       setIsLoading(false);
-      // Clear loading flag after a short delay, always ensuring it's cleared
+      // Clear loading flag after a short delay
       setTimeout(() => {
         cacheWithExpiration.set(LOADING_IN_PROGRESS, false, 0);
       }, 1000);
     }
-  }, [loadAllData, isUltraLightMode, setIsLoading, usdtNgnRate, fxRates, setUsdtNgnRate, setFxRates, setLastUpdated, connectionInfo, isMobile]);
+  }, [loadAllData, isUltraLightMode, setIsLoading, usdtNgnRate, fxRates]);
 
   return { 
     loadAllData: smartLoad, 
@@ -172,4 +138,3 @@ export const useRateDataLoader = ({
     isUltraLightMode
   };
 };
-
