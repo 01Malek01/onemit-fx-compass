@@ -35,6 +35,22 @@ export const useRealtimeUpdates = ({
           }
         }
       )
+      // Also listen for updates to existing rates
+      .on('postgres_changes', 
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'usdt_ngn_rates'
+        }, 
+        (payload) => {
+          console.log("Real-time: USDT/NGN rate updated:", payload);
+          const newRate = payload.new?.rate;
+          if (newRate && typeof newRate === 'number' && newRate > 0) {
+            onUsdtRateChange(newRate);
+            toast.info("USDT/NGN rate has been updated");
+          }
+        }
+      )
       // Subscribe to margin settings changes
       .on('postgres_changes', 
         {
