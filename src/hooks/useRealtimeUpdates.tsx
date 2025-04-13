@@ -30,7 +30,8 @@ export const useRealtimeUpdates = ({
         }, 
         (payload) => {
           console.log("Real-time: USDT/NGN rate change detected");
-          const newRate = payload.new?.rate;
+          // Add proper type checking before accessing properties
+          const newRate = payload.new && 'rate' in payload.new ? payload.new.rate : null;
           if (newRate && typeof newRate === 'number' && newRate > 0) {
             onUsdtRateChange(newRate);
             
@@ -52,10 +53,13 @@ export const useRealtimeUpdates = ({
         }, 
         (payload) => {
           console.log("Real-time: Margin settings change detected");
-          const usdMargin = payload.new?.usd_margin;
-          const otherCurrenciesMargin = payload.new?.other_currencies_margin;
+          // Add proper type checking before accessing properties
+          const usdMargin = payload.new && 'usd_margin' in payload.new ? payload.new.usd_margin : null;
+          const otherCurrenciesMargin = payload.new && 'other_currencies_margin' in payload.new 
+            ? payload.new.other_currencies_margin 
+            : null;
           
-          if (usdMargin !== undefined && otherCurrenciesMargin !== undefined) {
+          if (usdMargin !== null && otherCurrenciesMargin !== null) {
             onMarginSettingsChange(Number(usdMargin), Number(otherCurrenciesMargin));
             toast.info("Margin settings have been updated");
           }
