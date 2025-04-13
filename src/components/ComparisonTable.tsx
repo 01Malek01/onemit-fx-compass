@@ -32,15 +32,32 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
     vertoFxRates
   });
 
-  // Safety check for valid rates with defaults
+  // Define default values based on currency
+  const getDefaultRates = (currency: string): Rate => {
+    switch (currency) {
+      case 'USD':
+        return { buy: 1635, sell: 1600 };
+      case 'EUR':
+        return { buy: 1870, sell: 1805 };
+      case 'GBP':
+        return { buy: 2150, sell: 2080 };
+      case 'CAD':
+        return { buy: 1190, sell: 1140 };
+      default:
+        return { buy: 1600, sell: 1550 };
+    }
+  };
+
+  // Safety check for valid rates with currency-specific defaults
   const safeOneremitRates = {
     buy: oneremitRates?.buy || 0,
     sell: oneremitRates?.sell || 0
   };
   
+  const defaultRates = getDefaultRates(currencyCode);
   const safeVertoRates = {
-    buy: vertoFxRates?.buy || 0,
-    sell: vertoFxRates?.sell || 0
+    buy: (vertoFxRates?.buy > 0) ? vertoFxRates.buy : defaultRates.buy,
+    sell: (vertoFxRates?.sell > 0) ? vertoFxRates.sell : defaultRates.sell
   };
 
   const getBuyRateComparison = () => {

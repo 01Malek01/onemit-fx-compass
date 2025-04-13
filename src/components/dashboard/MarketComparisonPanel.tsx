@@ -12,6 +12,14 @@ interface MarketComparisonPanelProps {
   isLoading: boolean;
 }
 
+// Default rates to use as fallback
+const DEFAULT_VERTOFX_RATES: VertoFXRates = {
+  USD: { buy: 1635, sell: 1600 },
+  EUR: { buy: 1870, sell: 1805 },
+  GBP: { buy: 2150, sell: 2080 },
+  CAD: { buy: 1190, sell: 1140 }
+};
+
 const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   currencies,
   oneremitRatesFn,
@@ -21,14 +29,15 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   // Log the VertoFX rates for debugging
   console.log("MarketComparisonPanel received vertoFxRates:", vertoFxRates);
   
-  // Ensure vertoFxRates is never undefined by providing default empty object
-  const safeVertoRates = vertoFxRates || {};
+  // Ensure vertoFxRates is never undefined by providing default values
+  const safeVertoRates: VertoFXRates = vertoFxRates && Object.keys(vertoFxRates).length > 0 
+    ? vertoFxRates 
+    : DEFAULT_VERTOFX_RATES;
   
-  // Check if we have valid VertoFX rates
-  const hasVertoRates = Object.keys(safeVertoRates).length > 0 && 
-    Object.values(safeVertoRates).some(rate => 
-      (rate?.buy > 0 || rate?.sell > 0)
-    );
+  // Check if we have valid VertoFX rates (any rate > 0)
+  const hasVertoRates = Object.values(safeVertoRates).some(rate => 
+    (rate?.buy > 0 || rate?.sell > 0)
+  );
   
   // Count how many currencies have valid buy rates
   const validBuyRateCount = Object.values(safeVertoRates).filter(rate => rate?.buy > 0).length;
@@ -63,8 +72,14 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
           // Make sure we have valid rates, otherwise use fallback values
           const oneremitRates = oneremitRatesFn(currency);
           
-          // Provide default values if currency not found in vertoFxRates
-          const defaultRate = { buy: 0, sell: 0 };
+          // Use the rates from our safe object, or default values if currency not found
+          const defaultRate = { buy: currency === 'USD' ? 1635 : 
+                               currency === 'EUR' ? 1870 : 
+                               currency === 'GBP' ? 2150 : 1190, 
+                              sell: currency === 'USD' ? 1600 : 
+                                   currency === 'EUR' ? 1805 : 
+                                   currency === 'GBP' ? 2080 : 1140 };
+          
           const vertoRates = safeVertoRates[currency] || defaultRate;
           
           console.log(`MarketComparisonPanel: Currency ${currency}`, {

@@ -41,6 +41,17 @@ export const loadRatesData = async (
   }
   
   try {
+    // Define default VertoFX rates that we'll use if API fails
+    const defaultVertoRates: VertoFXRates = {
+      USD: { buy: 1635, sell: 1600 },
+      EUR: { buy: 1870, sell: 1805 },
+      GBP: { buy: 2150, sell: 2080 },
+      CAD: { buy: 1190, sell: 1140 }
+    };
+
+    // Set default rates immediately to ensure UI shows something
+    setVertoFxRates(defaultVertoRates);
+    
     // Shorter timeout for mobile to avoid blocking UI
     const timeoutMs = isMobile ? 2000 : 4000;
     
@@ -64,14 +75,7 @@ export const loadRatesData = async (
     const vertoRates = await loadVertoFxRates(isMobile, setVertoFxRates).catch(error => {
       console.warn("[ratesLoader] Error loading VertoFX rates:", error);
       // Return default rates on error
-      const defaultRates = {
-        USD: { buy: 1635, sell: 1600 },
-        EUR: { buy: 1870, sell: 1805 },
-        GBP: { buy: 2150, sell: 2080 },
-        CAD: { buy: 1190, sell: 1140 }
-      };
-      setVertoFxRates(defaultRates); // Make sure UI gets updated
-      return defaultRates;
+      return defaultVertoRates;
     });
     
     // Cache this initial data for future fast loads

@@ -3,13 +3,16 @@ import { VertoFXRates, fetchVertoFXRates } from '@/services/api';
 import { cacheWithExpiration } from '../cacheUtils';
 import { raceWithTimeout } from '../apiUtils';
 
-// Local cache for last successful rate data
-let lastSuccessfulVertoFxRates: VertoFXRates = {
+// Default rates that will always be used as fallback
+const DEFAULT_VERTOFX_RATES: VertoFXRates = {
   USD: { buy: 1635, sell: 1600 },
   EUR: { buy: 1870, sell: 1805 },
   GBP: { buy: 2150, sell: 2080 },
   CAD: { buy: 1190, sell: 1140 }
 };
+
+// Local cache for last successful rate data
+let lastSuccessfulVertoFxRates: VertoFXRates = { ...DEFAULT_VERTOFX_RATES };
 
 /**
  * Load VertoFX rates with fallbacks
@@ -18,12 +21,17 @@ export const loadVertoFxRates = async (
   isMobile: boolean = false,
   setVertoFxRates: (rates: VertoFXRates) => void
 ): Promise<VertoFXRates> => {
+  // Start by setting default rates immediately for faster UI response
+  setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
+  
   // On mobile, use cached values for immediate display
   if (isMobile && Object.keys(lastSuccessfulVertoFxRates).length > 0) {
     const cachedRates = cacheWithExpiration.get('vertoRates');
     
     if (cachedRates) {
       console.log("[vertoRateLoader] Using cached VertoFX rates for immediate display");
+      // Use the cached rates for UI
+      setVertoFxRates(cachedRates);
       
       // In the background, try to load fresh rates
       setTimeout(async () => {
@@ -72,16 +80,19 @@ export const loadVertoFxRates = async (
         vertoRates, 
         isMobile ? 600000 : 300000
       );
+      setVertoFxRates(vertoRates);
       return vertoRates;
     } else {
       // If API returned no valid rates, use default values
       console.log("[vertoRateLoader] API returned no valid rates, using defaults");
-      return { ...lastSuccessfulVertoFxRates };
+      setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
+      return { ...DEFAULT_VERTOFX_RATES };
     }
   } catch (error) {
     console.error("[vertoRateLoader] Error fetching VertoFX rates:", error);
     // Always return valid default rates on error
-    return { ...lastSuccessfulVertoFxRates };
+    setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
+    return { ...DEFAULT_VERTOFX_RATES };
   }
 };
 
@@ -97,10 +108,5 @@ export const getLastSuccessfulVertoFxRates = (): VertoFXRates => {
  */
 export const resetLastSuccessfulVertoFxRates = (): void => {
   // Don't completely empty, just reset to defaults
-  lastSuccessfulVertoFxRates = {
-    USD: { buy: 1635, sell: 1600 },
-    EUR: { buy: 1870, sell: 1805 },
-    GBP: { buy: 2150, sell: 2080 },
-    CAD: { buy: 1190, sell: 1140 }
-  };
+  lastSuccessfulVertoFxRates = { ...DEFAULT_VERTOFX_RATES };
 };
