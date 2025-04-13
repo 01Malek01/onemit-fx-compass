@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wifi, Shield, ShieldAlert } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -39,6 +39,9 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   onRefresh,
   isLoading
 }) => {
+  // Track network errors
+  const [hasNetworkError, setHasNetworkError] = useState(false);
+  
   // Calculate if the rate is stale (more than 1 hour old)
   const isStale = useMemo(() => {
     if (!lastUpdated) return false;
@@ -75,9 +78,24 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     return RATE_UPDATE_EMOJIS[randomIndex];
   }, [showUpdateFlash]);
 
+  // Handle refresh with network error tracking
+  const handleRefresh = async () => {
+    try {
+      const result = await onRefresh();
+      setHasNetworkError(!result); // Set network error if refresh fails
+      return result;
+    } catch (error) {
+      console.error("Error during refresh:", error);
+      setHasNetworkError(true);
+      return false;
+    }
+  };
+
   // Status icon based on rate state
-  const StatusIcon = isMissingRate ? ShieldAlert : isStale ? Shield : Wifi;
-  const statusTooltip = isMissingRate 
+  const StatusIcon = isMissingRate || hasNetworkError ? ShieldAlert : isStale ? Shield : Wifi;
+  const statusTooltip = hasNetworkError 
+    ? "Network connectivity issue - using fallback" 
+    : isMissingRate 
     ? "Rate unavailable - using fallback" 
     : isStale 
     ? "Rate may be outdated" 
@@ -85,7 +103,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
 
   return (
     <Card 
-      className={`fx-card relative overflow-hidden ${isMissingRate ? 'border-red-300 dark:border-red-900' : isStale ? 'border-amber-300 dark:border-amber-900' : ''}`} 
+      className={`fx-card relative overflow-hidden ${hasNetworkError || isMissingRate ? 'border-red-300 dark:border-red-900' : isStale ? 'border-amber-300 dark:border-amber-900' : ''}`} 
       data-testid="live-rate-display"
     >
       {/* Background gradient */}
@@ -106,7 +124,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
       <CardHeader className="pb-2 relative">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <div className="relative">
-            <StatusIndicator rate={rate} isStale={isStale} />
+            <StatusIndicator rate={rate} isStale={isStale} hasNetworkError={hasNetworkError} />
           </div>
           <span id="rate-title">USDT/NGN Rate (Live from Bybit)</span>
           <TooltipProvider>
@@ -115,7 +133,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
                 <div className="ml-auto cursor-help" aria-describedby="rate-source-tooltip">
                   <StatusIcon
                     className={`h-3.5 w-3.5 ${
-                      isMissingRate 
+                      hasNetworkError || isMissingRate 
                         ? "text-red-500" 
                         : isStale 
                         ? "text-amber-500" 
@@ -149,13 +167,18 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
                 </span>
               )}
             </div>
-            <TimestampDisplay lastUpdated={lastUpdated} rate={rate} isStale={isStale} />
+            <TimestampDisplay lastUpdated={lastUpdated} rate={rate} isStale={isStale} hasNetworkError={hasNetworkError} />
             <RefreshCountdown nextRefreshIn={nextRefreshIn} />
           </div>
-          <RefreshButton onRefresh={onRefresh} isLoading={isLoading} />
+          <RefreshButton onRefresh={handleRefresh} isLoading={isLoading} />
         </div>
         
-        <StatusAlerts rate={rate} isStale={isStale} />
+        <StatusAlerts 
+          rate={rate} 
+          isStale={isStale} 
+          onRetryClick={handleRefresh}
+          networkError={hasNetworkError} 
+        />
         <InfoNote />
       </CardContent>
     </Card>
