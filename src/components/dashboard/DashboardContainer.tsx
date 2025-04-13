@@ -22,9 +22,8 @@ const DashboardContainer = () => {
     isLoading,
     usdMargin,
     otherCurrenciesMargin,
-    setUsdtNgnRate,
     handleRefresh,
-    handleUsdtRateUpdate,
+    handleBybitRateRefresh,
     handleMarginUpdate,
     getOneremitRates
   } = useDashboardState();
@@ -81,10 +80,10 @@ const DashboardContainer = () => {
         <div className="lg:col-span-3">
           <RateCalculatorSection 
             usdtNgnRate={usdtNgnRate}
-            setUsdtNgnRate={setUsdtNgnRate}
+            lastUpdated={lastUpdated}
             usdMargin={usdMargin}
             otherCurrenciesMargin={otherCurrenciesMargin}
-            onUsdtRateUpdate={handleUsdtRateUpdate}
+            onBybitRateRefresh={handleBybitRateRefresh}
             onMarginUpdate={handleMarginUpdate}
             isLoading={isLoading}
           />

@@ -16,7 +16,8 @@ export interface CurrencyDataState {
 
 export interface CurrencyDataActions {
   loadAllData: () => Promise<void>;
-  updateUsdtRate: (rate: number) => Promise<boolean>; // Updated return type to match implementation
+  updateUsdtRate: (rate: number) => Promise<boolean>;
+  refreshBybitRate: () => Promise<boolean>; // New function
   setUsdtNgnRate: (rate: number) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
 }
@@ -38,7 +39,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   });
 
   // Use data loading hook
-  const { loadAllData, updateUsdtRate } = useRateDataLoader({
+  const { loadAllData, updateUsdtRate, refreshBybitRate } = useRateDataLoader({
     setUsdtNgnRate,
     setFxRates,
     setVertoFxRates,
@@ -72,6 +73,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     { 
       loadAllData, 
       updateUsdtRate, 
+      refreshBybitRate, // Add the new function
       setUsdtNgnRate, 
       calculateAllCostPrices 
     }

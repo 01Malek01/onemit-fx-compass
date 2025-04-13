@@ -7,20 +7,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface RateCalculatorSectionProps {
   usdtNgnRate: number | null;
-  setUsdtNgnRate: (rate: number) => void;
+  lastUpdated: Date | null;
   usdMargin: number;
   otherCurrenciesMargin: number;
-  onUsdtRateUpdate: (rate: number) => void; // Update type to accept a value parameter
+  onBybitRateRefresh: () => Promise<void>;
   onMarginUpdate: (usdMargin: number, otherMargin: number) => void;
   isLoading: boolean;
 }
 
 const RateCalculatorSection: React.FC<RateCalculatorSectionProps> = ({
   usdtNgnRate,
-  setUsdtNgnRate,
+  lastUpdated,
   usdMargin,
   otherCurrenciesMargin,
-  onUsdtRateUpdate,
+  onBybitRateRefresh,
   onMarginUpdate,
   isLoading
 }) => {
@@ -37,10 +37,10 @@ const RateCalculatorSection: React.FC<RateCalculatorSectionProps> = ({
         ) : (
           <CurrencyInputPanel 
             usdtNgnRate={usdtNgnRate}
-            setUsdtNgnRate={setUsdtNgnRate}
+            lastUpdated={lastUpdated}
             usdMargin={usdMargin}
             otherCurrenciesMargin={otherCurrenciesMargin}
-            onUsdtRateUpdate={onUsdtRateUpdate}
+            onBybitRateRefresh={onBybitRateRefresh}
             onMarginUpdate={onMarginUpdate}
             isLoading={isLoading}
           />

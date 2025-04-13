@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings, updateMarginSettings } from '@/services/margin-settings-service';
 import { fetchLatestUsdtNgnRate } from '@/services/usdt-ngn-service';
@@ -15,7 +15,7 @@ export const useDashboardState = () => {
   // Use our custom hook for currency data
   const [
     { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading, fxRates },
-    { loadAllData, updateUsdtRate, setUsdtNgnRate, calculateAllCostPrices }
+    { loadAllData, updateUsdtRate, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate }
   ] = useCurrencyData();
 
   // Handler for real-time USDT/NGN rate updates
@@ -39,31 +39,25 @@ export const useDashboardState = () => {
     onMarginSettingsChange: handleRealtimeMarginUpdate
   });
 
+  // Refresh Bybit rate on an interval
+  useEffect(() => {
+    // Refresh every 10 minutes (600000 milliseconds)
+    const intervalId = setInterval(() => {
+      console.log("Auto-refreshing Bybit rate...");
+      refreshBybitRate().catch(console.error);
+    }, 600000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshBybitRate]);
+
   // Load initial data - make sure this runs only once and correctly loads the data
   useEffect(() => {
     console.log("DashboardContainer: Running initial data loading effect");
     const initialize = async () => {
       try {
-        // Force-fetch the latest USDT/NGN rate first to ensure we have it
-        const latestRate = await fetchLatestUsdtNgnRate();
-        console.log("DashboardContainer: Pre-fetched latest USDT/NGN rate:", latestRate);
-        
-        if (latestRate && latestRate > 0) {
-          console.log("DashboardContainer: Setting pre-fetched USDT/NGN rate:", latestRate);
-          setUsdtNgnRate(latestRate); // Directly update the state
-        }
-        
-        // Load all currency data
+        // Load all currency data including Bybit rate
         console.log("DashboardContainer: Initializing and loading all data");
         await loadAllData();
-        
-        // After loading data, fetch the rate again to ensure we have the latest
-        // This is crucial as sometimes the rate might not be set correctly in loadAllData due to async timing
-        const confirmedRate = await fetchLatestUsdtNgnRate();
-        if (confirmedRate && confirmedRate > 0) {
-          console.log("DashboardContainer: Confirming USDT/NGN rate after loadAllData:", confirmedRate);
-          setUsdtNgnRate(confirmedRate); // Force-set the rate again to ensure UI reflects latest value
-        }
         
         // Fetch margin settings from database
         const settings = await fetchMarginSettings();
@@ -72,7 +66,7 @@ export const useDashboardState = () => {
           setUsdMargin(settings.usd_margin);
           setOtherCurrenciesMargin(settings.other_currencies_margin);
           
-          // Calculate cost prices with the loaded margins and confirmed rate
+          // Calculate cost prices with the loaded margins
           calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
         } else {
           console.warn("No margin settings found, using defaults");
@@ -98,20 +92,14 @@ export const useDashboardState = () => {
     console.log("DashboardContainer: Handling refresh button click");
     await loadAllData();
     
-    // After loading data, force fetch the latest rate again to ensure consistency
-    const latestRate = await fetchLatestUsdtNgnRate();
-    if (latestRate && latestRate > 0) {
-      setUsdtNgnRate(latestRate);
-    }
-    
     // After loading data, recalculate with current margins
     calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
     
     // Save historical data after refresh with source="refresh"
     try {
-      if (latestRate && Object.keys(costPrices).length > 0) {
+      if (usdtNgnRate && Object.keys(costPrices).length > 0) {
         await saveHistoricalRates(
-          latestRate,
+          usdtNgnRate,
           usdMargin,
           otherCurrenciesMargin,
           fxRates,
@@ -125,15 +113,14 @@ export const useDashboardState = () => {
     }
   };
 
-  // Handle USDT/NGN rate update - now accepts the rate parameter
-  const handleUsdtRateUpdate = async (rate: number) => {
-    console.log("DashboardContainer: Handling USDT rate update with explicitly passed value:", rate);
-    if (rate && rate > 0) {
-      await updateUsdtRate(rate);
-    } else {
-      console.warn("Attempted to update with invalid USDT rate:", rate);
-    }
-  };
+  // Handle manual Bybit rate refresh
+  const handleBybitRateRefresh = useCallback(async () => {
+    console.log("DashboardContainer: Manually refreshing Bybit rate");
+    await refreshBybitRate();
+    
+    // After refreshing the rate, recalculate with current margins
+    calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+  }, [refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin]);
 
   // Handle margin updates
   const handleMarginUpdate = async (newUsdMargin: number, newOtherMargin: number) => {
@@ -192,9 +179,9 @@ export const useDashboardState = () => {
     otherCurrenciesMargin,
     setUsdtNgnRate,
     handleRefresh,
-    handleUsdtRateUpdate,
+    handleBybitRateRefresh,
     handleMarginUpdate,
     getOneremitRates,
-    fxRates, // Export fxRates for use in historical data saving
+    fxRates,
   };
 };
