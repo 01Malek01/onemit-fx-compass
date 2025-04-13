@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wifi } from 'lucide-react';
+import { Wifi, Shield, ShieldAlert } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Import our sub-components
@@ -45,6 +45,9 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     return (new Date().getTime() - lastUpdated.getTime() > 3600000); // 1 hour
   }, [lastUpdated]);
   
+  // Check if the rate is missing entirely
+  const isMissingRate = rate === null || rate <= 0;
+  
   // Format the timestamp in the user's local timezone
   const formattedTimestamp = useMemo(() => {
     if (!lastUpdated) return 'never';
@@ -72,8 +75,19 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
     return RATE_UPDATE_EMOJIS[randomIndex];
   }, [showUpdateFlash]);
 
+  // Status icon based on rate state
+  const StatusIcon = isMissingRate ? ShieldAlert : isStale ? Shield : Wifi;
+  const statusTooltip = isMissingRate 
+    ? "Rate unavailable - using fallback" 
+    : isStale 
+    ? "Rate may be outdated" 
+    : "Real-time rate connection";
+
   return (
-    <Card className="fx-card relative overflow-hidden" data-testid="live-rate-display">
+    <Card 
+      className={`fx-card relative overflow-hidden ${isMissingRate ? 'border-red-300 dark:border-red-900' : isStale ? 'border-amber-300 dark:border-amber-900' : ''}`} 
+      data-testid="live-rate-display"
+    >
       {/* Background gradient */}
       <div 
         className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" 
@@ -99,14 +113,20 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="ml-auto cursor-help" aria-describedby="rate-source-tooltip">
-                  <Wifi 
-                    className="h-3.5 w-3.5 text-muted-foreground opacity-70" 
-                    aria-label="Real-time connection indicator"
+                  <StatusIcon
+                    className={`h-3.5 w-3.5 ${
+                      isMissingRate 
+                        ? "text-red-500" 
+                        : isStale 
+                        ? "text-amber-500" 
+                        : "text-muted-foreground opacity-70"
+                    }`}
+                    aria-label={statusTooltip}
                   />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" id="rate-source-tooltip">
-                <p className="text-xs">Live rates via secure server proxy to Bybit P2P exchange</p>
+                <p className="text-xs">{statusTooltip}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

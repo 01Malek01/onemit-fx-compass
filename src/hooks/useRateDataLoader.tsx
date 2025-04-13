@@ -8,6 +8,7 @@ import { useDeviceDetect } from './use-mobile';
 import { isLikelySlowDevice, getConnectionInfo } from '@/utils/deviceUtils';
 import { toast } from 'sonner';
 import { cacheWithExpiration } from '@/utils/cacheUtils';
+import { AlertTriangle } from 'lucide-react';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -24,6 +25,8 @@ export interface RateDataLoaderProps {
 const LOADING_IN_PROGRESS = 'loading_in_progress';
 const LOADING_TIMEOUT_MS = 10000; // 10 seconds to prevent deadlock
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const ERROR_COUNT_KEY = 'bybit_error_count';
+const ERROR_THRESHOLD = 3;
 
 export const useRateDataLoader = ({
   setUsdtNgnRate,
@@ -74,6 +77,27 @@ export const useRateDataLoader = ({
     isMobile
   });
 
+  // Track Bybit API availability issues
+  const trackBybitError = () => {
+    const currentCount = cacheWithExpiration.get(ERROR_COUNT_KEY) || 0;
+    const newCount = currentCount + 1;
+    cacheWithExpiration.set(ERROR_COUNT_KEY, newCount, 30 * 60 * 1000); // 30 minutes
+    
+    // If we've hit the threshold, show a persistent notification
+    if (newCount >= ERROR_THRESHOLD) {
+      toast.warning("Bybit API connection issues detected", {
+        description: "We're having trouble connecting to Bybit. Your rates may not be current.",
+        duration: 10000,
+        icon: <AlertTriangle className="h-4 w-4" />,
+      });
+    }
+  };
+  
+  // Reset error count when successful
+  const resetErrorCount = () => {
+    cacheWithExpiration.set(ERROR_COUNT_KEY, 0, 30 * 60 * 1000);
+  };
+
   // Function to intelligently load data based on device and connection
   const smartLoad = useCallback(async () => {
     // Improved race condition handling with automatic timeout clearing
@@ -112,6 +136,7 @@ export const useRateDataLoader = ({
           setTimeout(() => {
             loadAllData().catch(error => {
               console.error("[useRateDataLoader] Background data load failed:", error);
+              trackBybitError();
             });
           }, 2000);
           
@@ -119,10 +144,20 @@ export const useRateDataLoader = ({
         }
         
         // Fetch DB values for immediate display
-        await loadAllData();
+        const success = await loadAllData();
+        if (!success) {
+          trackBybitError();
+        } else {
+          resetErrorCount();
+        }
       } else {
         // Progressive loading strategy for better performance
-        await loadAllData();
+        const success = await loadAllData();
+        if (!success) {
+          trackBybitError();
+        } else {
+          resetErrorCount();
+        }
       }
       
       // Only cache valid data
@@ -137,8 +172,10 @@ export const useRateDataLoader = ({
     } catch (error) {
       console.error("[useRateDataLoader] Error in smart loading:", error);
       toast.error("Failed to load data", {
-        description: "Please check your connection and try again"
+        description: "Please check your connection and try again",
+        icon: <AlertTriangle className="h-4 w-4" />
       });
+      trackBybitError();
     } finally {
       setIsLoading(false);
       // Clear loading flag after a short delay, always ensuring it's cleared

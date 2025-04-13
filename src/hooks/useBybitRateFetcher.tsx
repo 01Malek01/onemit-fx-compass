@@ -2,6 +2,7 @@
 import { toast } from "sonner";
 import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
+import { AlertCircle } from "lucide-react";
 
 interface BybitRateFetcherProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -18,7 +19,7 @@ export const useBybitRateFetcher = ({
   const fetchBybitRate = async (): Promise<number | null> => {
     try {
       console.log("[useBybitRateFetcher] Fetching Bybit P2P rate with improved retry logic");
-      const { rate, error } = await fetchBybitRateWithRetry(3, 2000); // Increased retries to 3
+      const { rate, error } = await fetchBybitRateWithRetry(3, 2000);
       
       if (!rate || rate <= 0) {
         console.warn(`[useBybitRateFetcher] Failed to get valid Bybit rate: ${error || "Unknown error"}`);
@@ -56,17 +57,25 @@ export const useBybitRateFetcher = ({
       } else {
         console.warn("[useBybitRateFetcher] Could not refresh Bybit rate");
         
+        // Enhanced error toast with more information and icon
         toast.error("Failed to update USDT/NGN rate from Bybit", {
-          description: "Using last saved rate instead"
+          description: "Using last saved rate instead",
+          icon: <AlertCircle className="h-4 w-4" />,
+          duration: 5000 // Show for longer so user can see it
         });
         
         return false;
       }
     } catch (error) {
       console.error("[useBybitRateFetcher] Error refreshing Bybit rate:", error);
+      
+      // More detailed error toast with icon
       toast.error("Failed to update USDT/NGN rate", {
-        description: "Check your network connection and try again"
+        description: "Check your network connection and try again",
+        icon: <AlertCircle className="h-4 w-4" />,
+        duration: 5000
       });
+      
       return false;
     } finally {
       setIsLoading(false);
