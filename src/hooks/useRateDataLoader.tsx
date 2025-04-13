@@ -3,6 +3,7 @@ import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { useUsdtRateUpdater } from './useUsdtRateUpdater';
 import { useBybitRateFetcher } from './useBybitRateFetcher';
 import { useRatesLoader } from './useRatesLoader';
+import { useDeviceDetect } from './use-mobile';
 
 export interface RateDataLoaderProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -25,6 +26,8 @@ export const useRateDataLoader = ({
   fxRates,
   usdtNgnRate
 }: RateDataLoaderProps) => {
+  // Check if on mobile for optimized loading
+  const { isMobile } = useDeviceDetect();
   
   // Use the USDT rate updater hook
   const { updateUsdtRate } = useUsdtRateUpdater({
@@ -35,14 +38,14 @@ export const useRateDataLoader = ({
     fxRates
   });
   
-  // Use the Bybit rate fetcher hook
+  // Use the Bybit rate fetcher hook with mobile optimization
   const { fetchBybitRate, refreshBybitRate } = useBybitRateFetcher({
     setUsdtNgnRate,
     setLastUpdated,
     setIsLoading
   });
   
-  // Use the rates loader hook
+  // Use the rates loader hook with mobile awareness
   const { loadAllData } = useRatesLoader({
     setUsdtNgnRate,
     setFxRates,
@@ -50,7 +53,8 @@ export const useRateDataLoader = ({
     setLastUpdated,
     setIsLoading,
     calculateAllCostPrices,
-    fetchBybitRate
+    fetchBybitRate,
+    isMobile
   });
 
   return { 

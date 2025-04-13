@@ -1,19 +1,46 @@
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768
+const TABLET_BREAKPOINT = 1024
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+export interface DeviceInfo {
+  isMobile: boolean
+  isTablet: boolean
+  isDesktop: boolean
+  width: number | undefined
+}
 
+export function useDeviceDetect(): DeviceInfo {
+  const [deviceInfo, setDeviceInfo] = React.useState<DeviceInfo>({
+    isMobile: false,
+    isTablet: false,
+    isDesktop: true,
+    width: undefined
+  })
+  
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    const handleResize = () => {
+      const width = window.innerWidth;
+      
+      setDeviceInfo({
+        isMobile: width < MOBILE_BREAKPOINT,
+        isTablet: width >= MOBILE_BREAKPOINT && width < TABLET_BREAKPOINT,
+        isDesktop: width >= TABLET_BREAKPOINT,
+        width
+      });
     }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
+    
+    handleResize();
+    
+    window.addEventListener("resize", handleResize);
+    
+    return () => window.removeEventListener("resize", handleResize);
   }, [])
+  
+  return deviceInfo
+}
 
-  return !!isMobile
+export function useIsMobile(): boolean {
+  const { isMobile } = useDeviceDetect()
+  return isMobile
 }

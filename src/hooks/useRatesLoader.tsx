@@ -12,6 +12,7 @@ interface RatesLoaderProps {
   setIsLoading: (loading: boolean) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
   fetchBybitRate: () => Promise<number | null>;
+  isMobile?: boolean; // Add mobile awareness
 }
 
 export const useRatesLoader = ({
@@ -21,11 +22,12 @@ export const useRatesLoader = ({
   setLastUpdated,
   setIsLoading,
   calculateAllCostPrices,
-  fetchBybitRate
+  fetchBybitRate,
+  isMobile = false
 }: RatesLoaderProps) => {
   
   const loadAllData = async () => {
-    console.log("[useRatesLoader] Loading all data...");
+    console.log(`[useRatesLoader] Loading all data... (mobile: ${isMobile})`);
     setIsLoading(true);
     
     try {
@@ -36,15 +38,43 @@ export const useRatesLoader = ({
         margins: false
       };
       
-      // First fetch live Bybit rate
-      const bybitRate = await fetchBybitRate();
+      // Prioritize critical data first on mobile
+      if (isMobile) {
+        // On mobile, prioritize database rates first for faster initial load
+        console.log("[useRatesLoader] Mobile detected, prioritizing cached rates");
+        const databaseRate = await fetchLatestUsdtNgnRate().catch(error => {
+          console.error("[useRatesLoader] Error fetching from database:", error);
+          return null;
+        });
+        
+        if (databaseRate && databaseRate > 0) {
+          console.log("[useRatesLoader] Setting USDT/NGN rate from database:", databaseRate);
+          setUsdtNgnRate(databaseRate);
+          
+          // Show toast that we're using cached data initially
+          toast.info("Using cached rates", {
+            description: "Live rates are loading in background"
+          });
+        }
+      }
+      
+      // First fetch live Bybit rate - but with timeout optimization for mobile
+      const bybitRatePromise = fetchBybitRate();
+      const bybitRate = isMobile 
+        ? await Promise.race([
+            bybitRatePromise, 
+            new Promise<null>(resolve => setTimeout(() => resolve(null), 3000))
+          ])
+        : await bybitRatePromise;
+      
       loadStatus.bybitRate = !!bybitRate;
       
-      // Load other FX rates
+      // Load other FX rates with mobile optimization
       const { fxRates: loadedFxRates, success } = await loadRatesData(
         setFxRates,
         setVertoFxRates,
-        setIsLoading
+        setIsLoading,
+        isMobile
       );
       
       loadStatus.fxRates = success;
@@ -53,7 +83,9 @@ export const useRatesLoader = ({
       if (bybitRate && bybitRate > 0) {
         console.log("[useRatesLoader] Setting USDT/NGN rate from Bybit:", bybitRate);
         setUsdtNgnRate(bybitRate);
-      } else {
+      } else if (!isMobile || !databaseRate) {
+        // Only try to fetch from database again if we're not on mobile
+        // or if we didn't already set a database rate
         console.log("[useRatesLoader] Bybit rate unavailable, fetching from database");
         const databaseRate = await fetchLatestUsdtNgnRate().catch(error => {
           console.error("[useRatesLoader] Error fetching from database:", error);
@@ -81,7 +113,8 @@ export const useRatesLoader = ({
       
       loadStatus.margins = calculationsApplied;
       
-      if (calculationsApplied) {
+      // On non-mobile or after initial mobile load is complete, save historical data
+      if (!isMobile && calculationsApplied) {
         try {
           await saveHistoricalRatesData(loadedFxRates, bybitRate || DEFAULT_RATE);
         } catch (error) {
@@ -92,28 +125,36 @@ export const useRatesLoader = ({
       setLastUpdated(new Date());
       
       // Check if any data sources failed and show appropriate notifications
-      if (!loadStatus.bybitRate && !loadStatus.fxRates) {
+      // On mobile, show fewer and simpler toasts
+      if (!loadStatus.bybitRate && !loadStatus.fxRates && !isMobile) {
         toast.warning("Using cached rates - external data sources unavailable", {
           description: "Check your network connection"
         });
-      } else if (!loadStatus.bybitRate) {
+      } else if (!loadStatus.bybitRate && !isMobile) {
         toast.info("Using fallback USDT/NGN rate", {
           description: "Bybit rates unavailable"
         });
-      } else if (!loadStatus.fxRates) {
+      } else if (!loadStatus.fxRates && !isMobile) {
         toast.info("Using cached exchange rates", {
           description: "Currency API unavailable"
         });
-      } else {
+      } else if (!isMobile) {
         toast.success("All rates loaded successfully");
       }
       
       console.log("[useRatesLoader] All rates loaded with status:", loadStatus);
     } catch (error) {
       console.error("[useRatesLoader] Error loading data:", error);
-      toast.error("Failed to load some data", {
-        description: "Using cached values where possible"
-      });
+      
+      // Simpler error toast for mobile
+      if (isMobile) {
+        toast.error("Failed to load data");
+      } else {
+        toast.error("Failed to load some data", {
+          description: "Using cached values where possible"
+        });
+      }
+      
       setUsdtNgnRate(DEFAULT_RATE);
     } finally {
       setIsLoading(false);

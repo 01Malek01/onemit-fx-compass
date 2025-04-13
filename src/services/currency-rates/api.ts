@@ -9,18 +9,22 @@ const API_BASE_URL = 'https://api.freecurrencyapi.com/v1/latest';
 /**
  * Fetches the latest exchange rates for specified currencies against USD
  * @param currencies Array of currency codes (e.g., ["EUR", "GBP", "CAD"])
+ * @param timeoutMs Timeout in milliseconds for the API request
  * @returns Object with currency codes as keys and exchange rates as values
  */
-export const fetchExchangeRates = async (currencies: string[]): Promise<Record<string, number>> => {
+export const fetchExchangeRates = async (
+  currencies: string[],
+  timeoutMs: number = 5000
+): Promise<Record<string, number>> => {
   try {
     console.log("[currency-rates/api] Fetching exchange rates for:", currencies);
     
     // Join the currencies with a comma for the API request
     const currenciesParam = currencies.join(',');
     
-    // Make API request with a timeout
+    // Make API request with a configurable timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     const response = await fetch(`${API_BASE_URL}?apikey=${API_KEY}&currencies=${currenciesParam}`, {
       signal: controller.signal

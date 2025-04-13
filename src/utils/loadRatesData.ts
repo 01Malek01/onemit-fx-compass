@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { 
   CurrencyRates,
@@ -24,13 +25,14 @@ let lastSuccessfulUsdtRate: number = 0;
 export const loadRatesData = async (
   setFxRates: (rates: CurrencyRates) => void,
   setVertoFxRates: (rates: VertoFXRates) => void,
-  setIsLoading: (loading: boolean) => void
+  setIsLoading: (loading: boolean) => void,
+  isMobile: boolean = false
 ): Promise<{ 
   usdtRate: number, 
   fxRates: CurrencyRates, 
   success: boolean 
 }> => {
-  console.log("[loadRatesData] Loading rates data...");
+  console.log(`[loadRatesData] Loading rates data... (mobile: ${isMobile})`);
   let loadSuccess = true;
   
   try {
@@ -58,7 +60,10 @@ export const loadRatesData = async (
     let apiRates: CurrencyRates = {};
     
     try {
-      apiRates = await fetchExchangeRates(supportedCurrencies);
+      // Use a shorter timeout for mobile
+      const apiTimeout = isMobile ? 3000 : 5000;
+      
+      apiRates = await fetchExchangeRates(supportedCurrencies, apiTimeout);
       console.log("[loadRatesData] Fetched rates from API:", apiRates);
     } catch (apiError) {
       console.error("[loadRatesData] Error fetching from API:", apiError);
@@ -71,13 +76,17 @@ export const loadRatesData = async (
       // Ensure USD is included with rate 1.0
       rates = { ...apiRates, USD: 1.0 };
       
-      // Save to database for persistence
-      try {
-        const saved = await saveCurrencyRates(rates);
-        console.log("[loadRatesData] Saved currency rates to DB:", saved);
-      } catch (saveError) {
-        console.error("[loadRatesData] Failed to save rates to DB:", saveError);
-        // Continue as we still have the rates in memory
+      // Save to database for persistence - skip on mobile to improve performance
+      if (!isMobile) {
+        try {
+          const saved = await saveCurrencyRates(rates);
+          console.log("[loadRatesData] Saved currency rates to DB:", saved);
+        } catch (saveError) {
+          console.error("[loadRatesData] Failed to save rates to DB:", saveError);
+          // Continue as we still have the rates in memory
+        }
+      } else {
+        console.log("[loadRatesData] Skipping DB save on mobile for better performance");
       }
       
       // Update our last successful rates cache
@@ -110,23 +119,29 @@ export const loadRatesData = async (
     
     setFxRates(rates);
     
-    // Fetch VertoFX rates (these are always from API as they're comparison only)
+    // Fetch VertoFX rates - use a simplified approach on mobile
     let vertoRates: VertoFXRates = {};
     try {
-      vertoRates = await fetchVertoFXRates();
-      console.log("[loadRatesData] Fetched VertoFX rates:", vertoRates);
-      
-      // Check if we got valid rates
-      const hasValidRates = Object.values(vertoRates).some(rate => 
-        (rate.buy > 0 || rate.sell > 0)
-      );
-      
-      if (hasValidRates) {
-        lastSuccessfulVertoFxRates = { ...vertoRates };
-      } else {
-        console.warn("[loadRatesData] Invalid VertoFX rates, using cached rates");
+      // Skip VertoFX rate loading on initial mobile load if we already have cached values
+      if (isMobile && Object.keys(lastSuccessfulVertoFxRates).length > 0) {
+        console.log("[loadRatesData] Mobile detected, using cached VertoFX rates for faster load");
         vertoRates = { ...lastSuccessfulVertoFxRates };
-        loadSuccess = false;
+      } else {
+        vertoRates = await fetchVertoFXRates();
+        console.log("[loadRatesData] Fetched VertoFX rates:", vertoRates);
+      
+        // Check if we got valid rates
+        const hasValidRates = Object.values(vertoRates).some(rate => 
+          (rate.buy > 0 || rate.sell > 0)
+        );
+        
+        if (hasValidRates) {
+          lastSuccessfulVertoFxRates = { ...vertoRates };
+        } else {
+          console.warn("[loadRatesData] Invalid VertoFX rates, using cached rates");
+          vertoRates = { ...lastSuccessfulVertoFxRates };
+          loadSuccess = false;
+        }
       }
     } catch (vertoError) {
       console.error("[loadRatesData] Error fetching VertoFX rates:", vertoError);
@@ -143,9 +158,15 @@ export const loadRatesData = async (
     };
   } catch (error) {
     console.error("[loadRatesData] Critical error loading rates data:", error);
-    toast.error("Failed to load rates data", {
-      description: "Using fallback values - please try refreshing"
-    });
+    
+    // Simpler toast on mobile
+    if (!isMobile) {
+      toast.error("Failed to load rates data", {
+        description: "Using fallback values - please try refreshing"
+      });
+    } else {
+      toast.error("Failed to load rates");
+    }
     
     // Use any cached data we have
     setFxRates(lastSuccessfulFxRates);
