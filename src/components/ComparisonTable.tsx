@@ -81,7 +81,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
       
       return (
         <div className={isBetter ? 'rate-better' : 'rate-worse'}>
-          <div className="text-lg font-medium">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
+          <div className="text-lg font-medium text-emerald-500">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -106,7 +106,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   const getSellRateComparison = () => {
     // Display 0 NGN for sell rates as requested
     return <div>
-        <div className="text-lg font-medium">{formatCurrency(0, 'NGN')}</div>
+        <div className="text-lg font-medium">NGN 0.00</div>
       </div>;
   };
 
@@ -119,13 +119,13 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   // Handle errors in the entire component render
   try {
     return (
-      <Card className="fx-card">
+      <Card className="fx-card bg-[#111119]">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-medium flex items-center">
             <CurrencyFlag currency={currencyCode} className="mr-2" />
             NGN/{currencyCode} Comparison
             {isUsingDefaultRates && (
-              <Badge variant="outline" className="ml-2 bg-red-50 text-red-700 border-red-200 text-xs">
+              <Badge variant="outline" className="ml-2 bg-red-500/10 text-white text-xs px-2 py-0">
                 Default data
               </Badge>
             )}
@@ -138,27 +138,25 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
               <div className="h-20 w-full skeleton-pulse"></div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[30%]">Provider</TableHead>
-                  <TableHead>Buy Rate (NGN → {currencyCode})</TableHead>
-                  <TableHead>Sell Rate ({currencyCode} → NGN)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow className="hover:bg-secondary/20">
-                  <TableCell className="font-medium">Oneremit</TableCell>
-                  <TableCell>{getBuyRateComparison()}</TableCell>
-                  <TableCell>{getSellRateComparison()}</TableCell>
-                </TableRow>
-                <TableRow className="hover:bg-secondary/20">
-                  <TableCell className="font-medium">VertoFX</TableCell>
-                  <TableCell>{formatVertoRate(safeVertoRates.buy)}</TableCell>
-                  <TableCell>{formatVertoRate(safeVertoRates.sell)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <div className="text-sm">
+              <div className="flex border-b border-gray-700 py-3">
+                <div className="w-1/3 font-medium text-gray-400">Provider</div>
+                <div className="w-1/3 font-medium text-gray-400">Buy Rate (NGN → {currencyCode})</div>
+                <div className="w-1/3 font-medium text-gray-400">Sell Rate ({currencyCode} → NGN)</div>
+              </div>
+              
+              <div className="flex border-b border-gray-700 py-4 items-center">
+                <div className="w-1/3 font-medium">Oneremit</div>
+                <div className="w-1/3">{getBuyRateComparison()}</div>
+                <div className="w-1/3">{getSellRateComparison()}</div>
+              </div>
+              
+              <div className="flex py-4 items-center">
+                <div className="w-1/3 font-medium">VertoFX</div>
+                <div className="w-1/3 text-lg font-medium">{formatVertoRate(safeVertoRates.buy)}</div>
+                <div className="w-1/3 text-lg font-medium">{formatVertoRate(safeVertoRates.sell)}</div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

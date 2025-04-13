@@ -71,23 +71,21 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
           Market Comparison
         </div>
         
-        {usingDefaults && (
-          <Button 
-            onClick={handleRefreshVertoFxRates} 
-            variant="outline" 
-            size="sm" 
-            className="gap-1.5"
-            disabled={cooldownRemaining > 0 || retryLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${retryLoading ? 'animate-spin' : ''}`} />
-            {retryLoading 
-              ? 'Refreshing...' 
-              : cooldownRemaining > 0 
-                ? `Retry in ${Math.ceil(cooldownRemaining / 1000)}s` 
-                : 'Refresh Market Data'
-            }
-          </Button>
-        )}
+        <Button 
+          onClick={handleRefreshVertoFxRates} 
+          variant="outline" 
+          size="sm" 
+          className="gap-1.5 text-gray-300 border-gray-700 hover:bg-gray-800"
+          disabled={cooldownRemaining > 0 || retryLoading}
+        >
+          <RefreshCw className={`h-4 w-4 ${retryLoading ? 'animate-spin' : ''}`} />
+          {retryLoading 
+            ? 'Refreshing...' 
+            : cooldownRemaining > 0 
+              ? `Retry in ${Math.ceil(cooldownRemaining / 1000)}s` 
+              : 'Retry in 30s'
+          }
+        </Button>
       </h2>
       <MarketComparisonPanel 
         currencies={currencies} 

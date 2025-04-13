@@ -57,27 +57,27 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   return (
     <div className="space-y-4">
       {isUsingDefaults && (
-        <Alert variant="destructive" className="bg-red-50 border-red-200">
-          <WifiOff className="h-4 w-4 text-red-500" />
-          <AlertDescription className="text-red-800">
+        <Alert className="bg-red-50/10 border-red-500/20 text-red-100">
+          <WifiOff className="h-4 w-4 text-red-400" />
+          <AlertDescription className="text-red-100">
             <strong>Market comparison data unavailable.</strong> VertoFX API connection failed. Showing default rates.
           </AlertDescription>
         </Alert>
       )}
       
       {usingCachedRates && !isUsingDefaults && (
-        <Alert variant="default" className="bg-amber-50 border-amber-200">
-          <WifiOff className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="text-amber-800">
+        <Alert variant="default" className="bg-amber-50/10 border-amber-500/20 text-amber-100">
+          <WifiOff className="h-4 w-4 text-amber-400" />
+          <AlertDescription className="text-amber-100">
             Market comparison data may be outdated or incomplete. Using cached rates.
           </AlertDescription>
         </Alert>
       )}
       
       {hasPartialData && !isUsingDefaults && (
-        <Alert variant="default" className="bg-blue-50 border-blue-200">
-          <AlertTriangle className="h-4 w-4 text-blue-500" />
-          <AlertDescription className="text-blue-800">
+        <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100">
+          <AlertTriangle className="h-4 w-4 text-blue-400" />
+          <AlertDescription className="text-blue-100">
             Some market comparison data may be incomplete. Showing available rates.
           </AlertDescription>
         </Alert>
@@ -118,9 +118,9 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
       
       {isUsingDefaults && (
         <div className="mt-4">
-          <Alert variant="default" className="bg-blue-50 border-blue-200">
-            <Info className="h-4 w-4 text-blue-500" />
-            <AlertDescription className="text-blue-800">
+          <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100">
+            <Info className="h-4 w-4 text-blue-400" />
+            <AlertDescription className="text-blue-100">
               Default rates are based on typical market spreads and may not reflect current conditions. 
               Please refresh to attempt reconnection to VertoFX API.
             </AlertDescription>
