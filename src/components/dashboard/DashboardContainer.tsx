@@ -1,18 +1,24 @@
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import Header from '@/components/Header';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import RateCalculatorSection from '@/components/dashboard/RateCalculatorSection';
-import CostPriceSection from '@/components/dashboard/CostPriceSection';
-import MarketComparisonSection from '@/components/dashboard/MarketComparisonSection';
 import { BarChart3, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// Lazy loaded components to improve initial render time
+// Lazy load non-critical sections for faster initial render
+const CostPriceSection = lazy(() => import('@/components/dashboard/CostPriceSection'));
+const MarketComparisonSection = lazy(() => import('@/components/dashboard/MarketComparisonSection'));
+
+// Simple placeholder components for lazy-loaded components
+const CostPricePlaceholder = () => <div className="animate-pulse h-64 w-full bg-muted/20 rounded-md"></div>;
+const MarketPlaceholder = () => <div className="animate-pulse h-80 w-full bg-muted/20 rounded-md"></div>;
+
+// Lazy loaded analytics component
 const AnalyticsPlaceholder = () => (
   <Card className="fx-card relative overflow-hidden mt-8">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" aria-hidden="true" />
@@ -110,20 +116,24 @@ const DashboardContainer = () => {
         </div>
       </div>
 
-      <CostPriceSection 
-        costPrices={costPrices}
-        previousCostPrices={previousCostPrices}
-        isLoading={isLoading}
-      />
+      <Suspense fallback={<CostPricePlaceholder />}>
+        <CostPriceSection 
+          costPrices={costPrices}
+          previousCostPrices={previousCostPrices}
+          isLoading={isLoading}
+        />
+      </Suspense>
       
       <Separator className="my-8 opacity-30" />
       
-      <MarketComparisonSection 
-        currencies={['USD', 'EUR', 'GBP', 'CAD']} 
-        oneremitRatesFn={getOneremitRates}
-        vertoFxRates={vertoFxRates}
-        isLoading={isLoading}
-      />
+      <Suspense fallback={<MarketPlaceholder />}>
+        <MarketComparisonSection 
+          currencies={['USD', 'EUR', 'GBP', 'CAD']} 
+          oneremitRatesFn={getOneremitRates}
+          vertoFxRates={vertoFxRates}
+          isLoading={isLoading}
+        />
+      </Suspense>
       
       <Separator className="my-8 opacity-30" />
       

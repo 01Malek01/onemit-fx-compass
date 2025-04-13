@@ -8,6 +8,10 @@ import { corsHeaders } from "../_shared/cors.ts";
 // Define the Bybit API URL
 const BYBIT_API_URL = "https://api2.bybit.com/fiat/otc/item/online";
 
+// In-memory cache for Bybit responses
+const responseCache = new Map();
+const CACHE_TTL = 60 * 1000; // 1 minute cache TTL
+
 serve(async (req) => {
   console.log("Bybit proxy request received:", req.method);
   
@@ -38,6 +42,19 @@ serve(async (req) => {
     const tokenId = requestData.tokenId || "USDT";
     const currencyId = requestData.currencyId || "NGN";
     const verifiedOnly = requestData.verifiedOnly !== undefined ? requestData.verifiedOnly : true;
+    
+    // Create a cache key based on the request params
+    const cacheKey = `${tokenId}-${currencyId}-${verifiedOnly}`;
+    
+    // Check if we have a cached response
+    const cachedItem = responseCache.get(cacheKey);
+    if (cachedItem && Date.now() - cachedItem.timestamp < CACHE_TTL) {
+      console.log("Returning cached Bybit response");
+      return new Response(JSON.stringify(cachedItem.data), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
     
     // Prepare headers for Bybit API request
     const headers = {
@@ -74,112 +91,144 @@ serve(async (req) => {
     
     console.log("Sending request to Bybit API:", JSON.stringify(payload));
     
-    // Make request to Bybit API
-    const response = await fetch(BYBIT_API_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
+    // Make request to Bybit API with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 second timeout
     
-    // Handle API response
-    if (!response.ok) {
-      console.error(`Bybit API error: ${response.status} ${response.statusText}`);
-      const errorText = await response.text();
-      console.error("Error response:", errorText);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: `API responded with status: ${response.status}`,
-        details: errorText
-      }), {
-        status: 502, // Bad Gateway
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
-    
-    // Parse and process the successful response
-    const data = await response.json();
-    console.log("Bybit API response status code:", response.status);
-    console.log("Bybit API response ret_code:", data.ret_code);
-    
-    // Process the response similarly to the frontend code
-    if (data.ret_code === 0 && data.result && data.result.items && data.result.items.length > 0) {
-      const items = data.result.items;
-      
-      const traders = items.map((item: any) => ({
-        price: parseFloat(item.price),
-        nickname: item.nickName,
-        completion_rate: item.recentExecuteRate,
-        orders: item.recentOrderNum,
-        available_quantity: parseFloat(item.lastQuantity),
-        min_amount: parseFloat(item.minAmount),
-        max_amount: parseFloat(item.maxAmount),
-        verified: !!item.authTag,
-        payment_methods: item.payments ?? [],
-        order_completion_time: item.orderFinishTime ?? "15Min(s)",
-      }));
-      
-      const prices = traders.map((t: any) => t.price);
-      const sortedPrices = [...prices].sort((a: number, b: number) => a - b);
-      const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)];
-      
-      const average =
-        prices.reduce((sum: number, p: number) => sum + p, 0) / (prices.length || 1);
-      
-      // Find most common price (mode)
-      const priceFrequency: Record<number, number> = {};
-      let maxFreq = 0;
-      let modePrice = prices[0] || 0;
-      
-      prices.forEach((price: number) => {
-        priceFrequency[price] = (priceFrequency[price] || 0) + 1;
-        if (priceFrequency[price] > maxFreq) {
-          maxFreq = priceFrequency[price];
-          modePrice = price;
-        }
+    try {
+      const response = await fetch(BYBIT_API_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
       
-      // Return the processed data with the same structure as the frontend expects
+      clearTimeout(timeoutId);
+      
+      // Handle API response
+      if (!response.ok) {
+        console.error(`Bybit API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: `API responded with status: ${response.status}`,
+          details: errorText
+        }), {
+          status: 502, // Bad Gateway
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      
+      // Parse and process the successful response
+      const data = await response.json();
+      console.log("Bybit API response status code:", response.status);
+      console.log("Bybit API response ret_code:", data.ret_code);
+      
+      // Process the response similarly to the frontend code
+      if (data.ret_code === 0 && data.result && data.result.items && data.result.items.length > 0) {
+        const items = data.result.items;
+        
+        const traders = items.map((item: any) => ({
+          price: parseFloat(item.price),
+          nickname: item.nickName,
+          completion_rate: item.recentExecuteRate,
+          orders: item.recentOrderNum,
+          available_quantity: parseFloat(item.lastQuantity),
+          min_amount: parseFloat(item.minAmount),
+          max_amount: parseFloat(item.maxAmount),
+          verified: !!item.authTag,
+          payment_methods: item.payments ?? [],
+          order_completion_time: item.orderFinishTime ?? "15Min(s)",
+        }));
+        
+        const prices = traders.map((t: any) => t.price);
+        const sortedPrices = [...prices].sort((a: number, b: number) => a - b);
+        const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)];
+        
+        const average =
+          prices.reduce((sum: number, p: number) => sum + p, 0) / (prices.length || 1);
+        
+        // Find most common price (mode)
+        const priceFrequency: Record<number, number> = {};
+        let maxFreq = 0;
+        let modePrice = prices[0] || 0;
+        
+        prices.forEach((price: number) => {
+          priceFrequency[price] = (priceFrequency[price] || 0) + 1;
+          if (priceFrequency[price] > maxFreq) {
+            maxFreq = priceFrequency[price];
+            modePrice = price;
+          }
+        });
+        
+        // Prepare response
+        const processedResponse = {
+          traders,
+          market_summary: {
+            total_traders: prices.length,
+            price_range: {
+              min: Math.min(...prices),
+              max: Math.max(...prices),
+              average,
+              median: medianPrice,
+              mode: modePrice,
+            },
+          },
+          timestamp: new Date().toISOString(),
+          success: true
+        };
+        
+        // Cache the response
+        responseCache.set(cacheKey, {
+          data: processedResponse,
+          timestamp: Date.now()
+        });
+        
+        return new Response(JSON.stringify(processedResponse), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      
+      // Handle unsuccessful or empty responses
+      console.warn("Invalid or empty response from Bybit API");
       return new Response(JSON.stringify({
-        traders,
+        traders: [],
         market_summary: {
-          total_traders: prices.length,
+          total_traders: 0,
           price_range: {
-            min: Math.min(...prices),
-            max: Math.max(...prices),
-            average,
-            median: medianPrice,
-            mode: modePrice,
+            min: 0,
+            max: 0,
+            average: 0,
+            median: 0,
+            mode: 0,
           },
         },
         timestamp: new Date().toISOString(),
-        success: true
+        success: false,
+        error: `Invalid response from Bybit API: ${data?.ret_msg || "No traders found"}`
       }), {
-        status: 200,
+        status: 200, // Still return 200 to allow frontend to handle gracefully
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error("Bybit API request timed out");
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Request to Bybit API timed out",
+          timestamp: new Date().toISOString(),
+        }), {
+          status: 504, // Gateway Timeout
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      
+      throw error; // Re-throw for the outer catch block
     }
-    
-    // Handle unsuccessful or empty responses
-    console.warn("Invalid or empty response from Bybit API");
-    return new Response(JSON.stringify({
-      traders: [],
-      market_summary: {
-        total_traders: 0,
-        price_range: {
-          min: 0,
-          max: 0,
-          average: 0,
-          median: 0,
-          mode: 0,
-        },
-      },
-      timestamp: new Date().toISOString(),
-      success: false,
-      error: `Invalid response from Bybit API: ${data?.ret_msg || "No traders found"}`
-    }), {
-      status: 200, // Still return 200 to allow frontend to handle gracefully
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
   } catch (error) {
     // Handle any unexpected errors
     console.error("Error in bybit-proxy function:", error.message);

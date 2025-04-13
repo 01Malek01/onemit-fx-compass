@@ -1,9 +1,13 @@
 
 import { getBybitP2PRate } from './bybit-api';
 import { saveBybitRate } from './bybit-storage';
+import { cacheWithExpiration } from '@/utils/cacheUtils';
+
+// Cache key for Bybit rate
+const BYBIT_RATE_CACHE_KEY = 'bybit_rate_cache';
 
 /**
- * Function to fetch Bybit rate with retry logic
+ * Function to fetch Bybit rate with retry logic and caching
  * @param maxRetries Maximum number of retry attempts
  * @param delayMs Delay in ms between retries
  */
@@ -11,6 +15,13 @@ export const fetchBybitRateWithRetry = async (
   maxRetries: number = 2,
   delayMs: number = 2000
 ): Promise<{rate: number | null, error?: string}> => {
+  // Check cache first for ultra-fast response
+  const cachedRate = cacheWithExpiration.get(BYBIT_RATE_CACHE_KEY);
+  if (cachedRate) {
+    console.log(`[BybitAPI] Using cached rate: ${cachedRate}`);
+    return { rate: cachedRate };
+  }
+  
   let lastError = "";
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -28,6 +39,9 @@ export const fetchBybitRateWithRetry = async (
           
           // Save successful rate to database
           await saveBybitRate(rate);
+          
+          // Cache the rate for 5 minutes
+          cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 5 * 60 * 1000);
           
           return { rate };
         } else {
