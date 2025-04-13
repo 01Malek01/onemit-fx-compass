@@ -14,21 +14,21 @@ export const getBybitP2PRate = async (
   console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
 
   try {
-    // Add request timeout handling
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 8000); // 8 second timeout
+    // Add request timeout handling for client-side
+    const timeoutId = setTimeout(() => {
+      throw new Error("Client-side timeout exceeded");
+    }, 10000); // 10 second client-side timeout
     
     console.log("[BybitAPI] Calling Supabase Edge Function proxy");
     
-    // Call our Supabase Edge Function with abort controller
+    // Call our Supabase Edge Function without the signal parameter
     const { data, error } = await supabase.functions.invoke('bybit-proxy', {
       body: {
         currencyId,
         tokenId,
         verifiedOnly,
         requestTimestamp: new Date().toISOString() // Add timestamp for cache busting
-      },
-      // Remove signal which is not supported in FunctionInvokeOptions
+      }
     });
     
     clearTimeout(timeoutId);

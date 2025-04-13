@@ -33,7 +33,12 @@ export const fetchBybitRateWithRetry = async (
       
       const response = await getBybitP2PRate("NGN", "USDT", true);
       
-      if (response && response.success && response.market_summary.total_traders > 0) {
+      if (!response) {
+        lastError = "Null response from Bybit API";
+        continue;
+      }
+      
+      if (response && response.success && response.market_summary && response.market_summary.total_traders > 0) {
         // Use average price for more stability, not min price
         const rate = response.market_summary.price_range.average; 
         
@@ -41,7 +46,10 @@ export const fetchBybitRateWithRetry = async (
           console.log(`[BybitAPI] Successfully fetched rate on attempt ${attempt}: ${rate}`);
           
           // Save successful rate to database
-          await saveBybitRate(rate);
+          await saveBybitRate(rate).catch(err => {
+            console.warn(`[BybitAPI] Failed to save rate to DB: ${err.message}`);
+            // Continue anyway as this is not critical
+          });
           
           // Cache the rate for 10 minutes (increased from 5)
           cacheWithExpiration.set(BYBIT_RATE_CACHE_KEY, rate, 10 * 60 * 1000);

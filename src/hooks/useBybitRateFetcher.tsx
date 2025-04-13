@@ -44,6 +44,9 @@ export const useBybitRateFetcher = ({
     setIsLoading(true);
     
     try {
+      // Clear any existing toasts first
+      toast.dismiss();
+      
       const bybitRate = await fetchBybitRate();
       
       if (bybitRate && bybitRate > 0) {
