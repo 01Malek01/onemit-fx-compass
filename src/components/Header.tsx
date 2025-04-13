@@ -7,13 +7,13 @@ import AuthHeader from './AuthHeader';
 
 interface HeaderProps {
   lastUpdated: Date | null;
-  onRefresh?: () => void;
+  onRefresh?: () => Promise<boolean>;
   isLoading?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({
   lastUpdated,
-  onRefresh,
+  onRefresh = async () => false,
   isLoading = false,
 }) => {
   return (
@@ -29,8 +29,15 @@ const Header: React.FC<HeaderProps> = ({
 
       <div className="flex flex-wrap items-center justify-between w-full sm:w-auto mt-3 sm:mt-0 gap-2">
         <div className="flex items-center space-x-3">
-          <TimestampDisplay lastUpdated={lastUpdated} />
-          <RefreshButton onClick={onRefresh} isLoading={isLoading} />
+          <TimestampDisplay 
+            lastUpdated={lastUpdated} 
+            rate={null} 
+            isStale={false} 
+          />
+          <RefreshButton 
+            onRefresh={onRefresh} 
+            isLoading={isLoading} 
+          />
         </div>
         <AuthHeader />
       </div>
