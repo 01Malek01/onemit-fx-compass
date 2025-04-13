@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
@@ -15,8 +14,8 @@ export const useDashboardState = () => {
     { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate }
   ] = useCurrencyData();
 
-  // Use our rate refresher hook
-  const { handleRefresh, handleBybitRateRefresh } = useRateRefresher({
+  // Use our rate refresher hook with countdown
+  const { handleRefresh, handleBybitRateRefresh, nextRefreshIn } = useRateRefresher({
     usdtNgnRate,
     costPrices,
     fxRates,
@@ -25,21 +24,21 @@ export const useDashboardState = () => {
     usdMargin: 2.5, // Default value, will be updated in useEffect
     otherCurrenciesMargin: 3.0 // Default value, will be updated in useEffect
   });
-  
+
   // Use our margin manager hook
-  const { 
-    usdMargin, 
-    otherCurrenciesMargin, 
-    setUsdMargin, 
-    setOtherCurrenciesMargin, 
-    handleMarginUpdate 
+  const {
+    usdMargin,
+    otherCurrenciesMargin,
+    setUsdMargin,
+    setOtherCurrenciesMargin,
+    handleMarginUpdate
   } = useMarginManager({
     usdtNgnRate,
     costPrices,
     fxRates,
     calculateAllCostPrices
   });
-  
+
   // Use our Oneremit rates generator hook
   const { getOneremitRates } = useOneremitRates({
     costPrices
@@ -51,7 +50,7 @@ export const useDashboardState = () => {
     setUsdtNgnRate(rate);
     calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
   };
-  
+
   // Handler for real-time margin settings updates
   const handleRealtimeMarginUpdate = (newUsdMargin: number, newOtherMargin: number) => {
     console.log("Received real-time margin settings update:", { newUsdMargin, newOtherMargin });
@@ -59,7 +58,7 @@ export const useDashboardState = () => {
     setOtherCurrenciesMargin(newOtherMargin);
     calculateAllCostPrices(newUsdMargin, newOtherMargin);
   };
-  
+
   // Set up real-time subscriptions
   useRealtimeUpdates({
     onUsdtRateChange: handleRealtimeUsdtRateUpdate,
@@ -74,14 +73,14 @@ export const useDashboardState = () => {
         // Load all currency data including Bybit rate
         console.log("DashboardContainer: Initializing and loading all data");
         await loadAllData();
-        
+
         // Fetch margin settings from database
         const settings = await fetchMarginSettings();
         if (settings) {
           console.log("Initial margin settings loaded:", settings);
           setUsdMargin(settings.usd_margin);
           setOtherCurrenciesMargin(settings.other_currencies_margin);
-          
+
           // Calculate cost prices with the loaded margins
           calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
         } else {
@@ -91,7 +90,7 @@ export const useDashboardState = () => {
         console.error("DashboardContainer: Error during initialization:", error);
       }
     };
-    
+
     initialize();
   }, []);
 
@@ -118,5 +117,6 @@ export const useDashboardState = () => {
     handleMarginUpdate,
     getOneremitRates,
     fxRates,
+    nextRefreshIn,
   };
 };

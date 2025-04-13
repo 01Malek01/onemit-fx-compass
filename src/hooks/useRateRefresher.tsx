@@ -1,5 +1,4 @@
-
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
 
@@ -24,12 +23,15 @@ export const useRateRefresher = ({
 }: RateRefresherProps) => {
   // Reference to store timer
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
+  // Add state for tracking next refresh
+  const [nextRefreshIn, setNextRefreshIn] = useState(60); // 60 seconds
+
   // Handle manual Bybit rate refresh
   const handleBybitRateRefresh = useCallback(async () => {
     console.log("RateRefresher: Manually refreshing Bybit rate");
     const success = await refreshBybitRate();
-    
+
     if (success) {
       console.log("RateRefresher: Manual refresh was successful");
       // After refreshing the rate, recalculate with current margins
@@ -45,7 +47,7 @@ export const useRateRefresher = ({
   const handleRefresh = async () => {
     console.log("RateRefresher: Handling refresh button click");
     const success = await handleBybitRateRefresh();
-    
+
     // Only save historical data if refresh was successful
     if (success) {
       // Save historical data after refresh with source="refresh"
@@ -67,56 +69,57 @@ export const useRateRefresher = ({
     }
   };
 
-  // Setup automatic refresh interval (every 60 seconds)
-  useEffect(() => {
-    // Clear any existing timer
-    if (autoRefreshTimerRef.current) {
-      clearInterval(autoRefreshTimerRef.current);
-    }
-    
-    // Set up a new timer for auto-refresh every minute (60000ms)
-    autoRefreshTimerRef.current = setInterval(async () => {
-      console.log("RateRefresher: Auto-refreshing Bybit rate");
-      try {
-        // Important: Use await to ensure we get the result
-        const success = await refreshBybitRate();
-        
-        // Only recalculate if the refresh was successful
-        if (success) {
-          console.log("RateRefresher: Auto-refresh was successful, recalculating prices");
-          calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
-          
-          // Save historical data after auto-refresh with source="auto"
-          if (usdtNgnRate && Object.keys(costPrices).length > 0) {
-            await saveHistoricalRates(
-              usdtNgnRate,
-              usdMargin,
-              otherCurrenciesMargin,
-              fxRates,
-              costPrices,
-              'auto'
-            );
-            console.log("Historical data saved after auto-refresh");
-          }
-        } else {
-          console.warn("RateRefresher: Auto-refresh did not update the rate");
+  // Function to handle the actual refresh
+  const performRefresh = async () => {
+    console.log("RateRefresher: Performing auto-refresh");
+    try {
+      const success = await refreshBybitRate();
+
+      if (success) {
+        console.log("RateRefresher: Auto-refresh successful");
+        calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
+
+        // Save historical data
+        if (usdtNgnRate && Object.keys(costPrices).length > 0) {
+          await saveHistoricalRates(
+            usdtNgnRate,
+            usdMargin,
+            otherCurrenciesMargin,
+            fxRates,
+            costPrices,
+            'auto'
+          );
         }
-      } catch (error) {
-        console.error("Auto-refresh failed:", error);
       }
-    }, 60000); // 1 minute interval (or lower to 10000 for testing - 10 seconds)
-    
-    // Cleanup on unmount
+    } catch (error) {
+      console.error("Auto-refresh failed:", error);
+    }
+  };
+
+  // Setup countdown timer and auto-refresh
+  useEffect(() => {
+    // Update countdown every second
+    const countdownInterval = setInterval(() => {
+      setNextRefreshIn(prev => {
+        if (prev <= 1) {
+          performRefresh(); // Trigger refresh when countdown reaches 0
+          return 60; // Reset to 60 seconds
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Initial refresh
+    performRefresh();
+
     return () => {
-      if (autoRefreshTimerRef.current) {
-        clearInterval(autoRefreshTimerRef.current);
-        autoRefreshTimerRef.current = null;
-      }
+      clearInterval(countdownInterval);
     };
-  }, [refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin, usdtNgnRate, costPrices, fxRates]);
+  }, [usdMargin, otherCurrenciesMargin]);
 
   return {
     handleRefresh,
-    handleBybitRateRefresh
+    handleBybitRateRefresh,
+    nextRefreshIn
   };
 };

@@ -8,6 +8,7 @@ import RateCalculatorSection from '@/components/dashboard/RateCalculatorSection'
 import { BarChart3, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import RefreshCountdown from '@/components/dashboard/rate-display/RefreshCountdown';
 
 // Lazy load non-critical sections for faster initial render
 const CostPriceSection = lazy(() => import('@/components/dashboard/CostPriceSection'));
@@ -55,11 +56,12 @@ const DashboardContainer = () => {
     handleMarginUpdate,
     getOneremitRates,
     fxRates,
+    nextRefreshIn,
   } = useDashboardState();
-  
+
   // State for real-time indicator
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
-  
+
   // Optimized effect to track changes
   useEffect(() => {
     setIsRealtimeActive(true);
@@ -75,13 +77,13 @@ const DashboardContainer = () => {
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl">
       <div className="dashboard-bg absolute inset-0 -z-10"></div>
-      
+
       <Card className="bg-card/80 backdrop-blur-sm border-border/40 mb-6 overflow-hidden">
         <CardContent className="p-0">
-          <Header 
-            lastUpdated={lastUpdated} 
-            onRefresh={handleRefresh} 
-            isLoading={isLoading} 
+          <Header
+            lastUpdated={lastUpdated}
+            onRefresh={handleRefresh}
+            isLoading={isLoading}
           />
           <div className="px-4 pb-2 flex justify-end">
             <TooltipProvider>
@@ -103,7 +105,7 @@ const DashboardContainer = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-3">
-          <RateCalculatorSection 
+          <RateCalculatorSection
             usdtNgnRate={usdtNgnRate}
             lastUpdated={lastUpdated}
             usdMargin={usdMargin}
@@ -116,30 +118,35 @@ const DashboardContainer = () => {
       </div>
 
       <Suspense fallback={<CostPricePlaceholder />}>
-        <CostPriceSection 
+        <CostPriceSection
           costPrices={costPrices}
           previousCostPrices={previousCostPrices}
           isLoading={isLoading}
         />
       </Suspense>
-      
+
       <Separator className="my-8 opacity-30" />
-      
+
       <Suspense fallback={<MarketPlaceholder />}>
-        <MarketComparisonSection 
-          currencies={['USD', 'EUR', 'GBP', 'CAD']} 
+        <MarketComparisonSection
+          currencies={['USD', 'EUR', 'GBP', 'CAD']}
           oneremitRatesFn={getOneremitRates}
           vertoFxRates={vertoFxRates}
           isLoading={isLoading}
         />
       </Suspense>
-      
+
       <Separator className="my-8 opacity-30" />
-      
+
       {/* Only render analytics placeholder after core content is loaded */}
       <Suspense fallback={null}>
         <AnalyticsPlaceholder />
       </Suspense>
+
+      <RefreshCountdown
+        nextRefreshIn={nextRefreshIn}
+        isRefreshing={isLoading}
+      />
     </div>
   );
 };
