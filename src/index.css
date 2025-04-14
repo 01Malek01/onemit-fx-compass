@@ -153,4 +153,15 @@
   .glass-card {
     @apply backdrop-blur-lg bg-card/40 border border-white/10;
   }
+  
+  /* Parallax effects */
+  .parallax-bg {
+    @apply fixed inset-0 w-full h-full pointer-events-none;
+    z-index: -1;
+  }
+  
+  .frosted-glass {
+    @apply bg-card/30 backdrop-blur-lg border border-white/10;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
 }
