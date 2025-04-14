@@ -46,12 +46,12 @@ export default function Auth() {
   
   return (
     <ParallaxBackground>
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md px-4">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }} 
           animate={{ opacity: 1, scale: 1 }} 
           transition={{ duration: 0.5, ease: "easeOut" }} 
-          className="w-full max-w-md"
+          className="w-full"
         >
           <Card className="shadow-[0_0_50px_rgba(0,98,255,0.1)] border-white/[0.05] bg-card/30 backdrop-blur-2xl p-6">
             <div className="space-y-6">
