@@ -10,6 +10,7 @@ import { Eye, EyeOff, LogIn, UserPlus, Mail, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ParallaxBackground from '@/components/ParallaxBackground';
 import { useIsMobile } from '@/hooks/use-mobile';
+
 export default function Auth() {
   const {
     signIn,
@@ -21,6 +22,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const isMobile = useIsMobile();
+  
   const handleSubmit = async (e: React.FormEvent, mode: 'signin' | 'signup') => {
     e.preventDefault();
     setIsLoading(true);
@@ -41,9 +43,11 @@ export default function Auth() {
       setIsLoading(false);
     }
   };
+  
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+  
   return <ParallaxBackground>
       <div className="flex min-h-screen items-center justify-center px-4 py-12">
         <motion.div initial={{
@@ -67,12 +71,16 @@ export default function Auth() {
             </div>
             
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 p-1 mx-6 bg-secondary/50">
-                <TabsTrigger value="signin" className="data-[state=active]:bg-[#0062FF] data-[state=active]:text-white">
-                  Sign In
-                </TabsTrigger>
-                
-              </TabsList>
+              <div className="px-6 pb-2">
+                <TabsList className="grid w-full grid-cols-2 rounded-lg p-1 bg-secondary/30 shadow-inner backdrop-blur-sm border border-white/[0.03]">
+                  <TabsTrigger 
+                    value="signin" 
+                    className="rounded-md px-6 py-2.5 transition-all data-[state=active]:bg-[#0062FF] data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
+                    Sign In
+                  </TabsTrigger>
+                </TabsList>
+              </div>
               
               <TabsContent value="signin">
                 <form onSubmit={e => handleSubmit(e, 'signin')} className="space-y-4 p-6">
