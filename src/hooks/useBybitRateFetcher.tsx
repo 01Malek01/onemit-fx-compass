@@ -1,5 +1,4 @@
 
-import { toast } from "sonner";
 import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { logger } from '@/utils/logUtils';
@@ -30,7 +29,8 @@ export const useBybitRateFetcher = ({
       
       // Save to the standard rate service with 'bybit' as source
       try {
-        await saveUsdtNgnRate(rate, 'bybit');
+        // Pass silent=true to prevent duplicate toast notifications
+        await saveUsdtNgnRate(rate, 'bybit', true);
       } catch (err) {
         logger.error("Failed to save Bybit rate to database:", err);
         // Continue execution even if save fails
@@ -54,21 +54,29 @@ export const useBybitRateFetcher = ({
         setUsdtNgnRate(bybitRate);
         setLastUpdated(new Date());
         
-        toast.success("USDT/NGN rate updated from Bybit");
+        // Only show toast here, as this is the main user-initiated refresh point
+        import('sonner').then(({ toast }) => {
+          toast.success("USDT/NGN rate updated from Bybit");
+        });
+        
         return true;
       } else {
         logger.warn("Could not refresh Bybit rate");
         
-        toast.error("Failed to update USDT/NGN rate from Bybit", {
-          description: "Using last saved rate instead"
+        import('sonner').then(({ toast }) => {
+          toast.error("Failed to update USDT/NGN rate from Bybit", {
+            description: "Using last saved rate instead"
+          });
         });
         
         return false;
       }
     } catch (error) {
       logger.error("Error refreshing Bybit rate:", error);
-      toast.error("Failed to update USDT/NGN rate", {
-        description: "Check your network connection and try again"
+      import('sonner').then(({ toast }) => {
+        toast.error("Failed to update USDT/NGN rate", {
+          description: "Check your network connection and try again"
+        });
       });
       return false;
     } finally {

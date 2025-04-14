@@ -58,12 +58,16 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
   }
 };
 
-// Update or insert USDT/NGN rate with optional source parameter
-export const saveUsdtNgnRate = async (rate: number, source: string = 'manual'): Promise<boolean> => {
+// Update or insert USDT/NGN rate with optional source parameter and silent option
+export const saveUsdtNgnRate = async (
+  rate: number, 
+  source: string = 'manual', 
+  silent: boolean = false
+): Promise<boolean> => {
   try {
     if (!rate || isNaN(rate) || rate <= 0) {
       logger.error("Invalid rate value:", rate);
-      toast.error("Invalid rate value provided");
+      if (!silent) toast.error("Invalid rate value provided");
       throw new Error("Invalid rate value");
     }
 
@@ -81,17 +85,17 @@ export const saveUsdtNgnRate = async (rate: number, source: string = 'manual'): 
     
     if (error) {
       logger.error("Supabase error saving USDT/NGN rate:", error);
-      toast.error("Failed to save USDT/NGN rate");
+      if (!silent) toast.error("Failed to save USDT/NGN rate");
       throw error;
     }
     
     logger.debug(`USDT/NGN rate saved successfully (source: ${source}):`, rate);
-    toast.success("USDT/NGN rate updated successfully");
+    if (!silent) toast.success("USDT/NGN rate updated successfully");
     return true;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("Error updating USDT/NGN rate:", errorMessage);
-    toast.error("Failed to update USDT/NGN rate");
+    if (!silent) toast.error("Failed to update USDT/NGN rate");
     return false;
   }
 };
