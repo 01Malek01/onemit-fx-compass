@@ -1,4 +1,3 @@
-
 // Follow Deno Deploy runtime compatibility
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
@@ -75,18 +74,18 @@ serve(async (req) => {
       tokenId,
       currencyId,
       payment: [],
-      side: "0", // Changed from "1" to "0"
+      side: "0",
       size: "10",
-      page: "2", // Changed from "1" to "2"
+      page: "3",
       rows: "10", 
       amount: "",
       canTrade: true,
-      bulkMaker: false, // Added parameter
+      bulkMaker: false,
       sortType: "TRADE_PRICE",
       vaMaker: verifiedOnly,
-      verificationFilter: 0, // Added parameter
-      itemRegion: 1, // Added parameter
-      paymentPeriod: [] // Added parameter
+      verificationFilter: 0,
+      itemRegion: 1,
+      paymentPeriod: []
     };
     
     console.log("Sending request to Bybit API:", JSON.stringify(payload));
@@ -115,7 +114,7 @@ serve(async (req) => {
           error: `API responded with status: ${response.status}`,
           details: errorText
         }), {
-          status: 502, // Bad Gateway
+          status: 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
@@ -209,7 +208,7 @@ serve(async (req) => {
         success: false,
         error: `Invalid response from Bybit API: ${data?.ret_msg || "No traders found"}`
       }), {
-        status: 200, // Still return 200 to allow frontend to handle gracefully
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     } catch (error) {
@@ -222,15 +221,14 @@ serve(async (req) => {
           error: "Request to Bybit API timed out",
           timestamp: new Date().toISOString(),
         }), {
-          status: 504, // Gateway Timeout
+          status: 504,
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
       
-      throw error; // Re-throw for the outer catch block
+      throw error;
     }
   } catch (error) {
-    // Handle any unexpected errors
     console.error("Error in bybit-proxy function:", error.message);
     return new Response(JSON.stringify({
       success: false,
