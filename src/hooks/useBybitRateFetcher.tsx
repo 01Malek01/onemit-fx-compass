@@ -29,7 +29,7 @@ export const useBybitRateFetcher = ({
       
       // Save to the standard rate service with 'bybit' as source
       try {
-        // Pass silent=true to prevent duplicate toast notifications
+        // Always use silent=true here, as toast notifications are managed at a higher level
         await saveUsdtNgnRate(rate, 'bybit', true);
       } catch (err) {
         logger.error("Failed to save Bybit rate to database:", err);
@@ -54,7 +54,7 @@ export const useBybitRateFetcher = ({
         setUsdtNgnRate(bybitRate);
         setLastUpdated(new Date());
         
-        // Only show toast here, as this is the main user-initiated refresh point
+        // Show toast only for manual refresh, not auto-refresh
         import('sonner').then(({ toast }) => {
           toast.success("USDT/NGN rate updated from Bybit");
         });

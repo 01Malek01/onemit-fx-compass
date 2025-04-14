@@ -35,8 +35,8 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
     if (!data || data.length === 0) {
       logger.warn("No USDT/NGN rate found in database, using default rate:", DEFAULT_USDT_NGN_RATE);
       
-      // Insert a default rate if no rates are found
-      await saveUsdtNgnRate(DEFAULT_USDT_NGN_RATE);
+      // Insert a default rate if no rates are found - use silent mode to prevent duplicate toasts
+      await saveUsdtNgnRate(DEFAULT_USDT_NGN_RATE, 'default', true);
       
       return DEFAULT_USDT_NGN_RATE;
     }
@@ -57,6 +57,10 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
     return DEFAULT_USDT_NGN_RATE;
   }
 };
+
+// Track the last toast shown to prevent duplicates
+let lastToastTime = 0;
+const MIN_TOAST_INTERVAL = 3000; // 3 seconds minimum between toasts
 
 // Update or insert USDT/NGN rate with optional source parameter and silent option
 export const saveUsdtNgnRate = async (
@@ -90,7 +94,14 @@ export const saveUsdtNgnRate = async (
     }
     
     logger.debug(`USDT/NGN rate saved successfully (source: ${source}):`, rate);
-    if (!silent) toast.success("USDT/NGN rate updated successfully");
+    
+    // Only show toast if not in silent mode AND if enough time has passed since the last toast
+    const now = Date.now();
+    if (!silent && (now - lastToastTime > MIN_TOAST_INTERVAL)) {
+      lastToastTime = now;
+      toast.success("USDT/NGN rate updated successfully");
+    }
+    
     return true;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);

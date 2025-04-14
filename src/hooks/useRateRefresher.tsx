@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
@@ -73,6 +74,8 @@ export const useRateRefresher = ({
   const performRefresh = async () => {
     console.log("RateRefresher: Performing auto-refresh");
     try {
+      // For auto-refresh, use a different approach - don't show toast notifications
+      // We'll directly fetch the rate without notification
       const success = await refreshBybitRate();
 
       if (success) {
