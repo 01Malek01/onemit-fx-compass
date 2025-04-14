@@ -50,8 +50,9 @@ export const fetchLatestUsdtNgnRate = async (): Promise<number> => {
     }
     logger.debug("Returning valid USDT/NGN rate:", rate);
     return rate;
-  } catch (error) {
-    logger.error("Error fetching USDT/NGN rate:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error("Error fetching USDT/NGN rate:", errorMessage);
     toast.error("Failed to fetch USDT/NGN rate, using default");
     return DEFAULT_USDT_NGN_RATE;
   }
@@ -87,8 +88,9 @@ export const saveUsdtNgnRate = async (rate: number, source: string = 'manual'): 
     logger.debug(`USDT/NGN rate saved successfully (source: ${source}):`, rate);
     toast.success("USDT/NGN rate updated successfully");
     return true;
-  } catch (error) {
-    logger.error("Error updating USDT/NGN rate:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error("Error updating USDT/NGN rate:", errorMessage);
     toast.error("Failed to update USDT/NGN rate");
     return false;
   }

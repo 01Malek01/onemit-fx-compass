@@ -58,8 +58,9 @@ export const fetchBybitRateWithRetry = async (
         lastError = response?.error || "No traders found or empty response";
         logger.warn(`[BybitAPI] ${lastError}`);
       }
-    } catch (error: any) {
-      lastError = error.message || "Unknown error";
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      lastError = errorMessage;
       logger.error(`[BybitAPI] Error on attempt ${attempt}: ${lastError}`);
     }
     

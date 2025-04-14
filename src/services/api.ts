@@ -61,6 +61,18 @@ const DEFAULT_VERTOFX_RATES: VertoFXRates = {
 // In-memory cache for VertoFX rates to use if API calls fail
 let cachedVertoFxRates: VertoFXRates = { ...DEFAULT_VERTOFX_RATES };
 
+// Define the response type for VertoFX API
+interface VertoFXApiResponse {
+  success: boolean;
+  rate: number;
+  rateAfterSpread?: number;
+  reversedRate: number;
+  unitSpread?: number;
+  provider?: string;
+  rateType?: string;
+  overnightPercentChange?: number;
+}
+
 // Fetch VertoFX rates - optimized with smarter caching
 export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
   // Check cache first for faster responses
@@ -128,8 +140,9 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
       logger.warn("[API] No valid rates found in API response, using default rates");
       return { ...DEFAULT_VERTOFX_RATES };
     }
-  } catch (error) {
-    logger.error("[API] Error fetching VertoFX rates:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error("[API] Error fetching VertoFX rates:", errorMessage);
     
     // Only show toast when not silent refresh
     if (!cacheWithExpiration.get(VERTOFX_RATES_CACHE_KEY)) {
