@@ -1,5 +1,4 @@
 
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route } from "react-router-dom";
@@ -11,7 +10,6 @@ import { ProtectedRoute, AuthRoute } from "./components/auth/ProtectedRoute";
 const App = () => (
   <TooltipProvider>
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Toaster />
       <Sonner />
       <Routes>
         <Route 
