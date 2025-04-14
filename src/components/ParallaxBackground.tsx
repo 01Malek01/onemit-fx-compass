@@ -28,7 +28,7 @@ const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
           </div>
         )}
       >
-        <div />
+        <div className="h-screen" />
       </Parallax>
 
       {/* Secondary accent gradient */}
@@ -49,7 +49,7 @@ const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
           </div>
         )}
       >
-        <div />
+        <div className="h-screen" />
       </Parallax>
 
       {/* Ambient light effect */}
