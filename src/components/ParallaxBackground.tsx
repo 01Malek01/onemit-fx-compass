@@ -9,41 +9,20 @@ interface ParallaxBackgroundProps {
 
 const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      {/* First parallax layer - Enhanced primary gradient blob */}
-      <Parallax
-        strength={300}
-        className="absolute inset-0"
-        renderLayer={(percentage) => (
-          <div className="pointer-events-none absolute inset-0 h-screen w-screen">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 0.7, scale: 1 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="absolute top-[10%] -left-[15%] h-[60vh] w-[60vh] rounded-full bg-gradient-to-br from-primary/40 to-blue-400/20 blur-3xl"
-              style={{
-                transform: `translate3d(${percentage * 30}px, ${percentage * -15}px, 0)`,
-              }}
-            />
-          </div>
-        )}
-      >
-        <div />
-      </Parallax>
-
-      {/* Second parallax layer - Enhanced blue/purple gradient circle */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#0A0B0D]">
+      {/* Primary gradient blob */}
       <Parallax
         strength={200}
         className="absolute inset-0"
         renderLayer={(percentage) => (
           <div className="pointer-events-none absolute inset-0 h-screen w-screen">
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 0.5, scale: 1 }}
-              transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
-              className="absolute bottom-[20%] right-[5%] h-[45vh] w-[45vh] rounded-full bg-gradient-to-tl from-blue-500/20 to-purple-400/10 blur-3xl"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 0.3, scale: 1 }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="absolute -left-[20%] top-[5%] h-[70vh] w-[70vh] rounded-full bg-gradient-to-br from-[#0062FF]/30 to-blue-600/10 blur-3xl"
               style={{
-                transform: `translate3d(${percentage * -20}px, ${percentage * 20}px, 0)`,
+                transform: `translate3d(${percentage * 100}px, ${percentage * -50}px, 0)`,
               }}
             />
           </div>
@@ -52,42 +31,19 @@ const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
         <div />
       </Parallax>
 
-      {/* Third parallax layer - Grid pattern with improved visibility */}
+      {/* Secondary accent gradient */}
       <Parallax
         strength={100}
         className="absolute inset-0"
         renderLayer={(percentage) => (
           <div className="pointer-events-none absolute inset-0 h-screen w-screen">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.15 }}
-              transition={{ duration: 2, ease: "easeOut", delay: 0.4 }}
-              className="absolute inset-0"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 0.2, scale: 1 }}
+              transition={{ duration: 1.8, ease: "easeOut", delay: 0.2 }}
+              className="absolute bottom-[10%] right-[5%] h-[50vh] w-[50vh] rounded-full bg-gradient-to-tl from-blue-600/20 to-purple-400/10 blur-3xl"
               style={{
-                backgroundImage: "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-                transform: `translate3d(${percentage * 10}px, ${percentage * 10}px, 0) scale(${1 + percentage * 0.1})`,
-              }}
-            />
-          </div>
-        )}
-      >
-        <div />
-      </Parallax>
-      
-      {/* Fourth parallax layer - Subtle accent color orb */}
-      <Parallax
-        strength={150}
-        className="absolute inset-0"
-        renderLayer={(percentage) => (
-          <div className="pointer-events-none absolute inset-0 h-screen w-screen">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 0.4, scale: 1 }}
-              transition={{ duration: 1.8, ease: "easeOut", delay: 0.3 }}
-              className="absolute top-[60%] left-[60%] h-[25vh] w-[25vh] rounded-full bg-gradient-to-br from-purple-500/10 to-pink-400/5 blur-3xl"
-              style={{
-                transform: `translate3d(${percentage * -25}px, ${percentage * 15}px, 0)`,
+                transform: `translate3d(${percentage * -50}px, ${percentage * 30}px, 0)`,
               }}
             />
           </div>
@@ -96,15 +52,14 @@ const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
         <div />
       </Parallax>
 
-      {/* Content with enhanced animation */}
+      {/* Ambient light effect */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background pointer-events-none" />
+
+      {/* Content */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ 
-          duration: 0.8, 
-          ease: "easeOut",
-          staggerChildren: 0.1 
-        }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10"
       >
         {children}
