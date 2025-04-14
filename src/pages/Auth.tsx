@@ -47,6 +47,22 @@ export default function Auth() {
     setShowPassword(!showPassword);
   };
 
+  // Animation variants for form elements
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
   return (
     <ParallaxBackground>
       <div className="flex min-h-screen items-center justify-center px-4 py-12">
@@ -56,7 +72,7 @@ export default function Auth() {
           transition={{ duration: 0.5, ease: "easeOut" }}
           className="w-full max-w-md"
         >
-          <Card className="w-full border-border/40 shadow-lg backdrop-blur-lg bg-card/80 fx-card">
+          <Card className="w-full border-border/40 shadow-xl backdrop-blur-xl bg-card/50 fx-card">
             <CardHeader className="space-y-2 text-center">
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
                 Oneremit FX Terminal
@@ -85,7 +101,12 @@ export default function Auth() {
               <TabsContent value="signin">
                 <form onSubmit={(e) => handleSubmit(e, 'signin')}>
                   <CardContent className="space-y-5 pt-4">
-                    <div className="space-y-2">
+                    <motion.div 
+                      className="space-y-2"
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="show"
+                    >
                       <Label htmlFor="email" className="text-sm font-medium">
                         Email Address
                       </Label>
@@ -101,9 +122,15 @@ export default function Auth() {
                           required
                         />
                       </div>
-                    </div>
+                    </motion.div>
                     
-                    <div className="space-y-2">
+                    <motion.div 
+                      className="space-y-2"
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="show"
+                      transition={{ delay: 0.1 }}
+                    >
                       <Label htmlFor="password" className="text-sm font-medium">
                         Password
                       </Label>
@@ -120,7 +147,7 @@ export default function Auth() {
                         <button 
                           type="button"
                           onClick={togglePasswordVisibility} 
-                          className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {showPassword ? (
                             <EyeOff className="h-5 w-5" />
@@ -129,13 +156,13 @@ export default function Auth() {
                           )}
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   </CardContent>
                   
                   <CardFooter>
                     <Button 
                       type="submit" 
-                      className="w-full" 
+                      className="w-full shadow-lg hover:shadow-primary/20 transition-all duration-300" 
                       disabled={isLoading || authLoading}
                     >
                       {isLoading ? 'Signing In...' : (
@@ -152,7 +179,12 @@ export default function Auth() {
               <TabsContent value="signup">
                 <form onSubmit={(e) => handleSubmit(e, 'signup')}>
                   <CardContent className="space-y-5 pt-4">
-                    <div className="space-y-2">
+                    <motion.div 
+                      className="space-y-2"
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="show"
+                    >
                       <Label htmlFor="signup-email" className="text-sm font-medium">
                         Email Address
                       </Label>
@@ -168,9 +200,15 @@ export default function Auth() {
                           required
                         />
                       </div>
-                    </div>
+                    </motion.div>
                     
-                    <div className="space-y-2">
+                    <motion.div 
+                      className="space-y-2"
+                      variants={itemVariants}
+                      initial="hidden"
+                      animate="show"
+                      transition={{ delay: 0.1 }}
+                    >
                       <Label htmlFor="signup-password" className="text-sm font-medium">
                         Password
                       </Label>
@@ -187,7 +225,7 @@ export default function Auth() {
                         <button 
                           type="button"
                           onClick={togglePasswordVisibility} 
-                          className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                          className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {showPassword ? (
                             <EyeOff className="h-5 w-5" />
@@ -199,13 +237,13 @@ export default function Auth() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Password must be at least 6 characters long
                       </p>
-                    </div>
+                    </motion.div>
                   </CardContent>
                   
                   <CardFooter>
                     <Button 
                       type="submit" 
-                      className="w-full" 
+                      className="w-full shadow-lg hover:shadow-primary/20 transition-all duration-300" 
                       disabled={isLoading || authLoading}
                     >
                       {isLoading ? 'Creating Account...' : (

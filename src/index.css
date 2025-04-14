@@ -71,7 +71,25 @@
   /* Card styles */
   .fx-card {
     @apply bg-card/60 backdrop-blur-sm rounded-lg border border-border/40 shadow-lg transition-all duration-300 hover:border-border/60;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(255, 255, 255, 0.07) inset;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(255, 255, 255, 0.07) inset, 0 0 20px rgba(var(--primary), 0.1);
+  }
+
+  /* Enhanced frosted glass effect */
+  .frosted-glass {
+    @apply backdrop-blur-xl bg-card/30 border border-white/10 transition-all duration-300;
+    box-shadow: 
+      0 4px 24px rgba(0, 0, 0, 0.2),
+      0 1px 2px rgba(255, 255, 255, 0.05) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  }
+
+  .premium-glass {
+    @apply backdrop-blur-xl bg-card/40 border border-white/10 transition-all duration-300;
+    box-shadow: 
+      0 10px 30px -5px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+      0 5px 15px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(79, 70, 229, 0.15);
   }
 
   /* Dashboard background */
@@ -118,8 +136,28 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes glow-pulse {
+    0% { box-shadow: 0 0 5px rgba(79, 70, 229, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(79, 70, 229, 0.5); }
+    100% { box-shadow: 0 0 5px rgba(79, 70, 229, 0.3); }
+  }
+
+  @keyframes floating {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+
   .animate-count {
     animation: number-count 0.4s ease-out forwards;
+  }
+
+  .animate-glow {
+    animation: glow-pulse 3s infinite;
+  }
+
+  .animate-float {
+    animation: floating 5s ease-in-out infinite;
   }
 
   /* Currency flags */
@@ -152,16 +190,14 @@
   /* Glassmorphism effects */
   .glass-card {
     @apply backdrop-blur-lg bg-card/40 border border-white/10;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   }
   
   /* Parallax effects */
   .parallax-bg {
     @apply fixed inset-0 w-full h-full pointer-events-none;
     z-index: -1;
-  }
-  
-  .frosted-glass {
-    @apply bg-card/30 backdrop-blur-lg border border-white/10;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   }
 }
