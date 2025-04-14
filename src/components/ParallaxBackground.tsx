@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Parallax, Background } from 'react-parallax';
+import { Parallax } from 'react-parallax';
 import { motion } from 'framer-motion';
 
 interface ParallaxBackgroundProps {
