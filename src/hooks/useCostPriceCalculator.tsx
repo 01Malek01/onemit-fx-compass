@@ -5,6 +5,7 @@ import {
   calculateUsdPrice,
   calculateOtherCurrencyPrice
 } from '@/utils/currencyUtils';
+import { logger } from '@/utils/logUtils';
 
 // Updated fee constant with correct value (0.10%)
 const USDT_TO_USD_FEE = 0.001; // 0.10% as decimal
@@ -26,16 +27,17 @@ export const useCostPriceCalculator = ({
 }: CostPriceCalculatorProps) => {
   
   const calculateAllCostPrices = (usdMargin: number, otherCurrenciesMargin: number) => {
-    // Log only once at the beginning with all parameters
-    console.debug("Calculating cost prices with margins:", { usdMargin, otherCurrenciesMargin });
-    
-    if (!usdtNgnRate || usdtNgnRate <= 0) {
-      console.warn("Invalid USDT/NGN rate for calculations:", usdtNgnRate);
+    // Enhanced validation - guard clause to prevent calculations with invalid rate
+    if (!usdtNgnRate || isNaN(Number(usdtNgnRate)) || usdtNgnRate <= 0) {
+      logger.warn("Skipping cost price calculation due to invalid USDT/NGN rate:", usdtNgnRate);
       return;
     }
     
+    // Only log once at the beginning with all parameters
+    logger.debug("Calculating cost prices with margins:", { usdMargin, otherCurrenciesMargin });
+    
     if (Object.keys(fxRates).length === 0) {
-      console.warn("No FX rates available for calculations");
+      logger.warn("No FX rates available for calculations");
       return;
     }
     
@@ -62,7 +64,7 @@ export const useCostPriceCalculator = ({
     
     // Log results once at the end
     if (process.env.NODE_ENV !== 'production') {
-      console.debug("All cost prices calculated:", newCostPrices);
+      logger.debug("All cost prices calculated:", newCostPrices);
     }
     
     setCostPrices(newCostPrices);
