@@ -3,12 +3,14 @@ import React from 'react';
 import DashboardContainer from '@/components/dashboard/DashboardContainer';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { applyConsoleFilters } from '@/utils/logUtils';
+import { logger } from '@/utils/logUtils';
 
 const Index = () => {
   // Set up console settings on initial render
   React.useEffect(() => {
     // Apply console filtering for a cleaner experience
     applyConsoleFilters();
+    logger.info("Dashboard initialized");
   }, []);
   
   return (

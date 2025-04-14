@@ -1,12 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logUtils';
 
 /**
  * Saves a Bybit P2P rate to the database for historical purposes and fallback
  */
 export const saveBybitRate = async (rate: number): Promise<boolean> => {
   try {
-    console.log("[BybitAPI] Saving rate to Supabase:", rate);
+    logger.info("[BybitAPI] Saving rate to Supabase:", rate);
     
     const { error } = await supabase.from("usdt_ngn_rates").insert([
       {
@@ -18,14 +19,14 @@ export const saveBybitRate = async (rate: number): Promise<boolean> => {
     ]);
 
     if (error) {
-      console.error("❌ Failed to save Bybit rate:", error);
+      logger.error("❌ Failed to save Bybit rate:", error);
       return false;
     } else {
-      console.log("✅ Bybit rate saved:", rate);
+      logger.info("✅ Bybit rate saved:", rate);
       return true;
     }
   } catch (error) {
-    console.error("❌ Error in saveBybitRate:", error);
+    logger.error("❌ Error in saveBybitRate:", error);
     return false;
   }
 };

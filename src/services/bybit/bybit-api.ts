@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { BybitP2PResponse, BybitRequestParams } from './types';
+import { logger } from '@/utils/logUtils';
 
 /**
  * Calls the Bybit P2P API through our Supabase Edge Function proxy
@@ -11,10 +12,10 @@ export const getBybitP2PRate = async (
   tokenId: string = "USDT",
   verifiedOnly: boolean = true
 ): Promise<BybitP2PResponse | null> => {
-  console.log("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
+  logger.debug("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
 
   try {
-    console.log("[BybitAPI] Calling Supabase Edge Function proxy");
+    logger.debug("[BybitAPI] Calling Supabase Edge Function proxy");
     
     // Call our Supabase Edge Function instead of directly calling the Bybit API
     const { data, error } = await supabase.functions.invoke('bybit-proxy', {
@@ -26,7 +27,7 @@ export const getBybitP2PRate = async (
     });
     
     if (error) {
-      console.error("[BybitAPI] Edge function error:", error);
+      logger.error("[BybitAPI] Edge function error:", error);
       return {
         traders: [],
         market_summary: {
@@ -45,7 +46,7 @@ export const getBybitP2PRate = async (
       };
     }
     
-    console.log("[BybitAPI] Received response from Edge Function:", data);
+    logger.debug("[BybitAPI] Received response from Edge Function:", data);
     
     // The Edge Function returns the data in the same format we expect
     if (data && data.success && data.market_summary && data.traders) {
@@ -70,8 +71,8 @@ export const getBybitP2PRate = async (
       error: data?.error || "Invalid response from Edge Function"
     };
   } catch (error: any) {
-    console.error("❌ Error fetching Bybit P2P rate:", error);
-    console.error("[BybitAPI] Error details:", {
+    logger.error("❌ Error fetching Bybit P2P rate:", error);
+    logger.error("[BybitAPI] Error details:", {
       message: error.message,
       code: error.code,
       status: error.response?.status,

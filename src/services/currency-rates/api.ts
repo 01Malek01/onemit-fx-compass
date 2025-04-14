@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { CurrencyRateResponse } from "./types";
 import { browserStorage } from "@/utils/cacheUtils";
 import { fetchWithTimeout } from "@/utils/apiUtils";
+import { logger } from "@/utils/logUtils";
 
 // API configuration
 const API_KEY = 'fca_live_Go01rIgZxHqhRvqFQ2BLi6o5oZGoovGuZk3sQ8nV';
@@ -66,7 +67,7 @@ export const fetchExchangeRates = async (
     
     return data.data;
   } catch (error) {
-    console.error("[currency-rates/api] Error fetching exchange rates:", error);
+    logger.error("[currency-rates/api] Error fetching exchange rates:", error);
     
     // Only show toast for user-initiated requests
     const isBackgroundRefresh = false; // You could pass this as a parameter
@@ -88,7 +89,7 @@ export const fetchSingleExchangeRate = async (currency: string): Promise<number 
     const rates = await fetchExchangeRates([currency]);
     return rates[currency] || null;
   } catch (error) {
-    console.error(`[currency-rates/api] Error fetching rate for ${currency}:`, error);
+    logger.error(`[currency-rates/api] Error fetching rate for ${currency}:`, error);
     return null;
   }
 };

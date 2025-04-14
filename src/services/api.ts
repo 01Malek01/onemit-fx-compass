@@ -4,6 +4,7 @@ import { getAllNgnRates, VertoFxRate } from './vertofx';
 import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
 import { toast } from "sonner";
 import { cacheWithExpiration } from '@/utils/cacheUtils';
+import { logger } from '@/utils/logUtils';
 
 // Type for currency rates
 export type CurrencyRates = Record<string, number>;
@@ -33,7 +34,7 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
   // Check cache first
   const cachedRates = cacheWithExpiration.get(FX_RATES_CACHE_KEY);
   if (cachedRates) {
-    console.log("[API] Using cached FX rates");
+    logger.debug("[API] Using cached FX rates");
     return cachedRates;
   }
   
@@ -44,7 +45,7 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
     cacheWithExpiration.set(FX_RATES_CACHE_KEY, rates, 10 * 60 * 1000);
     return rates;
   } catch (error) {
-    console.error("[API] Error fetching FX rates:", error);
+    logger.error("[API] Error fetching FX rates:", error);
     throw error;
   }
 };
@@ -65,12 +66,12 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
   // Check cache first for faster responses
   const cachedRates = cacheWithExpiration.get(VERTOFX_RATES_CACHE_KEY);
   if (cachedRates) {
-    console.log("[API] Using cached VertoFX rates");
+    logger.debug("[API] Using cached VertoFX rates");
     return cachedRates;
   }
   
   try {
-    console.log("[API] Fetching live VertoFX rates...");
+    logger.debug("[API] Fetching live VertoFX rates...");
     
     // Add a shorter 5 second timeout (reduced from 10s)
     const timeoutPromise = new Promise<Record<string, VertoFxRate>>((_resolve, reject) => {
@@ -118,17 +119,17 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
         try {
           await saveVertoFxHistoricalRates(vertoRates);
         } catch (error) {
-          console.error("[API] Error saving historical VertoFX rates:", error);
+          logger.error("[API] Error saving historical VertoFX rates:", error);
         }
       });
       
       return formattedRates;
     } else {
-      console.warn("[API] No valid rates found in API response, using default rates");
+      logger.warn("[API] No valid rates found in API response, using default rates");
       return { ...DEFAULT_VERTOFX_RATES };
     }
   } catch (error) {
-    console.error("[API] Error fetching VertoFX rates:", error);
+    logger.error("[API] Error fetching VertoFX rates:", error);
     
     // Only show toast when not silent refresh
     if (!cacheWithExpiration.get(VERTOFX_RATES_CACHE_KEY)) {
