@@ -9,7 +9,7 @@ interface ParallaxBackgroundProps {
 
 const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#0A0B0D] flex flex-col justify-center items-center">
+    <div className="fixed inset-0 w-full min-h-screen overflow-hidden bg-[#0A0B0D] flex items-center justify-center">
       {/* Primary gradient blob */}
       <Parallax
         strength={200}
@@ -55,12 +55,12 @@ const ParallaxBackground = ({ children }: ParallaxBackgroundProps) => {
       {/* Ambient light effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background pointer-events-none" />
 
-      {/* Content - Ensuring proper centering and viewport visibility */}
+      {/* Content container - Ensuring immediate visibility without scrolling */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 flex w-full justify-center items-center min-h-screen"
+        className="relative z-10 flex items-center justify-center w-full h-full"
       >
         {children}
       </motion.div>

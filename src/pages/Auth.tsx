@@ -46,11 +46,11 @@ export default function Auth() {
   
   return (
     <ParallaxBackground>
-      <div className="w-full max-w-md px-4">
+      <div className="w-full max-w-md px-4 my-auto">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }} 
           animate={{ opacity: 1, scale: 1 }} 
-          transition={{ duration: 0.5, ease: "easeOut" }} 
+          transition={{ duration: 0.5, ease: "easeOut", delay: 0.2 }} 
           className="w-full"
         >
           <Card className="shadow-[0_0_50px_rgba(0,98,255,0.1)] border-white/[0.05] bg-card/30 backdrop-blur-2xl p-6">
