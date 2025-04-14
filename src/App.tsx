@@ -1,5 +1,4 @@
 
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -10,7 +9,7 @@ import { ProtectedRoute, AuthRoute } from "./components/auth/ProtectedRoute";
 const App = () => (
   <TooltipProvider>
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Sonner />
+      {/* Removed the Sonner component from here since it's now in main.tsx */}
       <Routes>
         <Route 
           path="/" 

@@ -1,5 +1,5 @@
 
-// This file now re-exports Sonner's toast functionality for backward compatibility
+// This file re-exports Sonner's toast functionality for backward compatibility
 import { toast as sonnerToast } from "sonner";
 
 export const toast = sonnerToast;
