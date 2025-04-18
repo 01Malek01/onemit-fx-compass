@@ -1,23 +1,29 @@
-
 import React from 'react';
 import MarketComparisonPanel from '@/components/dashboard/MarketComparisonPanel';
 import { VertoFXRates } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Clock } from 'lucide-react';
 import { loadVertoFxRates, isUsingDefaultVertoFxRates, getLastApiAttemptTime } from '@/utils/rates/vertoRateLoader';
+import { useVertoFxRefresher } from '@/hooks/useVertoFxRefresher';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import RefreshCountdown from './rate-display/RefreshCountdown';
+import TimestampDisplay from './rate-display/TimestampDisplay';
+import { toast } from '@/hooks/use-toast';
 
 interface MarketComparisonSectionProps {
   currencies: string[];
   oneremitRatesFn: (currency: string) => { buy: number; sell: number };
   vertoFxRates: VertoFXRates;
   isLoading: boolean;
+  setVertoFxRates: (rates: VertoFXRates) => void;
 }
 
 const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   currencies,
   oneremitRatesFn,
   vertoFxRates,
-  isLoading
+  isLoading,
+  setVertoFxRates
 }) => {
   // State to track retry button loading state
   const [retryLoading, setRetryLoading] = React.useState(false);
@@ -25,6 +31,17 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   const [usingDefaults, setUsingDefaults] = React.useState(isUsingDefaultVertoFxRates());
   // State to track the last API attempt time
   const [lastAttemptTime, setLastAttemptTime] = React.useState(getLastApiAttemptTime());
+  
+  // Use our new VertoFX auto-refresher hook
+  const { 
+    refreshVertoFxRates, 
+    nextRefreshIn, 
+    isRefreshing, 
+    lastUpdated 
+  } = useVertoFxRefresher({
+    vertoFxRates,
+    setVertoFxRates
+  });
   
   // Update states initially and when props change
   React.useEffect(() => {
@@ -45,19 +62,32 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
     if (cooldownRemaining > 0 || retryLoading) return;
     
     setRetryLoading(true);
+    toast("Refreshing Market Comparison", {
+      description: "Fetching the latest market rates..."
+    });
+    
     try {
-      // We need a temporary state updater for the loadVertoFxRates function
-      const tempSetRates = (rates: VertoFXRates) => {
-        // This will be handled by the parent component's state management
-      };
+      // Make sure to actually call loadVertoFxRates to get fresh data
+      const freshRates = await loadVertoFxRates(true, setVertoFxRates);
+      if (freshRates) {
+        setVertoFxRates(freshRates);
+      }
       
-      await loadVertoFxRates(false, tempSetRates);
+      // Refresh through the hook as well
+      await refreshVertoFxRates();
       
       // Update our local tracking states
       setUsingDefaults(isUsingDefaultVertoFxRates());
       setLastAttemptTime(getLastApiAttemptTime());
+      
+      toast("Market Comparison Refreshed", {
+        description: "Successfully updated with the latest rates"
+      });
     } catch (error) {
       console.error("Error refreshing VertoFX rates:", error);
+      toast("Refresh Failed", {
+        description: "Could not fetch the latest rates. Please try again later."
+      });
     } finally {
       setRetryLoading(false);
     }
@@ -76,22 +106,39 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
           variant="outline" 
           size="sm" 
           className="gap-1.5 text-gray-300 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:shadow-md"
-          disabled={cooldownRemaining > 0 || retryLoading}
+          disabled={cooldownRemaining > 0 || retryLoading || isRefreshing}
         >
-          <RefreshCw className={`h-4 w-4 ${retryLoading ? 'animate-spin' : ''}`} />
-          {retryLoading 
+          <RefreshCw className={`h-4 w-4 ${retryLoading || isRefreshing ? 'animate-spin' : ''}`} />
+          {retryLoading || isRefreshing
             ? 'Refreshing...' 
-            : cooldownRemaining > 0 
-              ? `Retry in ${Math.ceil(cooldownRemaining / 1000)}s` 
-              : 'Refresh rates'
+            : 'Refresh rates'
           }
         </Button>
       </h2>
+      
+      {/* Last updated timestamp and auto-refresh countdown */}
+      <div className="flex items-center justify-between mb-3 text-xs text-muted-foreground">
+        <div>
+          {lastUpdated && (
+            <TimestampDisplay 
+              lastUpdated={lastUpdated}
+              rate={vertoFxRates && Object.keys(vertoFxRates).length > 0 ? 1 : null}
+              isStale={usingDefaults}
+            />
+          )}
+        </div>
+        
+        <RefreshCountdown 
+          nextRefreshIn={nextRefreshIn} 
+          isRefreshing={isRefreshing || retryLoading} 
+        />
+      </div>
+      
       <MarketComparisonPanel 
         currencies={currencies} 
         oneremitRatesFn={oneremitRatesFn}
         vertoFxRates={vertoFxRates}
-        isLoading={isLoading || retryLoading}
+        isLoading={isLoading || retryLoading || isRefreshing}
       />
     </div>
   );
