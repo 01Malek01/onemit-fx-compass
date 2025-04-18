@@ -1,4 +1,3 @@
-
 import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { logger } from '@/utils/logUtils';
@@ -27,15 +26,6 @@ export const useBybitRateFetcher = ({
       
       logger.info("Bybit P2P rate fetched successfully:", rate);
       
-      // Save to the standard rate service with 'bybit' as source
-      try {
-        // Always use silent=true here, as toast notifications are managed at a higher level
-        await saveUsdtNgnRate(rate, 'bybit', true);
-      } catch (err) {
-        logger.error("Failed to save Bybit rate to database:", err);
-        // Continue execution even if save fails
-      }
-      
       return rate;
     } catch (error) {
       logger.error("Error in fetchBybitRate:", error);
@@ -51,12 +41,24 @@ export const useBybitRateFetcher = ({
       
       if (bybitRate && bybitRate > 0) {
         logger.info("Refreshed Bybit USDT/NGN rate:", bybitRate);
+        
+        // Update local state
         setUsdtNgnRate(bybitRate);
         setLastUpdated(new Date());
         
-        // Show toast only for manual refresh, not auto-refresh
+        // Important: Save the rate to the database with explicit source value
+        // This creates a new INSERT that will trigger real-time updates
+        const saveSuccess = await saveUsdtNgnRate(bybitRate, 'bybit', false);
+        
+        if (!saveSuccess) {
+          logger.error("Failed to save the rate to database for real-time sync");
+        }
+        
+        // Show toast for the user who initiated the refresh
         import('sonner').then(({ toast }) => {
-          toast.success("USDT/NGN rate updated from Bybit");
+          toast.success("USDT/NGN rate updated from Bybit", {
+            description: "The new rate will sync with all connected users"
+          });
         });
         
         return true;

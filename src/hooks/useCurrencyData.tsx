@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useRateState } from './useRateState';
 import { useCostPriceCalculator } from './useCostPriceCalculator';
@@ -20,6 +19,7 @@ export interface CurrencyDataActions {
   refreshBybitRate: () => Promise<boolean>;
   setUsdtNgnRate: (rate: number) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
+  setVertoFxRates: (rates: Record<string, { buy: number; sell: number }>) => void;
 }
 
 const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
@@ -90,7 +90,8 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
       updateUsdtRate, 
       refreshBybitRate,
       setUsdtNgnRate, 
-      calculateAllCostPrices 
+      calculateAllCostPrices,
+      setVertoFxRates
     }
   ];
 };

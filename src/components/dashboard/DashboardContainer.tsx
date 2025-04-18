@@ -1,7 +1,4 @@
 import React, { useEffect, useState, lazy, Suspense } from 'react';
-import Header from '@/components/Header';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardState } from '@/hooks/useDashboardState';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import RateCalculatorSection from '@/components/dashboard/RateCalculatorSection';
@@ -9,6 +6,9 @@ import { BarChart3, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import RefreshCountdown from '@/components/dashboard/rate-display/RefreshCountdown';
+import LiveRateDisplay from '@/components/dashboard/LiveRateDisplay';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Lazy load non-critical sections for faster initial render
 const CostPriceSection = lazy(() => import('@/components/dashboard/CostPriceSection'));
@@ -57,17 +57,21 @@ const DashboardContainer = () => {
     getOneremitRates,
     fxRates,
     nextRefreshIn,
+    setVertoFxRates
   } = useDashboardState();
 
-  // State for real-time indicator
+  // State for real-time indicator - keep this active longer for better visual feedback
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
-  // Optimized effect to track changes
+  // Optimized effect to track changes and show real-time indicator when data changes
   useEffect(() => {
-    setIsRealtimeActive(true);
-    const timer = setTimeout(() => setIsRealtimeActive(false), 1500);
-    return () => clearTimeout(timer);
-  }, [usdtNgnRate, usdMargin, otherCurrenciesMargin]);
+    if (usdtNgnRate) {
+      setIsRealtimeActive(true);
+      // Keep the real-time indicator active for 3 seconds
+      const timer = setTimeout(() => setIsRealtimeActive(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [usdtNgnRate]);
 
   // Show simple loading state if no rate is available yet
   if (usdtNgnRate === null) {
@@ -79,13 +83,8 @@ const DashboardContainer = () => {
       <div className="dashboard-bg absolute inset-0 -z-10"></div>
 
       <Card className="bg-card/80 backdrop-blur-sm border-border/40 mb-6 overflow-hidden">
-        <CardContent className="p-0">
-          <Header
-            lastUpdated={lastUpdated}
-            onRefresh={handleRefresh}
-            isLoading={isLoading}
-          />
-          <div className="px-4 pb-2 flex justify-end">
+        <CardContent className="p-4">
+          <div className="flex justify-end">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -104,6 +103,15 @@ const DashboardContainer = () => {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-3">
+          <LiveRateDisplay 
+            rate={usdtNgnRate}
+            lastUpdated={lastUpdated}
+            onRefresh={async () => { await handleRefresh(); return true; }}
+            isLoading={isLoading}
+            isRealtimeActive={isRealtimeActive}
+          />
+        </div>
         <div className="lg:col-span-3">
           <RateCalculatorSection
             usdtNgnRate={usdtNgnRate}
@@ -133,6 +141,7 @@ const DashboardContainer = () => {
           oneremitRatesFn={getOneremitRates}
           vertoFxRates={vertoFxRates}
           isLoading={isLoading}
+          setVertoFxRates={setVertoFxRates}
         />
       </Suspense>
 

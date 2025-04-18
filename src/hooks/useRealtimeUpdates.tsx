@@ -1,11 +1,11 @@
-
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logUtils';
 
 /**
  * Hook to subscribe to real-time updates for USDT/NGN rates and margin settings
- * Performance optimized with better type checking and reduced overhead
+ * Fixed to ensure cross-browser synchronization works properly
  */
 export const useRealtimeUpdates = ({
   onUsdtRateChange,
@@ -14,46 +14,63 @@ export const useRealtimeUpdates = ({
   onUsdtRateChange: (rate: number) => void;
   onMarginSettingsChange: (usdMargin: number, otherCurrenciesMargin: number) => void;
 }) => {
+  // Keep track of the last processed rate update timestamp to avoid duplicate processing
+  const lastProcessedTimestamp = useRef<string | null>(null);
+
   useEffect(() => {
-    // Single channel with better error handling for real-time updates
+    logger.info("Setting up real-time updates subscription");
+    
+    // Create a single channel for both tables - this is more reliable
     const channel = supabase
-      .channel('fx-rates-updates')
-      // More efficient subscription with tighter type checking
-      .on('postgres_changes', 
+      .channel('realtime-sync')
+      .on(
+        'postgres_changes',
         {
-          event: '*', 
+          event: 'INSERT', // Listen for new inserts - crucial for refresh functionality
           schema: 'public',
           table: 'usdt_ngn_rates'
         }, 
         (payload) => {
-          if (!payload.new || typeof payload.new !== 'object') return;
+          logger.debug("Received USDT/NGN rate update:", payload);
           
-          // Proper type checking to avoid TypeScript errors
+          if (!payload.new || typeof payload.new !== 'object') {
+            logger.warn("Invalid payload received:", payload);
+            return;
+          }
+          
           const newPayload = payload.new as Record<string, unknown>;
+          
           if ('rate' in newPayload && typeof newPayload.rate === 'number' && newPayload.rate > 0) {
             const rate = newPayload.rate;
+            const timestamp = newPayload.created_at as string;
+            
+            logger.info(`Real-time update: New USDT/NGN rate detected: ${rate}`);
+            
+            // Update the UI with the new rate
             onUsdtRateChange(rate);
             
-            // Optimized toast with shorter timeout
-            const debounceToast = setTimeout(() => {
-              toast.info("USDT/NGN rate updated");
-            }, 200);
-            
-            return () => clearTimeout(debounceToast);
+            // Show toast for real-time updates
+            toast.info("USDT/NGN rate updated", {
+              description: "Rate was refreshed by another user"
+            });
           }
         }
       )
-      // Improved margin settings subscription with proper type checking
-      .on('postgres_changes', 
+      .on(
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'margin_settings'
         }, 
         (payload) => {
-          if (!payload.new || typeof payload.new !== 'object') return;
+          logger.debug("Received margin settings update:", payload);
           
-          // Proper type checking to avoid TypeScript errors
+          if (!payload.new || typeof payload.new !== 'object') {
+            logger.warn("Invalid margin settings payload:", payload);
+            return;
+          }
+          
           const newPayload = payload.new as Record<string, unknown>;
           const hasUsdMargin = 'usd_margin' in newPayload && newPayload.usd_margin !== null;
           const hasOtherMargin = 'other_currencies_margin' in newPayload && newPayload.other_currencies_margin !== null;
@@ -63,15 +80,35 @@ export const useRealtimeUpdates = ({
             const otherCurrenciesMargin = Number(newPayload.other_currencies_margin);
             
             if (!isNaN(usdMargin) && !isNaN(otherCurrenciesMargin)) {
+              logger.info(`Real-time update: Margin settings changed to USD: ${usdMargin}%, Other: ${otherCurrenciesMargin}%`);
               onMarginSettingsChange(usdMargin, otherCurrenciesMargin);
-              toast.info("Margin settings updated");
+              toast.info("Margin settings updated", {
+                description: "Settings changed by another user"
+              });
             }
           }
         }
-      )
-      .subscribe();
+      );
+    
+    // Subscribe to the channel and log the status
+    channel.subscribe((status) => {
+      logger.info(`Supabase real-time subscription status: ${status}`);
+      
+      if (status === 'SUBSCRIBED') {
+        logger.info('✅ Real-time updates successfully enabled');
+      } else if (status === 'CHANNEL_ERROR') {
+        logger.error('❌ Failed to enable real-time updates');
+        
+        // Show error toast
+        toast.error("Real-time sync error", {
+          description: "Changes may not update automatically"
+        });
+      }
+    });
 
+    // Cleanup function to remove the channel when component unmounts
     return () => {
+      logger.info("Cleaning up real-time updates subscription");
       supabase.removeChannel(channel);
     };
   }, [onUsdtRateChange, onMarginSettingsChange]);

@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -121,6 +120,35 @@ export default {
 				'slide-up': {
 					from: { transform: 'translateY(10px)', opacity: '0' },
 					to: { transform: 'translateY(0)', opacity: '1' }
+				},
+				'gradient-x': {
+					'0%, 100%': { 
+						'background-position': '0% 50%',
+					},
+					'50%': {
+						'background-position': '100% 50%',
+					},
+				},
+				'shimmer': {
+					'0%': { 
+						'background-position': '-100% 0',
+					},
+					'100%': {
+						'background-position': '200% 0',
+					},
+				},
+				'pulse-ring': {
+					'0%': { 
+						transform: 'scale(0.8)',
+						opacity: '0',
+					},
+					'50%': {
+						opacity: '0.5',
+					},
+					'100%': { 
+						transform: 'scale(1.5)',
+						opacity: '0',
+					},
 				}
 			},
 			animation: {
@@ -130,7 +158,10 @@ export default {
 				'fade-in': 'fade-in 0.3s ease-out',
 				'fade-out': 'fade-out 0.3s ease-out',
 				'slide-in': 'slide-in 0.3s ease-out',
-				'slide-up': 'slide-up 0.3s ease-out'
+				'slide-up': 'slide-up 0.3s ease-out',
+				'gradient-x': 'gradient-x 4s ease infinite',
+				'shimmer': 'shimmer 2s linear infinite',
+				'pulse-ring': 'pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite'
 			}
 		}
 	},

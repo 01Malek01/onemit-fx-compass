@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +5,8 @@ import { formatCurrency, compareRates, calculateDifference } from '@/utils/curre
 import { Badge } from '@/components/ui/badge';
 import CurrencyFlag from '@/components/CurrencyFlag';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowDown, ArrowUp, AlertTriangle } from 'lucide-react';
+import { ArrowDown, ArrowUp, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Rate {
   buy: number;
@@ -74,17 +74,32 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
       
       return (
         <div className={`${isBetter ? 'rate-better' : 'rate-worse'} animate-slide-in`}>
-          <div className="text-lg font-medium text-emerald-500">{formatCurrency(safeOneremitRates.buy, 'NGN')}</div>
+          <div className={cn(
+            "text-lg font-medium",
+            isBetter ? "text-emerald-400" : "text-gray-100"
+          )}>
+            {formatCurrency(safeOneremitRates.buy, 'NGN')}
+          </div>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge className={`text-xs ${isBetter ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'} animate-slide-up`}>
-                  {isBetter ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
+                <Badge className={cn(
+                  "text-xs mt-1 gap-1 font-medium shadow-sm",
+                  isBetter 
+                    ? "bg-green-500/20 text-green-300 hover:bg-green-500/30 border-green-600/20" 
+                    : "bg-red-500/20 text-red-300 hover:bg-red-500/30 border-red-600/20"
+                )}>
+                  {isBetter ? 
+                    <TrendingUp className="h-3 w-3" /> : 
+                    <TrendingDown className="h-3 w-3" />
+                  }
                   {isNaN(diff) ? '0.00' : Math.abs(diff).toFixed(2)}%
                 </Badge>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>{isBetter ? 'Better than' : 'Worse than'} VertoFX by {isNaN(diff) ? '0.00' : Math.abs(diff).toFixed(2)}%</p>
+              <TooltipContent side="top" className="bg-gray-800/95 text-gray-100 border-gray-700">
+                <p>
+                  {isBetter ? 'Better than' : 'Worse than'} VertoFX by {isNaN(diff) ? '0.00' : Math.abs(diff).toFixed(2)}%
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -99,7 +114,7 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   const getSellRateComparison = () => {
     // Display 0 NGN for sell rates as requested
     return <div className="animate-fade-in">
-        <div className="text-lg font-medium">NGN 0.00</div>
+        <div className="text-lg font-medium text-gray-200">NGN 0.00</div>
       </div>;
   };
 
@@ -112,65 +127,101 @@ const ComparisonTable: React.FC<ComparisonTableProps> = ({
   // Handle errors in the entire component render
   try {
     return (
-      <Card className="fx-card bg-[#111119] hover:shadow-lg hover:shadow-primary/10 transition-all duration-300">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium flex items-center">
-            <CurrencyFlag currency={currencyCode} className="mr-2" />
-            NGN/{currencyCode} Comparison
+      <div className="h-full">
+        <div className={cn(
+          "flex flex-col h-full",
+          isUsingDefaultRates ? "opacity-90" : "opacity-100"
+        )}>
+          {/* Header with currency and flag */}
+          <div className="border-b border-gray-800 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <CurrencyFlag currency={currencyCode} className="w-7 h-7 rounded shadow-sm" />
+                {isUsingDefaultRates && (
+                  <div className="absolute -top-1 -right-1 bg-red-500 rounded-full w-2 h-2"></div>
+                )}
+              </div>
+              <div className="font-semibold text-gray-100">
+                NGN/{currencyCode} Comparison
+              </div>
+            </div>
+            
             {isUsingDefaultRates && (
-              <Badge variant="outline" className="ml-2 bg-red-500/10 text-white text-xs px-2 py-0 animate-pulse-subtle">
-                Default data
+              <Badge variant="outline" className="bg-red-900/30 border-red-800/40 text-red-200 text-xs px-1.5 py-0.5">
+                Default
               </Badge>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-2">
-              <div className="h-6 w-full skeleton-pulse"></div>
-              <div className="h-20 w-full skeleton-pulse"></div>
-            </div>
-          ) : (
-            <div className="text-sm">
-              <div className="flex border-b border-gray-700 py-3">
-                <div className="w-1/3 font-medium text-gray-400">Provider</div>
-                <div className="w-1/3 font-medium text-gray-400">Buy Rate (NGN → {currencyCode})</div>
-                <div className="w-1/3 font-medium text-gray-400">Sell Rate ({currencyCode} → NGN)</div>
+          </div>
+          
+          {/* Table content */}
+          <div className="p-4 flex-grow">
+            {isLoading ? (
+              <div className="space-y-4 py-2">
+                <div className="flex items-center gap-2 opacity-60">
+                  <div className="h-7 w-20 rounded-md bg-gray-700/40 animate-pulse"></div>
+                  <div className="h-7 w-28 rounded-md bg-gray-700/40 animate-pulse"></div>
+                </div>
+                <div className="h-14 rounded-md bg-gray-700/30 animate-pulse"></div>
               </div>
-              
-              <div className="flex border-b border-gray-700 py-4 items-center animate-fade-in" style={{animationDelay: '100ms'}}>
-                <div className="w-1/3 font-medium">Oneremit</div>
-                <div className="w-1/3">{getBuyRateComparison()}</div>
-                <div className="w-1/3">{getSellRateComparison()}</div>
+            ) : (
+              <div className="text-sm space-y-3">
+                {/* Column headers */}
+                <div className="grid grid-cols-3 text-xs font-medium text-gray-400 pb-2">
+                  <div>Provider</div>
+                  <div>Buy Rate<br/><span className="text-[10px]">(NGN → {currencyCode})</span></div>
+                  <div>Sell Rate<br/><span className="text-[10px]">({currencyCode} → NGN)</span></div>
+                </div>
+                
+                {/* Oneremit row */}
+                <div className={cn(
+                  "grid grid-cols-3 items-center py-3 rounded-md",
+                  "bg-gradient-to-r from-blue-900/10 via-blue-800/10 to-blue-900/5",
+                  "border border-blue-900/30"
+                )}>
+                  <div className="font-medium text-blue-100 flex items-center gap-1.5 pl-2">
+                    <div className="bg-blue-900/50 h-5 w-5 rounded-sm flex items-center justify-center">
+                      <span className="text-xs font-bold text-blue-300">O</span>
+                    </div>
+                    Oneremit
+                  </div>
+                  <div>{getBuyRateComparison()}</div>
+                  <div>{getSellRateComparison()}</div>
+                </div>
+                
+                {/* VertoFX row */}
+                <div className={cn(
+                  "grid grid-cols-3 items-center py-3 px-2 rounded-md",
+                  "bg-gradient-to-r from-gray-800/40 to-gray-800/20",
+                  "border border-gray-700/40"
+                )}>
+                  <div className="font-medium text-gray-300 flex items-center gap-1.5">
+                    <div className="bg-gray-700/70 h-5 w-5 rounded-sm flex items-center justify-center">
+                      <span className="text-xs font-bold text-gray-300">V</span>
+                    </div>
+                    VertoFX
+                  </div>
+                  <div className="text-lg font-medium text-gray-300">{formatVertoRate(safeVertoRates.buy)}</div>
+                  <div className="text-lg font-medium text-gray-300">{formatVertoRate(safeVertoRates.sell)}</div>
+                </div>
               </div>
-              
-              <div className="flex py-4 items-center animate-fade-in" style={{animationDelay: '200ms'}}>
-                <div className="w-1/3 font-medium">VertoFX</div>
-                <div className="w-1/3 text-lg font-medium">{formatVertoRate(safeVertoRates.buy)}</div>
-                <div className="w-1/3 text-lg font-medium">{formatVertoRate(safeVertoRates.sell)}</div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </div>
+      </div>
     );
   } catch (error) {
     console.error(`Critical error rendering ComparisonTable for ${currencyCode}:`, error);
     // Fallback UI that won't crash
     return (
-      <Card className="fx-card bg-red-50 border-red-200">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium flex items-center text-red-700">
-            <AlertTriangle className="mr-2 h-5 w-5" />
-            NGN/{currencyCode} Comparison
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 text-center text-red-700">
-            <p>Error displaying comparison data</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="border border-red-700 bg-red-900/20 rounded-lg p-4">
+        <div className="flex items-center gap-2 text-red-300">
+          <AlertTriangle className="h-5 w-5 text-red-400" />
+          <h3 className="font-medium">Data Display Error</h3>
+        </div>
+        <p className="text-sm text-red-300 mt-2">
+          Unable to display {currencyCode} comparison data
+        </p>
+      </div>
     );
   }
 };

@@ -1,10 +1,10 @@
-
 import React from 'react';
 import ComparisonTable from '@/components/ComparisonTable';
 import { VertoFXRates } from '@/services/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, WifiOff, Info } from 'lucide-react';
+import { AlertTriangle, WifiOff, Info, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface MarketComparisonPanelProps {
   currencies: string[];
@@ -27,9 +27,6 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   vertoFxRates,
   isLoading
 }) => {
-  // Log the VertoFX rates for debugging
-  console.log("MarketComparisonPanel received vertoFxRates:", vertoFxRates);
-  
   // Ensure vertoFxRates is never undefined by providing default values
   const safeVertoRates: VertoFXRates = vertoFxRates && Object.keys(vertoFxRates).length > 0 
     ? vertoFxRates 
@@ -55,34 +52,53 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   const hasPartialData = hasVertoRates && (validBuyRateCount < currencies.length || validSellRateCount < currencies.length);
   
   return (
-    <div className="space-y-4">
-      {isUsingDefaults && (
-        <Alert className="bg-red-50/10 border-red-500/20 text-red-100 animate-fade-in">
-          <WifiOff className="h-4 w-4 text-red-400" />
-          <AlertDescription className="text-red-100">
-            <strong>Market comparison data unavailable.</strong> VertoFX API connection failed. Showing default rates.
-          </AlertDescription>
-        </Alert>
-      )}
+    <div className="space-y-6">
+      {/* Status alerts */}
+      <div className="space-y-2.5">
+        {isUsingDefaults && (
+          <Alert className="border-none bg-gradient-to-r from-red-950/60 to-red-900/40 text-red-100 shadow-lg shadow-red-950/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="bg-red-900/60 p-1.5 rounded-md">
+                <WifiOff className="h-4 w-4 text-red-300" />
+              </div>
+              <AlertDescription className="text-red-100 font-medium">
+                Market data connection failed — showing default rates
+              </AlertDescription>
+            </div>
+            <div className="pl-9 mt-1 text-xs text-red-300/80">
+              Rates displayed may not reflect current market conditions
+            </div>
+          </Alert>
+        )}
+        
+        {usingCachedRates && !isUsingDefaults && (
+          <Alert className="border-none bg-gradient-to-r from-amber-950/60 to-amber-900/40 text-amber-100 shadow-lg shadow-amber-950/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="bg-amber-900/60 p-1.5 rounded-md">
+                <AlertCircle className="h-4 w-4 text-amber-300" />
+              </div>
+              <AlertDescription className="text-amber-100 font-medium">
+                Using cached market data — information may be outdated
+              </AlertDescription>
+            </div>
+          </Alert>
+        )}
+        
+        {hasPartialData && !isUsingDefaults && (
+          <Alert className="border-none bg-gradient-to-r from-blue-950/60 to-blue-900/40 text-blue-100 shadow-lg shadow-blue-950/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-900/60 p-1.5 rounded-md">
+                <AlertTriangle className="h-4 w-4 text-blue-300" />
+              </div>
+              <AlertDescription className="text-blue-100 font-medium">
+                Some market data is incomplete — showing available rates
+              </AlertDescription>
+            </div>
+          </Alert>
+        )}
+      </div>
       
-      {usingCachedRates && !isUsingDefaults && (
-        <Alert variant="default" className="bg-amber-50/10 border-amber-500/20 text-amber-100 animate-fade-in">
-          <WifiOff className="h-4 w-4 text-amber-400" />
-          <AlertDescription className="text-amber-100">
-            Market comparison data may be outdated or incomplete. Using cached rates.
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {hasPartialData && !isUsingDefaults && (
-        <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100 animate-fade-in">
-          <AlertTriangle className="h-4 w-4 text-blue-400" />
-          <AlertDescription className="text-blue-100">
-            Some market comparison data may be incomplete. Showing available rates.
-          </AlertDescription>
-        </Alert>
-      )}
-      
+      {/* Comparison tables */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {currencies.map((currency, index) => {
           // Make sure we have valid rates, otherwise use fallback values
@@ -98,13 +114,16 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
           
           const vertoRates = safeVertoRates[currency] || defaultRate;
           
-          console.log(`MarketComparisonPanel: Currency ${currency}`, {
-            oneremitRates,
-            vertoRates
-          });
-          
           return (
-            <div key={currency} className="animate-slide-up" style={{animationDelay: `${index * 100}ms`}}>
+            <div 
+              key={currency} 
+              className={cn(
+                "animate-slide-up transition-all duration-300",
+                "bg-gray-900/50 backdrop-blur-sm rounded-lg overflow-hidden border border-gray-800",
+                "hover:border-gray-700/60 hover:shadow-md"
+              )} 
+              style={{animationDelay: `${index * 100}ms`}}
+            >
               <ComparisonTable
                 currencyCode={currency}
                 oneremitRates={oneremitRates}
@@ -117,15 +136,23 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
         })}
       </div>
       
+      {/* Additional information for default rates */}
       {isUsingDefaults && (
-        <div className="mt-4 animate-fade-in" style={{animationDelay: '300ms'}}>
-          <Alert variant="default" className="bg-blue-50/10 border-blue-500/20 text-blue-100">
-            <Info className="h-4 w-4 text-blue-400" />
-            <AlertDescription className="text-blue-100">
-              Default rates are based on typical market spreads and may not reflect current conditions. 
-              Please refresh to attempt reconnection to VertoFX API.
-            </AlertDescription>
-          </Alert>
+        <div className="mt-6 animate-fade-in transition-all duration-300" style={{animationDelay: '300ms'}}>
+          <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 bg-blue-900/60 p-2 rounded-md flex-shrink-0">
+                <RefreshCw className="h-4 w-4 text-blue-300" />
+              </div>
+              <div>
+                <h3 className="text-blue-100 font-medium text-sm mb-1.5">Try refreshing market data</h3>
+                <p className="text-xs text-blue-200/80 leading-relaxed">
+                  Default rates shown are estimates based on typical market spreads and may not reflect 
+                  current conditions. Click the refresh button to reconnect to the market data API.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
