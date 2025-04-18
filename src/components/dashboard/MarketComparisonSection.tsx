@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import MarketComparisonPanel from '@/components/dashboard/MarketComparisonPanel';
 import { VertoFXRates } from '@/services/api';
@@ -32,7 +33,6 @@ interface MarketComparisonSectionProps {
   vertoFxRates: VertoFXRates;
   isLoading: boolean;
   setVertoFxRates: (rates: VertoFXRates) => void;
-  usingDefaults: boolean;
 }
 
 const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
@@ -40,8 +40,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   oneremitRatesFn,
   vertoFxRates,
   isLoading,
-  setVertoFxRates,
-  usingDefaults
+  setVertoFxRates
 }) => {
   const [isManuallyRefreshing, setIsManuallyRefreshing] = useState(false);
   const [showUpdateFlash, setShowUpdateFlash] = useState(false);
@@ -59,7 +58,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   // Derive additional states based on available data
   const vertoFxIsLoading = isLoading;
   const vertoFxIsStale = false; // This should be calculated based on the time since last update
-  const vertoFxIsFallback = usingDefaults;
+  const vertoFxIsFallback = isUsingDefaultVertoFxRates(); // Get this information from the util function
   const vertoFxRatesRefreshed = vertoFxRates;
   const vertoFxRateValue = vertoFxRates && Object.keys(vertoFxRates).length > 0 ? 1 : null;
 
@@ -85,14 +84,25 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
       // Always pass true to force a refresh when manually triggered
       const success = await refreshVertoFxRates(true);
       if (success) {
-        toast("Market comparison rates have been updated");
+        toast({
+          title: "Market comparison rates have been updated",
+          variant: "default"
+        });
       } else {
-        toast.error("Failed to refresh rates. Please try again later");
+        toast({
+          title: "Failed to refresh rates",
+          description: "Please try again later",
+          variant: "destructive"
+        });
       }
       return success;
     } catch (error) {
       logger.error("Error refreshing rates:", error);
-      toast.error("An unexpected error occurred while refreshing rates");
+      toast({
+        title: "An unexpected error occurred",
+        description: "Could not refresh rates",
+        variant: "destructive"
+      });
       return false;
     } finally {
       setIsManuallyRefreshing(false);
