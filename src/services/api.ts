@@ -1,4 +1,3 @@
-
 import { fetchExchangeRates } from './currency-rates-service';
 import { getAllNgnRates, VertoFxRate } from './vertofx';
 import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
@@ -10,7 +9,13 @@ import { logger } from '@/utils/logUtils';
 export type CurrencyRates = Record<string, number>;
 
 // Type for VertoFX rates
-export type VertoFXRates = Record<string, { buy: number; sell: number }>;
+export interface VertoFXRates {
+  USD: { buy: number; sell: number };
+  EUR: { buy: number; sell: number };
+  GBP: { buy: number; sell: number };
+  CAD: { buy: number; sell: number };
+  [key: string]: { buy: number; sell: number };
+}
 
 // Global variable to store current cost prices for the API endpoint
 let currentCostPrices: CurrencyRates = {};
@@ -51,7 +56,7 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
 };
 
 // Default VertoFX rates to use as fallback
-const DEFAULT_VERTOFX_RATES: VertoFXRates = {
+export const DEFAULT_VERTOFX_RATES: VertoFXRates = {
   USD: { buy: 1635, sell: 1600 },
   EUR: { buy: 1870, sell: 1805 },
   GBP: { buy: 2150, sell: 2080 },

@@ -1,4 +1,3 @@
-
 /**
  * Currency rates service main exports
  */
@@ -10,10 +9,13 @@ export type {
 } from './types';
 
 // Re-export API types and functions
-export type { CurrencyRates } from './api';
+export type { CurrencyRates, VertoFXRates } from './api';
 export {
   fetchCurrencyRates,
-  fetchVertoFXRates
+  fetchVertoFXRates,
+  fetchExchangeRates,
+  fetchSingleExchangeRate,
+  DEFAULT_VERTOFX_RATES
 } from './api';
 
 // Re-export storage functions

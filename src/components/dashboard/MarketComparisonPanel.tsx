@@ -1,6 +1,6 @@
 import React from 'react';
 import ComparisonTable from '@/components/ComparisonTable';
-import { VertoFXRates } from '@/services/api';
+import { VertoFXRates, DEFAULT_VERTOFX_RATES } from '@/services/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, WifiOff, Info, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,14 +12,6 @@ interface MarketComparisonPanelProps {
   vertoFxRates: VertoFXRates;
   isLoading: boolean;
 }
-
-// Default rates to use as fallback
-const DEFAULT_VERTOFX_RATES: VertoFXRates = {
-  USD: { buy: 1635, sell: 1600 },
-  EUR: { buy: 1870, sell: 1805 },
-  GBP: { buy: 2150, sell: 2080 },
-  CAD: { buy: 1190, sell: 1140 }
-};
 
 const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   currencies,

@@ -1,4 +1,3 @@
-
 /**
  * This file is maintained for backward compatibility
  * All functionality has been refactored into the currency-rates folder
