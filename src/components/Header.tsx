@@ -17,13 +17,13 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   return <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 relative">
       <div className="relative z-10">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Oneremit FX Terminal</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Oneremit Terminal</h1>
         {lastUpdated ? <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1.5">
             <Clock className="h-3.5 w-3.5" aria-hidden="true" />
             Last updated: {lastUpdated.toLocaleTimeString()} {lastUpdated.toLocaleDateString()}
           </div> : <p className="text-sm text-muted-foreground mt-1.5 flex items-center gap-1.5">
             <Info className="h-3.5 w-3.5" aria-hidden="true" />
-            {isLoading ? 'Loading rate data...' : 'Welcome to the FX Cost Engine'}
+            {isLoading ? 'Loading rate data...' : 'Welcome to Oneremit Terminal'}
           </p>}
       </div>
       
