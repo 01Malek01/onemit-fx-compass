@@ -59,7 +59,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   
   // Handler for manually refreshing VertoFX rates
   const handleRefreshVertoFxRates = async () => {
-    if (cooldownRemaining > 0 || retryLoading) return;
+    if (retryLoading || isRefreshing) return;
     
     setRetryLoading(true);
     toast("Refreshing Market Comparison", {
