@@ -2,13 +2,14 @@ import React from 'react';
 import MarketComparisonPanel from '@/components/dashboard/MarketComparisonPanel';
 import { VertoFXRates } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Clock } from 'lucide-react';
+import { RefreshCw, Clock, TrendingUp } from 'lucide-react';
 import { loadVertoFxRates, isUsingDefaultVertoFxRates, getLastApiAttemptTime } from '@/utils/rates/vertoRateLoader';
 import { useVertoFxRefresher } from '@/hooks/useVertoFxRefresher';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import RefreshCountdown from './rate-display/RefreshCountdown';
 import TimestampDisplay from './rate-display/TimestampDisplay';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface MarketComparisonSectionProps {
   currencies: string[];
@@ -31,6 +32,8 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   const [usingDefaults, setUsingDefaults] = React.useState(isUsingDefaultVertoFxRates());
   // State to track the last API attempt time
   const [lastAttemptTime, setLastAttemptTime] = React.useState(getLastApiAttemptTime());
+  // State to add refresh animation
+  const [isRefreshSuccess, setIsRefreshSuccess] = React.useState(false);
   
   // Use our new VertoFX auto-refresher hook
   const { 
@@ -85,6 +88,10 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
       setUsingDefaults(isUsingDefaultVertoFxRates());
       setLastAttemptTime(getLastApiAttemptTime());
       
+      // Show success animation
+      setIsRefreshSuccess(true);
+      setTimeout(() => setIsRefreshSuccess(false), 1500);
+      
       toast("Market Comparison Refreshed", {
         description: "Successfully updated with the latest rates"
       });
@@ -99,30 +106,74 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   };
   
   return (
-    <div className="animate-fade-in">
-      <h2 className="text-xl font-medium mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-          Market Comparison
+    <div className={cn(
+      "rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/80 to-gray-950 p-5 shadow-xl backdrop-blur-sm",
+      "transition-all duration-300 hover:shadow-blue-900/10 relative overflow-hidden"
+    )}>
+      {/* Top accent line */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-900/40 via-blue-500/60 to-blue-900/40" />
+      
+      {/* Background subtle grid pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMjkuNSAzMC41aDEiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSg1MCw1MCw1MCwwLjEpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-10" />
+      
+      {/* Success refresh overlay */}
+      <div className={cn(
+        "absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/10 to-green-500/0 pointer-events-none",
+        "transition-opacity duration-700 ease-out",
+        isRefreshSuccess ? "opacity-100" : "opacity-0"
+      )} />
+      
+      <h2 className="text-xl font-semibold mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-gray-100">
+          <div className="relative w-5 h-5 flex items-center justify-center">
+            <span className="absolute w-2 h-2 rounded-full bg-blue-500 animate-ping opacity-75"></span>
+            <TrendingUp className="h-5 w-5 text-blue-400 relative z-10" />
+          </div>
+          <span className="ml-1">Market Comparison</span>
         </div>
         
-        <Button 
-          onClick={handleRefreshVertoFxRates} 
-          variant="outline" 
-          size="sm" 
-          className="gap-1.5 text-gray-300 border-gray-700 hover:bg-gray-800 transition-all duration-300 hover:shadow-md"
-          disabled={retryLoading || isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 ${retryLoading || isRefreshing ? 'animate-spin' : ''}`} />
-          {retryLoading || isRefreshing
-            ? 'Refreshing...' 
-            : 'Refresh rates'
-          }
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                onClick={handleRefreshVertoFxRates} 
+                variant="outline" 
+                size="sm" 
+                className={cn(
+                  "gap-1.5 bg-gray-800/80 text-gray-200 border-gray-700 hover:bg-gray-700/80",
+                  "transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10",
+                  "flex items-center relative overflow-hidden",
+                  retryLoading || isRefreshing ? "cursor-not-allowed opacity-80" : "hover:border-blue-500/50"
+                )}
+                disabled={retryLoading || isRefreshing}
+              >
+                {/* Button background animation */}
+                {(retryLoading || isRefreshing) && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-800 via-blue-800/50 to-gray-800 -z-10 animate-gradient-x" />
+                )}
+                
+                <RefreshCw className={cn(
+                  "h-4 w-4 text-blue-400",
+                  retryLoading || isRefreshing ? "animate-spin" : ""
+                )} />
+                
+                <span>
+                  {retryLoading || isRefreshing
+                    ? 'Refreshing...' 
+                    : 'Refresh rates'
+                  }
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-gray-800 text-gray-100 border-gray-700">
+              <p>Fetch the latest market exchange rates</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </h2>
       
       {/* Last updated timestamp and auto-refresh countdown */}
-      <div className="flex items-center justify-between mb-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between mb-4 text-xs text-gray-400 bg-gray-800/30 rounded-md p-2 backdrop-blur-sm">
         <div>
           {lastUpdated && (
             <TimestampDisplay 
@@ -133,18 +184,32 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
           )}
         </div>
         
-        <RefreshCountdown 
-          nextRefreshIn={nextRefreshIn} 
-          isRefreshing={isRefreshing || retryLoading} 
-        />
+        <div className="flex items-center gap-1 bg-gray-900/50 px-2 py-1 rounded-md border border-gray-800">
+          <RefreshCountdown 
+            nextRefreshIn={nextRefreshIn} 
+            isRefreshing={isRefreshing || retryLoading} 
+          />
+        </div>
       </div>
       
-      <MarketComparisonPanel 
-        currencies={currencies} 
-        oneremitRatesFn={oneremitRatesFn}
-        vertoFxRates={vertoFxRates}
-        isLoading={isLoading || retryLoading || isRefreshing}
-      />
+      <div className="relative">
+        {/* Loading overlay */}
+        {(isLoading || retryLoading || isRefreshing) && (
+          <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-10 rounded-md">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-8 w-8 rounded-full border-2 border-t-blue-500 border-r-transparent border-b-blue-300 border-l-transparent animate-spin" />
+              <p className="text-sm text-gray-300">Updating rates...</p>
+            </div>
+          </div>
+        )}
+        
+        <MarketComparisonPanel 
+          currencies={currencies} 
+          oneremitRatesFn={oneremitRatesFn}
+          vertoFxRates={vertoFxRates}
+          isLoading={isLoading || retryLoading || isRefreshing}
+        />
+      </div>
     </div>
   );
 };
