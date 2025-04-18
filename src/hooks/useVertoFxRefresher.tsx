@@ -26,24 +26,18 @@ export const useVertoFxRefresher = ({
   
   // Function to manually refresh VertoFX rates
   const refreshVertoFxRates = useCallback(async (forceRefresh: boolean = false): Promise<boolean> => {
-    logger.debug("VertoFxRefresher: Manually refreshing VertoFX rates");
+    logger.debug("VertoFxRefresher: Manually refreshing VertoFX rates", { forceRefresh });
     setIsRefreshing(true);
     
     try {
-      // Force bypass the cooldown check if forceRefresh is true
-      if (forceRefresh) {
-        const now = Date.now() - 40000; // Set to 40 seconds ago to bypass the 30 second cooldown
-        window.localStorage.setItem('lastVertoFxApiAttempt', now.toString());
-      }
-      
       // Use a temporary state updater function for loadVertoFxRates
       const tempSetRates = (rates: VertoFXRates) => {
         setVertoFxRates(rates);
         setLastUpdated(new Date());
       };
       
-      // Call the loader function with our temporary state updater
-      const updatedRates = await loadVertoFxRates(false, tempSetRates);
+      // Call the loader function with our temporary state updater and the forceRefresh flag
+      const updatedRates = await loadVertoFxRates(false, tempSetRates, forceRefresh);
       
       if (updatedRates && Object.keys(updatedRates).length > 0) {
         logger.info("VertoFxRefresher: Successfully refreshed VertoFX rates");
@@ -75,7 +69,8 @@ export const useVertoFxRefresher = ({
         }
       };
       
-      await loadVertoFxRates(false, silentSetRates);
+      // Automatic refreshes are NOT forced - they respect the cooldown
+      await loadVertoFxRates(false, silentSetRates, false);
       logger.debug("VertoFxRefresher: Auto-refresh completed");
     } catch (error) {
       logger.error("VertoFxRefresher: Auto-refresh failed:", error);

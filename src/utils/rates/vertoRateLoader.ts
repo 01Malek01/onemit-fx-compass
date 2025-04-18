@@ -1,8 +1,11 @@
-
 import { VertoFXRates, fetchVertoFXRates } from '@/services/api';
 import { cacheWithExpiration } from '../cacheUtils';
 import { raceWithTimeout } from '../apiUtils';
 import { toast } from 'sonner';
+import { logger } from '../logUtils';
+
+// Storage key for the last API attempt timestamp
+const LAST_API_ATTEMPT_STORAGE_KEY = 'lastVertoFxApiAttempt';
 
 // Default rates that will always be used as fallback
 const DEFAULT_VERTOFX_RATES: VertoFXRates = {
@@ -18,14 +21,57 @@ let lastApiAttemptTimestamp: number = 0;
 let lastApiSuccess: boolean = false;
 
 /**
+ * Get the last API attempt timestamp, checking both memory and localStorage
+ */
+export const getLastApiAttemptTimestamp = (): number => {
+  // First check localStorage
+  const storedTimestamp = window.localStorage.getItem(LAST_API_ATTEMPT_STORAGE_KEY);
+  if (storedTimestamp) {
+    const parsedTimestamp = parseInt(storedTimestamp, 10);
+    if (!isNaN(parsedTimestamp)) {
+      // Use the most recent timestamp (either in-memory or localStorage)
+      lastApiAttemptTimestamp = Math.max(lastApiAttemptTimestamp, parsedTimestamp);
+      return lastApiAttemptTimestamp;
+    }
+  }
+  
+  return lastApiAttemptTimestamp;
+};
+
+/**
+ * Set the last API attempt timestamp in both memory and localStorage
+ */
+export const setLastApiAttemptTimestamp = (timestamp: number): void => {
+  // Update both in-memory and localStorage values
+  lastApiAttemptTimestamp = timestamp;
+  window.localStorage.setItem(LAST_API_ATTEMPT_STORAGE_KEY, timestamp.toString());
+};
+
+/**
+ * Force bypass the rate limiting cooldown
+ */
+export const bypassRateLimitingCooldown = (): void => {
+  // Set timestamp to 1 minute ago to force a new API call
+  const bypassTimestamp = Date.now() - 60000;
+  setLastApiAttemptTimestamp(bypassTimestamp);
+  logger.debug("[vertoRateLoader] Bypassing rate limiting cooldown");
+};
+
+/**
  * Load VertoFX rates with fallbacks
  */
 export const loadVertoFxRates = async (
   isMobile: boolean = false,
-  setVertoFxRates: (rates: VertoFXRates) => void
+  setVertoFxRates: (rates: VertoFXRates) => void,
+  forceRefresh: boolean = false
 ): Promise<VertoFXRates> => {
   // Start by setting default rates immediately for faster UI response
   setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
+  
+  // Force bypass the rate limiting if requested
+  if (forceRefresh) {
+    bypassRateLimitingCooldown();
+  }
   
   // On mobile, use cached values for immediate display
   if (isMobile && Object.keys(lastSuccessfulVertoFxRates).length > 0) {
@@ -58,7 +104,7 @@ export const loadVertoFxRates = async (
           // Ensure we use default rates if fetch fails
           setVertoFxRates({ ...lastSuccessfulVertoFxRates });
         } finally {
-          lastApiAttemptTimestamp = Date.now();
+          setLastApiAttemptTimestamp(Date.now());
         }
       }, 100);
       
@@ -70,10 +116,12 @@ export const loadVertoFxRates = async (
   try {
     const timeout = isMobile ? 3000 : 10000;
     
-    // Only attempt API call if we haven't tried in the last 30 seconds
-    const shouldCallApi = Date.now() - lastApiAttemptTimestamp > 30000;
+    // Only attempt API call if we haven't tried in the last 30 seconds OR if force refresh
+    const lastAttemptTime = getLastApiAttemptTimestamp();
+    const shouldCallApi = forceRefresh || (Date.now() - lastAttemptTime > 30000);
     
     if (shouldCallApi) {
+      logger.debug("[vertoRateLoader] Fetching fresh VertoFX rates");
       const vertoRates = await raceWithTimeout(
         fetchVertoFXRates(),
         timeout,
@@ -98,13 +146,13 @@ export const loadVertoFxRates = async (
         
         // If we had previously shown an error toast, show a success toast
         const isFirstSuccess = !lastApiSuccess;
-        if (isFirstSuccess) {
+        if (isFirstSuccess || forceRefresh) {
           toast.success("Market comparison data refreshed", {
             id: "vertofx-api-status",
           });
         }
         
-        lastApiAttemptTimestamp = Date.now();
+        setLastApiAttemptTimestamp(Date.now());
         return vertoRates;
       } else {
         // If API returned no valid rates, use default values
@@ -117,11 +165,12 @@ export const loadVertoFxRates = async (
         });
         
         setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
-        lastApiAttemptTimestamp = Date.now();
+        setLastApiAttemptTimestamp(Date.now());
         return { ...DEFAULT_VERTOFX_RATES };
       }
     } else {
       // If we recently tried and failed, don't spam the API
+      logger.debug(`[vertoRateLoader] Rate limiting active, last attempt was ${(Date.now() - lastAttemptTime) / 1000}s ago`);
       if (Object.keys(lastSuccessfulVertoFxRates).length > 0 && 
           JSON.stringify(lastSuccessfulVertoFxRates) !== JSON.stringify(DEFAULT_VERTOFX_RATES)) {
         setVertoFxRates({ ...lastSuccessfulVertoFxRates });
@@ -143,7 +192,7 @@ export const loadVertoFxRates = async (
     
     // Always return valid default rates on error
     setVertoFxRates({ ...DEFAULT_VERTOFX_RATES });
-    lastApiAttemptTimestamp = Date.now();
+    setLastApiAttemptTimestamp(Date.now());
     return { ...DEFAULT_VERTOFX_RATES };
   }
 };
@@ -174,5 +223,5 @@ export const isUsingDefaultVertoFxRates = (): boolean => {
  * Get the time since the last API attempt
  */
 export const getLastApiAttemptTime = (): number => {
-  return lastApiAttemptTimestamp;
+  return getLastApiAttemptTimestamp();
 };

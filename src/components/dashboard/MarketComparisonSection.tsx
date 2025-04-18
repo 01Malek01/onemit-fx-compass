@@ -82,6 +82,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   const handleManualRefresh = useCallback(async (): Promise<boolean> => {
     setIsManuallyRefreshing(true);
     try {
+      // Always pass true to force a refresh when manually triggered
       const success = await refreshVertoFxRates(true);
       if (success) {
         toast("Market comparison rates have been updated");
