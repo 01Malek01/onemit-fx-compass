@@ -7,17 +7,21 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
 // Defined types for better type checking
-type SupabaseConfig = {
-  autoRefreshToken?: boolean;
-  persistSession?: boolean;
-  detectSessionInUrl?: boolean;
+type SupabaseClientOptions = {
+  auth?: {
+    autoRefreshToken?: boolean;
+    persistSession?: boolean;
+    detectSessionInUrl?: boolean;
+  };
 };
 
 // Default configuration for Supabase client
-const defaultSupabaseConfig: SupabaseConfig = {
-  autoRefreshToken: true,
-  persistSession: true,
-  detectSessionInUrl: true,
+const defaultSupabaseConfig: SupabaseClientOptions = {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  }
 };
 
 /**
@@ -60,3 +64,5 @@ function initSupabaseClient() {
 
 // Export the initialized client
 export const supabaseClient = initSupabaseClient();
+// Export as 'supabase' for backward compatibility
+export const supabase = supabaseClient;

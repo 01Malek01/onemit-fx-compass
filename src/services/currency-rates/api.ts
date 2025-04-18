@@ -1,5 +1,11 @@
+
 import axios from 'axios';
-import { CurrencyRates } from './types';
+import { CurrencyRate } from './types';
+
+/**
+ * Type for currency rates object (from external API)
+ */
+export type CurrencyRates = Record<string, number>;
 
 /**
  * Default API endpoint for currency rates
