@@ -57,7 +57,7 @@ export default function Auth() {
             <div className="space-y-6">
               <div className="space-y-2 text-center">
                 <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-[#0062FF] to-blue-400 bg-clip-text text-transparent">
-                  Oneremit FX Terminal
+                  Oneremit Terminal
                 </h1>
                 <p className="text-muted-foreground/80 text-lg">
                   Enter your credentials to access the platform
@@ -138,4 +138,4 @@ export default function Auth() {
       </div>
     </ParallaxBackground>
   );
-}
+};

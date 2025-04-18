@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { loadUsdtRate } from './usdtRateLoader';
@@ -8,6 +7,14 @@ import { browserStorage } from '@/utils/cacheUtils';
 
 // Cache key for initial load data
 const INITIAL_LOAD_CACHE_KEY = 'fx_initial_load_data';
+
+// Define interface for cached data structure
+interface CachedRatesData {
+  usdtRate: number;
+  fxRates: CurrencyRates;
+  vertoRates?: VertoFXRates;
+  timestamp: number;
+}
 
 /**
  * Optimized function to load all rates data with aggressive caching
@@ -23,7 +30,7 @@ export const loadRatesData = async (
   success: boolean 
 }> => {
   // Try to use cached initial data for ultra-fast startup
-  const cachedData = browserStorage.getItem(INITIAL_LOAD_CACHE_KEY);
+  const cachedData = browserStorage.getItem(INITIAL_LOAD_CACHE_KEY) as CachedRatesData | null;
   if (cachedData) {
     console.log(`[ratesLoader] Using cached initial data`);
     setFxRates(cachedData.fxRates);

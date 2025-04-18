@@ -8,14 +8,18 @@ export type {
   CurrencyRateResponse
 } from './types';
 
-// Re-export API functions
+// Re-export API types and functions
+export type { CurrencyRates, VertoFXRates } from './api';
 export {
+  fetchCurrencyRates,
+  fetchVertoFXRates,
   fetchExchangeRates,
-  fetchSingleExchangeRate
+  fetchSingleExchangeRate,
+  DEFAULT_VERTOFX_RATES
 } from './api';
 
 // Re-export storage functions
 export {
   saveCurrencyRates,
-  fetchCurrencyRates
+  fetchCurrencyRates as fetchCurrencyRatesFromDB
 } from './storage';

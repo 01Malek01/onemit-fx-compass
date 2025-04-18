@@ -17,7 +17,6 @@ import StatusIndicator from './rate-display/StatusIndicator';
 // Import our custom hooks
 import { useRateAnimation } from './rate-display/useRateAnimation';
 import { useRefreshCountdown } from './rate-display/useRefreshCountdown';
-
 interface LiveRateDisplayProps {
   rate: number | null;
   lastUpdated: Date | null;
@@ -25,16 +24,18 @@ interface LiveRateDisplayProps {
   isLoading: boolean;
   isRealtimeActive?: boolean; // Add optional real-time status prop
 }
-
-const RATE_UPDATE_EMOJIS = [
-  '🚀', // Rapid update
-  '💹', // Chart increasing
-  '🔥', // Fire (hot update)
-  '✨', // Sparkles
-  '💡', // Idea
-  '🌟', // Glowing star
+const RATE_UPDATE_EMOJIS = ['🚀',
+// Rapid update
+'💹',
+// Chart increasing
+'🔥',
+// Fire (hot update)
+'✨',
+// Sparkles
+'💡',
+// Idea
+'🌟' // Glowing star
 ];
-
 const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   rate,
   lastUpdated,
@@ -44,37 +45,36 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
 }) => {
   // Calculate if the rate is stale (more than 1 hour old)
   const isStale = useMemo(() => {
-    return lastUpdated && 
-      (new Date().getTime() - lastUpdated.getTime() > 3600000);
+    return lastUpdated && new Date().getTime() - lastUpdated.getTime() > 3600000;
   }, [lastUpdated]);
-  
+
   // Format the timestamp in the user's local timezone
   const formattedTimestamp = useMemo(() => {
     if (!lastUpdated) return 'never';
-    
     return lastUpdated.toLocaleString('en-US', {
       dateStyle: 'medium',
       timeStyle: 'short'
     });
   }, [lastUpdated]);
-  
+
   // Use our custom hooks
-  const { showUpdateFlash } = useRateAnimation({ 
-    rate, 
-    formattedTimestamp 
+  const {
+    showUpdateFlash
+  } = useRateAnimation({
+    rate,
+    formattedTimestamp
   });
-  
-  const { nextRefreshIn } = useRefreshCountdown({ lastUpdated });
+  const {
+    nextRefreshIn
+  } = useRefreshCountdown({
+    lastUpdated
+  });
 
   // Pick a random emoji when the rate updates
   const updateEmoji = useMemo(() => {
-    return showUpdateFlash 
-      ? RATE_UPDATE_EMOJIS[Math.floor(Math.random() * RATE_UPDATE_EMOJIS.length)] 
-      : null;
+    return showUpdateFlash ? RATE_UPDATE_EMOJIS[Math.floor(Math.random() * RATE_UPDATE_EMOJIS.length)] : null;
   }, [showUpdateFlash]);
-
-  return (
-    <div className="relative overflow-hidden mb-8">
+  return <div className="relative overflow-hidden mb-8">
       {/* Background elements */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-950 to-black opacity-90" />
@@ -89,9 +89,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600/40 via-indigo-500/60 to-blue-600/40" />
         
         {/* Flash animation for updates */}
-        {showUpdateFlash && (
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 animate-gradient-x pointer-events-none z-10" />
-        )}
+        {showUpdateFlash && <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 animate-gradient-x pointer-events-none z-10" />}
         
         <div className="p-6 sm:p-8">
           <div className="flex flex-col md:flex-row md:items-center gap-6 justify-between">
@@ -110,12 +108,8 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
               {/* Title and subtitle */}
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-gray-200 bg-clip-text text-transparent">
-                    Oneremit Compass
-                  </h1>
-                  <Badge 
-                    className="bg-indigo-900/30 text-indigo-200 border border-indigo-700/30 text-xs px-2 py-0 h-5"
-                  >
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-gray-200 bg-clip-text text-transparent">Oneremit Terminal</h1>
+                  <Badge className="bg-indigo-900/30 text-indigo-200 border border-indigo-700/30 text-xs px-2 py-0 h-5">
                     LIVE
                   </Badge>
                 </div>
@@ -136,25 +130,17 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
                       <span>USDT/NGN</span>
                     </div>
                     
-                    {isRealtimeActive && (
-                      <div className="flex items-center gap-1.5 text-xs text-green-500 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-800/30">
+                    {isRealtimeActive && <div className="flex items-center gap-1.5 text-xs text-green-500 bg-green-900/20 px-2 py-0.5 rounded-full border border-green-800/30">
                         <Zap className="h-3 w-3" />
                         <span>Syncing</span>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                   
                   <div className="mt-1.5 flex items-center gap-2">
                     <RateValue rate={rate} showUpdateFlash={showUpdateFlash} customClasses="text-3xl font-bold bg-gradient-to-r from-blue-100 to-white text-transparent bg-clip-text" />
-                    {updateEmoji && (
-                      <span 
-                        className="text-xl animate-bounce" 
-                        role="img" 
-                        aria-label="Rate update emoji"
-                      >
+                    {updateEmoji && <span className="text-xl animate-bounce" role="img" aria-label="Rate update emoji">
                         {updateEmoji}
-                      </span>
-                    )}
+                      </span>}
                   </div>
                   
                   <div className="mt-1.5 flex items-center justify-between text-xs">
@@ -174,8 +160,6 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
         <StatusAlerts rate={rate} isStale={isStale} />
         <InfoNote />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default LiveRateDisplay;
