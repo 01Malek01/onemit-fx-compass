@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { VertoFXRates } from '@/services/api';
-import { loadVertoFxRates } from '@/utils/rates/vertoRateLoader';
+import { loadVertoFxRates, getTimeUntilNextAttempt, isVertoFxRateLimited } from '@/utils/rates/vertoRateLoader';
 import { logger } from '@/utils/logUtils';
 
 interface VertoFxRefresherProps {
@@ -8,15 +8,19 @@ interface VertoFxRefresherProps {
   vertoFxRates: VertoFXRates;
 }
 
+// Default refresh interval in seconds
+const DEFAULT_REFRESH_INTERVAL = 60;
+
 /**
  * Custom hook to handle automatic refreshing of VertoFX rates every minute
+ * with improved rate limiting awareness
  */
 export const useVertoFxRefresher = ({
   setVertoFxRates,
   vertoFxRates
 }: VertoFxRefresherProps) => {
   // State for tracking next refresh countdown
-  const [nextRefreshIn, setNextRefreshIn] = useState(60); // 60 seconds default
+  const [nextRefreshIn, setNextRefreshIn] = useState(DEFAULT_REFRESH_INTERVAL);
   
   // State to indicate when a refresh is in progress
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -24,9 +28,40 @@ export const useVertoFxRefresher = ({
   // State to track the last time rates were updated
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
+  // State to track if we're currently rate limited
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  
+  // Function to get the correct next refresh time
+  const updateNextRefreshTime = useCallback(() => {
+    // Check with the rate limiting system for accurate timing
+    const timeUntilNextCall = getTimeUntilNextAttempt();
+    const isLimited = isVertoFxRateLimited();
+    
+    // Update the rate limited state if needed
+    if (isLimited !== isRateLimited) {
+      setIsRateLimited(isLimited);
+    }
+    
+    // If we're rate limited or have a cooldown, use that time as countdown
+    if (timeUntilNextCall > 0) {
+      setNextRefreshIn(timeUntilNextCall);
+      return timeUntilNextCall;
+    }
+    
+    // Otherwise, use the default refresh interval
+    return nextRefreshIn;
+  }, [nextRefreshIn, isRateLimited]);
+  
   // Function to manually refresh VertoFX rates
   const refreshVertoFxRates = useCallback(async (forceRefresh: boolean = false): Promise<boolean> => {
     logger.debug("VertoFxRefresher: Manually refreshing VertoFX rates", { forceRefresh });
+    
+    // Don't allow refresh if rate limited and not forcing
+    if (isVertoFxRateLimited() && !forceRefresh) {
+      logger.warn("VertoFxRefresher: Currently rate limited, cannot refresh");
+      return false;
+    }
+    
     setIsRefreshing(true);
     
     try {
@@ -38,6 +73,9 @@ export const useVertoFxRefresher = ({
       
       // Call the loader function with our temporary state updater and the forceRefresh flag
       const updatedRates = await loadVertoFxRates(false, tempSetRates, forceRefresh);
+      
+      // After refresh, update the countdown time based on rate limits
+      updateNextRefreshTime();
       
       if (updatedRates && Object.keys(updatedRates).length > 0) {
         logger.info("VertoFxRefresher: Successfully refreshed VertoFX rates");
@@ -52,10 +90,17 @@ export const useVertoFxRefresher = ({
     } finally {
       setIsRefreshing(false);
     }
-  }, [setVertoFxRates]);
+  }, [setVertoFxRates, updateNextRefreshTime]);
   
   // Function to perform auto-refresh (without UI notifications)
   const performAutoRefresh = useCallback(async () => {
+    // Don't auto-refresh if we're rate limited
+    if (isVertoFxRateLimited()) {
+      logger.debug("VertoFxRefresher: Rate limited, skipping auto-refresh");
+      updateNextRefreshTime();
+      return;
+    }
+    
     logger.debug("VertoFxRefresher: Performing auto-refresh");
     setIsRefreshing(true);
     
@@ -76,36 +121,63 @@ export const useVertoFxRefresher = ({
       logger.error("VertoFxRefresher: Auto-refresh failed:", error);
     } finally {
       setIsRefreshing(false);
+      // Update the countdown based on rate limits
+      updateNextRefreshTime();
     }
-  }, [setVertoFxRates]);
+  }, [setVertoFxRates, updateNextRefreshTime]);
   
-  // Set up countdown timer and auto-refresh every minute
+  // Set up countdown timer and auto-refresh
   useEffect(() => {
+    // First, check if we're currently rate limited and update the state
+    setIsRateLimited(isVertoFxRateLimited());
+    
+    // Initial update for next refresh time
+    updateNextRefreshTime();
+    
     // Update countdown every second
     const countdownInterval = setInterval(() => {
       setNextRefreshIn(prev => {
         if (prev <= 1) {
-          // Trigger auto-refresh when countdown reaches 0
+          // Before triggering refresh, check for rate limiting again
+          if (isVertoFxRateLimited()) {
+            // If rate limited, update time to reflect the actual wait time
+            const limitedTime = getTimeUntilNextAttempt();
+            if (limitedTime > 0) {
+              return limitedTime;
+            }
+            // If still limited but no time reported, use default
+            return DEFAULT_REFRESH_INTERVAL;
+          }
+          
+          // Trigger auto-refresh when countdown reaches 0 and not rate limited
           performAutoRefresh(); 
-          return 60; // Reset to 60 seconds
+          return DEFAULT_REFRESH_INTERVAL; // Reset to default interval
         }
         return prev - 1;
       });
+      
+      // Every 5 seconds, check for rate limiting changes
+      if (nextRefreshIn % 5 === 0) {
+        updateNextRefreshTime();
+      }
     }, 1000);
     
-    // Initial refresh on mount
-    performAutoRefresh();
+    // Initial refresh on mount if not rate limited
+    if (!isVertoFxRateLimited()) {
+      performAutoRefresh();
+    }
     
     // Clean up
     return () => {
       clearInterval(countdownInterval);
     };
-  }, [performAutoRefresh]);
+  }, [performAutoRefresh, updateNextRefreshTime]);
   
   return {
     refreshVertoFxRates,
     nextRefreshIn,
     isRefreshing,
-    lastUpdated
+    lastUpdated,
+    isRateLimited
   };
 }; 

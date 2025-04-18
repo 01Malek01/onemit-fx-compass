@@ -131,11 +131,13 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
                 </span>
               )}
             </div>
-            <RefreshButton 
-              onRefresh={handleManualRefresh}
-              isLoading={isManuallyRefreshing || vertoFxIsRefreshing}
-              variant="premium"
-            />
+            <div className="flex items-center gap-2">
+              <RefreshButton 
+                onRefresh={handleManualRefresh}
+                isLoading={isManuallyRefreshing || vertoFxIsRefreshing}
+                variant="premium"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>

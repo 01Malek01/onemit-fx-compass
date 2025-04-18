@@ -1,40 +1,51 @@
 import React from 'react';
-import { RefreshCw, Wifi } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Clock, AlertOctagon } from 'lucide-react';
+import { isVertoFxRateLimited } from '@/utils/rates/vertoRateLoader';
 
 interface RefreshCountdownProps {
   nextRefreshIn: number;
-  isRefreshing?: boolean;
+  isRefreshing: boolean;
 }
 
-const RefreshCountdown: React.FC<RefreshCountdownProps> = ({
+const RefreshCountdown: React.FC<RefreshCountdownProps> = ({ 
   nextRefreshIn,
-  isRefreshing = false
+  isRefreshing
 }) => {
+  // Check if we're rate limited
+  const isRateLimited = isVertoFxRateLimited();
+  
+  // Format the countdown text
+  const formatCountdown = (seconds: number): string => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${String(remainingSeconds).padStart(2, '0')}s`;
+    }
+  };
+  
+  // Different countdown message based on state
+  const getCountdownMessage = () => {
+    if (isRefreshing) {
+      return 'Refreshing...';
+    }
+    
+    if (isRateLimited) {
+      return `Rate limited · ${formatCountdown(nextRefreshIn)}`;
+    }
+    
+    return `Refreshes in ${formatCountdown(nextRefreshIn)}`;
+  };
+  
   return (
-    <div className="flex items-center gap-2 mt-1">
-      <p className="text-xs text-primary/70 flex items-center gap-1.5">
-        <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-        <span>
-          {isRefreshing
-            ? 'Refreshing...'
-            : `Auto-refresh in ${nextRefreshIn}s`
-          }
-        </span>
-      </p>
-      
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="cursor-help">
-              <Wifi className="h-3 w-3 text-green-500" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">Real-time sync active with all users</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <div className="text-xs flex items-center text-muted-foreground mt-1.5">
+      {isRateLimited ? (
+        <AlertOctagon className="h-3 w-3 mr-1.5 text-amber-400" />
+      ) : (
+        <Clock className="h-3 w-3 mr-1.5" />
+      )}
+      <span>{getCountdownMessage()}</span>
     </div>
   );
 };
