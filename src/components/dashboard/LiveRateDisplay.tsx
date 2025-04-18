@@ -111,7 +111,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-blue-100 to-gray-200 bg-clip-text text-transparent">
-                    FX Compass
+                    Oneremit Compass
                   </h1>
                   <Badge 
                     className="bg-indigo-900/30 text-indigo-200 border border-indigo-700/30 text-xs px-2 py-0 h-5"
