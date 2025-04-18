@@ -33,7 +33,7 @@ export const useVertoFxRefresher = ({
       // Force bypass the cooldown check if forceRefresh is true
       if (forceRefresh) {
         const now = Date.now() - 40000; // Set to 40 seconds ago to bypass the 30 second cooldown
-        global.window.localStorage.setItem('lastVertoFxApiAttempt', now.toString());
+        window.localStorage.setItem('lastVertoFxApiAttempt', now.toString());
       }
       
       // Use a temporary state updater function for loadVertoFxRates
