@@ -20,65 +20,42 @@ export const useRealtimeUpdates = ({
   useEffect(() => {
     logger.info("Setting up real-time updates subscription");
     
-    // Fixed channel configuration for reliable cross-client synchronization
+    // Create a single channel for both tables - this is more reliable
     const channel = supabase
-      .channel('public:usdt_ngn_rates')
+      .channel('realtime-sync')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT', // Only listen for new insertions - this is key for the refresh feature
+          event: 'INSERT', // Listen for new inserts - crucial for refresh functionality
           schema: 'public',
           table: 'usdt_ngn_rates'
         }, 
         (payload) => {
-          logger.debug("Received real-time update from Supabase:", payload);
+          logger.debug("Received USDT/NGN rate update:", payload);
           
           if (!payload.new || typeof payload.new !== 'object') {
-            logger.warn("Received invalid payload from Supabase real-time:", payload);
+            logger.warn("Invalid payload received:", payload);
             return;
           }
           
-          // Type check the payload
           const newPayload = payload.new as Record<string, unknown>;
           
-          // Check if this is a valid rate update
           if ('rate' in newPayload && typeof newPayload.rate === 'number' && newPayload.rate > 0) {
             const rate = newPayload.rate;
-            
-            // Check for timestamp to ensure we only process newer updates
             const timestamp = newPayload.created_at as string;
             
-            if (timestamp && (!lastProcessedTimestamp.current || timestamp > lastProcessedTimestamp.current)) {
-              // Update our last processed timestamp
-              lastProcessedTimestamp.current = timestamp;
-              
-              logger.info(`Real-time update: USDT/NGN rate changed to ${rate} (timestamp: ${timestamp})`);
-              
-              // Update the rate in the UI
-              onUsdtRateChange(rate);
-              
-              // Show toast for real-time updates
-              const sourceInfo = newPayload.source as string;
-              const isManualUpdate = sourceInfo === 'manual' || sourceInfo === 'bybit';
-              
-              if (isManualUpdate) {
-                toast.info("USDT/NGN rate updated", {
-                  description: "Rate was refreshed by another user"
-                });
-              }
-            } else {
-              logger.debug("Skipping already processed rate update", { 
-                timestamp, 
-                lastProcessed: lastProcessedTimestamp.current 
-              });
-            }
+            logger.info(`Real-time update: New USDT/NGN rate detected: ${rate}`);
+            
+            // Update the UI with the new rate
+            onUsdtRateChange(rate);
+            
+            // Show toast for real-time updates
+            toast.info("USDT/NGN rate updated", {
+              description: "Rate was refreshed by another user"
+            });
           }
         }
-      );
-    
-    // Set up margin settings channel in a similar way
-    const marginChannel = supabase
-      .channel('public:margin_settings')
+      )
       .on(
         'postgres_changes',
         {
@@ -90,11 +67,10 @@ export const useRealtimeUpdates = ({
           logger.debug("Received margin settings update:", payload);
           
           if (!payload.new || typeof payload.new !== 'object') {
-            logger.warn("Received invalid margin settings payload:", payload);
+            logger.warn("Invalid margin settings payload:", payload);
             return;
           }
           
-          // Proper type checking to avoid TypeScript errors
           const newPayload = payload.new as Record<string, unknown>;
           const hasUsdMargin = 'usd_margin' in newPayload && newPayload.usd_margin !== null;
           const hasOtherMargin = 'other_currencies_margin' in newPayload && newPayload.other_currencies_margin !== null;
@@ -114,20 +90,26 @@ export const useRealtimeUpdates = ({
         }
       );
     
-    // Subscribe to both channels and log the result
+    // Subscribe to the channel and log the status
     channel.subscribe((status) => {
-      logger.info(`Supabase USDT/NGN rates channel subscription status: ${status}`);
-    });
-    
-    marginChannel.subscribe((status) => {
-      logger.info(`Supabase margin settings channel subscription status: ${status}`);
+      logger.info(`Supabase real-time subscription status: ${status}`);
+      
+      if (status === 'SUBSCRIBED') {
+        logger.info('✅ Real-time updates successfully enabled');
+      } else if (status === 'CHANNEL_ERROR') {
+        logger.error('❌ Failed to enable real-time updates');
+        
+        // Show error toast
+        toast.error("Real-time sync error", {
+          description: "Changes may not update automatically"
+        });
+      }
     });
 
-    // Cleanup function to remove the channels when component unmounts
+    // Cleanup function to remove the channel when component unmounts
     return () => {
       logger.info("Cleaning up real-time updates subscription");
       supabase.removeChannel(channel);
-      supabase.removeChannel(marginChannel);
     };
   }, [onUsdtRateChange, onMarginSettingsChange]);
 };

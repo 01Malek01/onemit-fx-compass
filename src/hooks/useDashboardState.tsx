@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
@@ -12,7 +11,7 @@ export const useDashboardState = () => {
   // Use our custom hook for currency data
   const [
     { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading, fxRates },
-    { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate }
+    { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate, setVertoFxRates }
   ] = useCurrencyData();
 
   // Use our rate refresher hook with countdown
@@ -114,5 +113,6 @@ export const useDashboardState = () => {
     getOneremitRates,
     fxRates,
     nextRefreshIn,
+    setVertoFxRates,
   };
 };

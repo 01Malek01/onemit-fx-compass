@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wifi } from 'lucide-react';
@@ -22,6 +21,7 @@ interface LiveRateDisplayProps {
   lastUpdated: Date | null;
   onRefresh: () => Promise<boolean>;
   isLoading: boolean;
+  isRealtimeActive?: boolean; // Add optional real-time status prop
 }
 
 const RATE_UPDATE_EMOJIS = [
@@ -37,7 +37,8 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
   rate,
   lastUpdated,
   onRefresh,
-  isLoading
+  isLoading,
+  isRealtimeActive = false // default to false if not provided
 }) => {
   // Calculate if the rate is stale (more than 1 hour old)
   const isStale = useMemo(() => {
@@ -91,12 +92,13 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="ml-auto cursor-help">
-                  <Wifi className="h-3.5 w-3.5 text-muted-foreground opacity-70" />
+                <div className={`ml-auto cursor-help flex items-center gap-1`}>
+                  <Wifi className={`h-3.5 w-3.5 ${isRealtimeActive ? 'text-green-500 animate-pulse' : 'text-muted-foreground opacity-70'}`} />
+                  {isRealtimeActive && <span className="text-xs text-green-500">Syncing</span>}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p className="text-xs">Live rates via secure server proxy to Bybit P2P exchange</p>
+                <p className="text-xs">Real-time sync with all connected users{isRealtimeActive ? ' - update in progress' : ''}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -118,7 +120,7 @@ const LiveRateDisplay: React.FC<LiveRateDisplayProps> = ({
               )}
             </div>
             <TimestampDisplay lastUpdated={lastUpdated} rate={rate} isStale={isStale} />
-            <RefreshCountdown nextRefreshIn={nextRefreshIn} />
+            <RefreshCountdown nextRefreshIn={nextRefreshIn} isRefreshing={isLoading || isRealtimeActive} />
           </div>
           <RefreshButton onRefresh={onRefresh} isLoading={isLoading} />
         </div>
