@@ -1,4 +1,3 @@
-
 /**
  * High-performance caching utilities for in-memory and localStorage
  * with optimized expiration and memory management
@@ -100,24 +99,54 @@ export const cacheWithExpiration = {
   }
 };
 
+// Define types for our cache structures
+type CacheItem<T> = {
+  value: T;
+  expiry?: number;
+};
+
 // Optimized browser storage with batch operations support
 export const browserStorage = {
   /**
    * Get an item from localStorage with expiry check and error handling
    */
-  getItem(key: string) {
+  getItem<T>(key: string): T | null {
     try {
       const item = localStorage.getItem(key);
       if (!item) return null;
       
-      const { value, expiry } = JSON.parse(item);
-      if (expiry && Date.now() > expiry) {
+      // Safely parse JSON with validation
+      let parsed: CacheItem<T> | null = null;
+      try {
+        const rawParsed = JSON.parse(item);
+        // Validate object structure to prevent JSON injection attacks
+        if (typeof rawParsed === 'object' && rawParsed !== null) {
+          // Only accept expected properties
+          parsed = {
+            value: rawParsed.value as T,
+            expiry: typeof rawParsed.expiry === 'number' ? rawParsed.expiry : undefined
+          };
+        }
+      } catch (e) {
+        console.warn(`Invalid JSON in localStorage for key: ${key}`);
         localStorage.removeItem(key);
         return null;
       }
-      return value;
-    } catch {
-      // Silent failure for better performance
+      
+      if (!parsed) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      
+      if (parsed.expiry && Date.now() > parsed.expiry) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      
+      return parsed.value;
+    } catch (error) {
+      // Log error but fail silently to the user
+      console.warn('Error accessing localStorage:', error);
       return null;
     }
   },
@@ -125,16 +154,20 @@ export const browserStorage = {
   /**
    * Set an item in localStorage with expiry
    */
-  setItem(key: string, value: any, ttlMs = 3600000) { // 1 hour default TTL
+  setItem<T>(key: string, value: T, ttlMs = 3600000): boolean { // 1 hour default TTL
     try {
-      const item = {
-        value,
+      // Safely store primitives, arrays and plain objects only
+      const safeValue = this.sanitizeForStorage(value);
+      
+      const item: CacheItem<typeof safeValue> = {
+        value: safeValue,
         expiry: Date.now() + ttlMs
       };
+      
       localStorage.setItem(key, JSON.stringify(item));
       return true;
-    } catch {
-      // Silent failure for better performance
+    } catch (error) {
+      console.warn('Error writing to localStorage:', error);
       return false;
     }
   },
@@ -142,19 +175,24 @@ export const browserStorage = {
   /**
    * Set multiple items at once to reduce localStorage operations
    */
-  setItems(items: Record<string, any>, ttlMs = 3600000) {
+  setItems<T extends Record<string, unknown>>(items: T, ttlMs = 3600000): boolean {
     try {
       const expiry = Date.now() + ttlMs;
       
       for (const [key, value] of Object.entries(items)) {
-        const item = {
-          value,
+        // Safely store primitives, arrays and plain objects only
+        const safeValue = this.sanitizeForStorage(value);
+        
+        const item: CacheItem<typeof safeValue> = {
+          value: safeValue,
           expiry
         };
+        
         localStorage.setItem(key, JSON.stringify(item));
       }
       return true;
-    } catch {
+    } catch (error) {
+      console.warn('Error in batch localStorage operation:', error);
       return false;
     }
   },
@@ -162,7 +200,7 @@ export const browserStorage = {
   /**
    * Clean up expired items to free localStorage space
    */
-  cleanup() {
+  cleanup(): void {
     try {
       const now = Date.now();
       
@@ -175,7 +213,11 @@ export const browserStorage = {
         
         try {
           const parsed = JSON.parse(item);
-          if (parsed.expiry && now > parsed.expiry) {
+          // Validate object structure
+          if (typeof parsed === 'object' && 
+              parsed !== null &&
+              typeof parsed.expiry === 'number' &&
+              now > parsed.expiry) {
             localStorage.removeItem(key);
           }
         } catch {
@@ -185,6 +227,41 @@ export const browserStorage = {
     } catch {
       // Silent failure
     }
+  },
+  
+  /**
+   * Sanitize values for safe storage
+   * Only allows primitives, plain objects, and arrays
+   */
+  sanitizeForStorage<T>(value: T): unknown {
+    const type = typeof value;
+    
+    // Allow primitive types directly
+    if (type === 'string' || type === 'number' || type === 'boolean' || value === null) {
+      return value;
+    }
+    
+    // Handle arrays recursively
+    if (Array.isArray(value)) {
+      return value.map(item => this.sanitizeForStorage(item));
+    }
+    
+    // Handle plain objects recursively
+    if (type === 'object') {
+      const result: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+        // Skip functions, symbols, etc.
+        const valType = typeof val;
+        if (valType === 'function' || valType === 'symbol' || valType === 'undefined') {
+          continue;
+        }
+        result[key] = this.sanitizeForStorage(val);
+      }
+      return result;
+    }
+    
+    // For other types (functions, symbols, etc.), return null
+    return null;
   }
 };
 

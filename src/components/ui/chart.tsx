@@ -74,25 +74,47 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+  // Sanitize the theme data to prevent XSS
+  const sanitizeHtml = (html: string): string => {
+    // Only allow CSS color values and basic CSS syntax
+    return html.replace(/[^\s:;#%.,\-\w()]/g, '');
+  };
+
+  // Generate sanitized CSS 
+  const generateSanitizedCss = (): string => {
+    return Object.entries(THEMES)
+      .map(
+        ([theme, prefix]) => `
+${sanitizeHtml(prefix)} [data-chart=${sanitizeHtml(id)}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+      itemConfig.color;
+    
+    // Skip if color is missing or invalid
+    if (!color || typeof color !== 'string') return '';
+    
+    // Only allow valid CSS color values
+    const sanitizedKey = sanitizeHtml(key);
+    const sanitizedColor = sanitizeHtml(color);
+    
+    return sanitizedKey && sanitizedColor 
+      ? `  --color-${sanitizedKey}: ${sanitizedColor};` 
+      : '';
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `
-          )
-          .join("\n"),
+      )
+      .join("\n");
+  };
+
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: generateSanitizedCss(),
       }}
     />
   )
