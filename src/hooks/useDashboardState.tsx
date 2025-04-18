@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
-import { CurrencyRates } from '@/services/api';
+import { CurrencyRates, VertoFXRates, DEFAULT_VERTOFX_RATES } from '@/services/api';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { useRateRefresher } from '@/hooks/useRateRefresher';
 import { useMarginManager } from '@/hooks/useMarginManager';
@@ -10,9 +10,30 @@ import { useOneremitRates } from '@/hooks/useOneremitRates';
 export const useDashboardState = () => {
   // Use our custom hook for currency data
   const [
-    { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates, lastUpdated, isLoading, fxRates },
-    { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate, setVertoFxRates }
+    { usdtNgnRate, costPrices, previousCostPrices, vertoFxRates: rawVertoFxRates, lastUpdated, isLoading, fxRates },
+    { loadAllData, setUsdtNgnRate, calculateAllCostPrices, refreshBybitRate, setVertoFxRates: setRawVertoFxRates }
   ] = useCurrencyData();
+
+  // Ensure vertoFxRates has the required properties
+  const vertoFxRates: VertoFXRates = {
+    USD: rawVertoFxRates?.USD || DEFAULT_VERTOFX_RATES.USD,
+    EUR: rawVertoFxRates?.EUR || DEFAULT_VERTOFX_RATES.EUR,
+    GBP: rawVertoFxRates?.GBP || DEFAULT_VERTOFX_RATES.GBP,
+    CAD: rawVertoFxRates?.CAD || DEFAULT_VERTOFX_RATES.CAD,
+    ...rawVertoFxRates
+  };
+
+  // Create a wrapper for setVertoFxRates that ensures required properties
+  const setVertoFxRates = useCallback((rates: VertoFXRates) => {
+    const safeRates: VertoFXRates = {
+      USD: rates?.USD || DEFAULT_VERTOFX_RATES.USD,
+      EUR: rates?.EUR || DEFAULT_VERTOFX_RATES.EUR,
+      GBP: rates?.GBP || DEFAULT_VERTOFX_RATES.GBP,
+      CAD: rates?.CAD || DEFAULT_VERTOFX_RATES.CAD,
+      ...rates
+    };
+    setRawVertoFxRates(safeRates);
+  }, [setRawVertoFxRates]);
 
   // Use our rate refresher hook with countdown
   const { handleRefresh, handleBybitRateRefresh, nextRefreshIn } = useRateRefresher({

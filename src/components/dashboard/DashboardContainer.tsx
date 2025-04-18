@@ -142,6 +142,10 @@ const DashboardContainer = () => {
           vertoFxRates={vertoFxRates}
           isLoading={isLoading}
           setVertoFxRates={setVertoFxRates}
+          usingDefaults={vertoFxRates ? 
+            ['USD', 'EUR', 'GBP', 'CAD'].some(curr => !vertoFxRates[curr] || 
+              (vertoFxRates[curr].buy === 0 && vertoFxRates[curr].sell === 0)) 
+            : true}
         />
       </Suspense>
 

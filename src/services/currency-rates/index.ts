@@ -1,4 +1,3 @@
-
 /**
  * Currency rates service main exports
  */
