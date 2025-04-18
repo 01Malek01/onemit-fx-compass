@@ -5,7 +5,7 @@ import { logger } from '@/utils/logUtils';
 
 /**
  * Hook to subscribe to real-time updates for USDT/NGN rates and margin settings
- * Performance optimized with better type checking and reduced overhead
+ * Fixed to ensure cross-browser synchronization works properly
  */
 export const useRealtimeUpdates = ({
   onUsdtRateChange,
@@ -20,26 +20,28 @@ export const useRealtimeUpdates = ({
   useEffect(() => {
     logger.info("Setting up real-time updates subscription");
     
-    // Single channel with better error handling for real-time updates
+    // Fixed channel configuration for reliable cross-client synchronization
     const channel = supabase
-      .channel('fx-rates-updates')
-      // More efficient subscription with tighter type checking
-      .on('postgres_changes', 
+      .channel('public:usdt_ngn_rates')
+      .on(
+        'postgres_changes',
         {
-          event: '*', 
+          event: 'INSERT', // Only listen for new insertions - this is key for the refresh feature
           schema: 'public',
           table: 'usdt_ngn_rates'
         }, 
         (payload) => {
+          logger.debug("Received real-time update from Supabase:", payload);
+          
           if (!payload.new || typeof payload.new !== 'object') {
             logger.warn("Received invalid payload from Supabase real-time:", payload);
             return;
           }
           
-          // Proper type checking to avoid TypeScript errors
+          // Type check the payload
           const newPayload = payload.new as Record<string, unknown>;
           
-          // Check if this is a rate update
+          // Check if this is a valid rate update
           if ('rate' in newPayload && typeof newPayload.rate === 'number' && newPayload.rate > 0) {
             const rate = newPayload.rate;
             
@@ -50,32 +52,43 @@ export const useRealtimeUpdates = ({
               // Update our last processed timestamp
               lastProcessedTimestamp.current = timestamp;
               
-              logger.info(`Real-time update: USDT/NGN rate changed to ${rate}`);
+              logger.info(`Real-time update: USDT/NGN rate changed to ${rate} (timestamp: ${timestamp})`);
+              
+              // Update the rate in the UI
               onUsdtRateChange(rate);
               
-              // Show toast for real-time updates from other users
-              // Using a short delay to prevent rapid toasts
-              const debounceToast = setTimeout(() => {
-                toast.info("USDT/NGN rate updated", {
-                  description: "Rate refreshed from another user"
-                });
-              }, 200);
+              // Show toast for real-time updates
+              const sourceInfo = newPayload.source as string;
+              const isManualUpdate = sourceInfo === 'manual' || sourceInfo === 'bybit';
               
-              return () => clearTimeout(debounceToast);
+              if (isManualUpdate) {
+                toast.info("USDT/NGN rate updated", {
+                  description: "Rate was refreshed by another user"
+                });
+              }
             } else {
-              logger.debug("Skipping already processed rate update", { timestamp, lastProcessed: lastProcessedTimestamp.current });
+              logger.debug("Skipping already processed rate update", { 
+                timestamp, 
+                lastProcessed: lastProcessedTimestamp.current 
+              });
             }
           }
         }
-      )
-      // Improved margin settings subscription with proper type checking
-      .on('postgres_changes',
+      );
+    
+    // Set up margin settings channel in a similar way
+    const marginChannel = supabase
+      .channel('public:margin_settings')
+      .on(
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'margin_settings'
         }, 
         (payload) => {
+          logger.debug("Received margin settings update:", payload);
+          
           if (!payload.new || typeof payload.new !== 'object') {
             logger.warn("Received invalid margin settings payload:", payload);
             return;
@@ -99,15 +112,22 @@ export const useRealtimeUpdates = ({
             }
           }
         }
-      )
-      .subscribe((status) => {
-        logger.info(`Supabase real-time subscription status: ${status}`);
-      });
+      );
+    
+    // Subscribe to both channels and log the result
+    channel.subscribe((status) => {
+      logger.info(`Supabase USDT/NGN rates channel subscription status: ${status}`);
+    });
+    
+    marginChannel.subscribe((status) => {
+      logger.info(`Supabase margin settings channel subscription status: ${status}`);
+    });
 
-    // Cleanup function to remove the channel when component unmounts
+    // Cleanup function to remove the channels when component unmounts
     return () => {
       logger.info("Cleaning up real-time updates subscription");
       supabase.removeChannel(channel);
+      supabase.removeChannel(marginChannel);
     };
   }, [onUsdtRateChange, onMarginSettingsChange]);
 };
