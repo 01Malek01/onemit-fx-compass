@@ -1,4 +1,3 @@
-
 import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { logger } from '@/utils/logUtils';
@@ -54,9 +53,11 @@ export const useBybitRateFetcher = ({
         setUsdtNgnRate(bybitRate);
         setLastUpdated(new Date());
         
-        // Show toast only for manual refresh, not auto-refresh
+        // Show toast only for manual refresh with clearer messaging about real-time updates
         import('sonner').then(({ toast }) => {
-          toast.success("USDT/NGN rate updated from Bybit");
+          toast.success("USDT/NGN rate updated from Bybit", {
+            description: "The new rate will sync with all connected users"
+          });
         });
         
         return true;
