@@ -126,13 +126,21 @@ export const useVertoFxRefresher = ({
     }
   }, [setVertoFxRates, updateNextRefreshTime]);
   
-  // Set up countdown timer and auto-refresh
+  // Set up countdown timer and auto-refresh - use a ref to track if mounted
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
     // First, check if we're currently rate limited and update the state
     setIsRateLimited(isVertoFxRateLimited());
     
     // Initial update for next refresh time
     updateNextRefreshTime();
+    
+    // Prevent duplicate refreshes by using a mount check
+    if (!isMountedRef.current) {
+      return;
+    }
+    isMountedRef.current = false;
     
     // Update countdown every second
     const countdownInterval = setInterval(() => {
@@ -170,8 +178,9 @@ export const useVertoFxRefresher = ({
     // Clean up
     return () => {
       clearInterval(countdownInterval);
+      isMountedRef.current = true; // Reset for next mount if component remounts
     };
-  }, [performAutoRefresh, updateNextRefreshTime]);
+  }, []); // Empty dependency array to ensure this runs only once on mount
   
   return {
     refreshVertoFxRates,
