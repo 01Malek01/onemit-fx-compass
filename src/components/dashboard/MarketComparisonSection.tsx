@@ -67,14 +67,19 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
     });
     
     try {
-      // Make sure to actually call loadVertoFxRates to get fresh data
+      // Force update lastApiAttemptTimestamp to bypass the cooldown check in loadVertoFxRates
+      // This is necessary to allow manual refreshes to work regardless of the cooldown period
+      const now = Date.now() - 40000; // Set to 40 seconds ago to bypass the 30 second cooldown
+      global.window.localStorage.setItem('lastVertoFxApiAttempt', now.toString());
+      
+      // Make sure to actually call loadVertoFxRates to get fresh data with force=true
       const freshRates = await loadVertoFxRates(true, setVertoFxRates);
       if (freshRates) {
         setVertoFxRates(freshRates);
       }
       
-      // Refresh through the hook as well
-      await refreshVertoFxRates();
+      // Refresh through the hook as well with force=true
+      await refreshVertoFxRates(true);
       
       // Update our local tracking states
       setUsingDefaults(isUsingDefaultVertoFxRates());
