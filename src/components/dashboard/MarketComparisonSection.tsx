@@ -2,7 +2,7 @@ import React from 'react';
 import MarketComparisonPanel from '@/components/dashboard/MarketComparisonPanel';
 import { VertoFXRates } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Clock, TrendingUp } from 'lucide-react';
+import { RefreshCw, Clock, TrendingUp, BarChartHorizontal, Activity } from 'lucide-react';
 import { loadVertoFxRates, isUsingDefaultVertoFxRates, getLastApiAttemptTime } from '@/utils/rates/vertoRateLoader';
 import { useVertoFxRefresher } from '@/hooks/useVertoFxRefresher';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -107,7 +107,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   
   return (
     <div className={cn(
-      "rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/80 to-gray-950 p-5 shadow-xl backdrop-blur-sm",
+      "rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/90 to-gray-950 p-5 shadow-xl backdrop-blur-sm",
       "transition-all duration-300 hover:shadow-blue-900/10 relative overflow-hidden"
     )}>
       {/* Top accent line */}
@@ -123,54 +123,77 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
         isRefreshSuccess ? "opacity-100" : "opacity-0"
       )} />
       
-      <h2 className="text-xl font-semibold mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-100">
-          <div className="relative w-5 h-5 flex items-center justify-center">
-            <span className="absolute w-2 h-2 rounded-full bg-blue-500 animate-ping opacity-75"></span>
-            <TrendingUp className="h-5 w-5 text-blue-400 relative z-10" />
-          </div>
-          <span className="ml-1">Market Comparison</span>
-        </div>
+      {/* Modern deep header */}
+      <div className="mb-6 pb-2 border-b border-gray-800/50 relative">
+        {/* Background glow effect */}
+        <div className="absolute -top-6 -left-6 -right-6 h-24 bg-gradient-to-r from-blue-600/10 via-indigo-600/15 to-blue-600/10 rounded-full blur-2xl opacity-70" />
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                onClick={handleRefreshVertoFxRates} 
-                variant="outline" 
-                size="sm" 
-                className={cn(
-                  "gap-1.5 bg-gray-800/80 text-gray-200 border-gray-700 hover:bg-gray-700/80",
-                  "transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10",
-                  "flex items-center relative overflow-hidden",
-                  retryLoading || isRefreshing ? "cursor-not-allowed opacity-80" : "hover:border-blue-500/50"
-                )}
-                disabled={retryLoading || isRefreshing}
-              >
-                {/* Button background animation */}
-                {(retryLoading || isRefreshing) && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-800 via-blue-800/50 to-gray-800 -z-10 animate-gradient-x" />
-                )}
-                
-                <RefreshCw className={cn(
-                  "h-4 w-4 text-blue-400",
-                  retryLoading || isRefreshing ? "animate-spin" : ""
-                )} />
-                
-                <span>
-                  {retryLoading || isRefreshing
-                    ? 'Refreshing...' 
-                    : 'Refresh rates'
-                  }
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="bg-gray-800 text-gray-100 border-gray-700">
-              <p>Fetch the latest market exchange rates</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </h2>
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Icon with animated rings */}
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl blur opacity-30 group-hover:opacity-70 transition duration-1000"></div>
+              <div className="relative h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl shadow-2xl flex items-center justify-center">
+                <div className="absolute inset-0.5 rounded-[10px] bg-gray-950 opacity-80"></div>
+                <div className="absolute h-12 w-12 rounded-xl animate-pulse-ring opacity-20"></div>
+                <Activity className="h-6 w-6 text-blue-400 relative z-10" />
+              </div>
+            </div>
+            
+            {/* Title with gradient text */}
+            <div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-100 via-blue-100 to-gray-100 text-transparent bg-clip-text tracking-tight">
+                Market Comparison
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                <span className="h-1 w-1 rounded-full bg-blue-500"></span>
+                Live exchange rates from multiple providers
+              </p>
+            </div>
+          </div>
+          
+          {/* Refresh button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={handleRefreshVertoFxRates} 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "gap-2 bg-gray-900 text-gray-200 border-gray-800 hover:bg-gray-800",
+                    "transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10",
+                    "flex items-center relative overflow-hidden rounded-lg py-2.5 px-4",
+                    "after:absolute after:inset-0 after:z-10 after:h-full after:w-full after:bg-gradient-to-r after:from-transparent after:via-blue-500/10 after:to-transparent after:opacity-0 hover:after:opacity-100 after:transition-opacity after:duration-500",
+                    retryLoading || isRefreshing ? "cursor-not-allowed opacity-80" : "hover:border-blue-500/50"
+                  )}
+                  disabled={retryLoading || isRefreshing}
+                >
+                  {/* Button background animation */}
+                  {(retryLoading || isRefreshing) && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-800 via-blue-800/50 to-gray-800 -z-10 animate-gradient-x" />
+                  )}
+                  
+                  <RefreshCw className={cn(
+                    "h-4 w-4 text-blue-400",
+                    retryLoading || isRefreshing ? "animate-spin" : ""
+                  )} />
+                  
+                  <span>
+                    {retryLoading || isRefreshing
+                      ? 'Refreshing...' 
+                      : 'Refresh rates'
+                    }
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="bg-gray-800 text-gray-100 border-gray-700">
+                <p>Fetch the latest market exchange rates</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
       
       {/* Last updated timestamp and auto-refresh countdown */}
       <div className="flex items-center justify-between mb-4 text-xs text-gray-400 bg-gray-800/30 rounded-md p-2 backdrop-blur-sm">
