@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { VertoFXRates } from '@/services/api';
 import { loadVertoFxRates, getTimeUntilNextAttempt, isVertoFxRateLimited } from '@/utils/rates/vertoRateLoader';
 import { logger } from '@/utils/logUtils';
+import { addNotification } from '@/contexts/NotificationContext';
 
 interface VertoFxRefresherProps {
   setVertoFxRates: (rates: VertoFXRates) => void;
@@ -96,8 +97,11 @@ export const useVertoFxRefresher = ({
   const performAutoRefresh = useCallback(async () => {
     // Don't auto-refresh if we're rate limited
     if (isVertoFxRateLimited()) {
-      logger.debug("VertoFxRefresher: Rate limited, skipping auto-refresh");
-      updateNextRefreshTime();
+      addNotification({
+        title: "Rate Limited",
+        description: "VertoFX API access is temporarily restricted",
+        type: "warning"
+      });
       return;
     }
     
@@ -111,6 +115,12 @@ export const useVertoFxRefresher = ({
         if (rates && Object.keys(rates).length > 0) {
           setVertoFxRates(rates);
           setLastUpdated(new Date());
+          
+          addNotification({
+            title: "Auto Market Rate Refresh",
+            description: "Rates automatically updated in background",
+            type: "info"
+          });
         }
       };
       
@@ -118,7 +128,11 @@ export const useVertoFxRefresher = ({
       await loadVertoFxRates(false, silentSetRates, false);
       logger.debug("VertoFxRefresher: Auto-refresh completed");
     } catch (error) {
-      logger.error("VertoFxRefresher: Auto-refresh failed:", error);
+      addNotification({
+        title: "Auto Refresh Failed",
+        description: "Could not update market rates automatically",
+        type: "error"
+      });
     } finally {
       setIsRefreshing(false);
       // Update the countdown based on rate limits
@@ -189,4 +203,4 @@ export const useVertoFxRefresher = ({
     lastUpdated,
     isRateLimited
   };
-}; 
+};
