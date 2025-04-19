@@ -1,6 +1,8 @@
+
 import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
 import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
 import { logger } from '@/utils/logUtils';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface BybitRateFetcherProps {
   setUsdtNgnRate: (rate: number) => void;
@@ -13,6 +15,7 @@ export const useBybitRateFetcher = ({
   setLastUpdated,
   setIsLoading
 }: BybitRateFetcherProps) => {
+  const { addNotification } = useNotifications();
   
   const fetchBybitRate = async (): Promise<number | null> => {
     try {
@@ -54,31 +57,31 @@ export const useBybitRateFetcher = ({
           logger.error("Failed to save the rate to database for real-time sync");
         }
         
-        // Show toast for the user who initiated the refresh
-        import('sonner').then(({ toast }) => {
-          toast.success("USDT/NGN rate updated from Bybit", {
-            description: "The new rate will sync with all connected users"
-          });
+        // Show notification for the user who initiated the refresh
+        addNotification({
+          title: "USDT/NGN rate updated from Bybit",
+          description: "The new rate will sync with all connected users",
+          type: "success"
         });
         
         return true;
       } else {
         logger.warn("Could not refresh Bybit rate");
         
-        import('sonner').then(({ toast }) => {
-          toast.error("Failed to update USDT/NGN rate from Bybit", {
-            description: "Using last saved rate instead"
-          });
+        addNotification({
+          title: "Failed to update USDT/NGN rate from Bybit",
+          description: "Using last saved rate instead",
+          type: "error"
         });
         
         return false;
       }
     } catch (error) {
       logger.error("Error refreshing Bybit rate:", error);
-      import('sonner').then(({ toast }) => {
-        toast.error("Failed to update USDT/NGN rate", {
-          description: "Check your network connection and try again"
-        });
+      addNotification({
+        title: "Failed to update USDT/NGN rate",
+        description: "Check your network connection and try again",
+        type: "error"
       });
       return false;
     } finally {

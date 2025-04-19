@@ -1,7 +1,9 @@
+
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { logger } from '@/utils/logUtils';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 /**
  * Hook to subscribe to real-time updates for USDT/NGN rates and margin settings
@@ -16,6 +18,7 @@ export const useRealtimeUpdates = ({
 }) => {
   // Keep track of the last processed rate update timestamp to avoid duplicate processing
   const lastProcessedTimestamp = useRef<string | null>(null);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     logger.info("Setting up real-time updates subscription");
@@ -49,9 +52,11 @@ export const useRealtimeUpdates = ({
             // Update the UI with the new rate
             onUsdtRateChange(rate);
             
-            // Show toast for real-time updates
-            toast.info("USDT/NGN rate updated", {
-              description: "Rate was refreshed by another user"
+            // Show notification
+            addNotification({
+              title: "USDT/NGN rate updated",
+              description: "Rate was refreshed by another user",
+              type: "info"
             });
           }
         }
@@ -82,8 +87,12 @@ export const useRealtimeUpdates = ({
             if (!isNaN(usdMargin) && !isNaN(otherCurrenciesMargin)) {
               logger.info(`Real-time update: Margin settings changed to USD: ${usdMargin}%, Other: ${otherCurrenciesMargin}%`);
               onMarginSettingsChange(usdMargin, otherCurrenciesMargin);
-              toast.info("Margin settings updated", {
-                description: "Settings changed by another user"
+              
+              // Show notification
+              addNotification({
+                title: "Margin settings updated",
+                description: "Settings changed by another user",
+                type: "info"
               });
             }
           }
@@ -99,9 +108,11 @@ export const useRealtimeUpdates = ({
       } else if (status === 'CHANNEL_ERROR') {
         logger.error('❌ Failed to enable real-time updates');
         
-        // Show error toast
-        toast.error("Real-time sync error", {
-          description: "Changes may not update automatically"
+        // Show error notification
+        addNotification({
+          title: "Real-time sync error",
+          description: "Changes may not update automatically",
+          type: "error"
         });
       }
     });
@@ -111,5 +122,5 @@ export const useRealtimeUpdates = ({
       logger.info("Cleaning up real-time updates subscription");
       supabase.removeChannel(channel);
     };
-  }, [onUsdtRateChange, onMarginSettingsChange]);
+  }, [onUsdtRateChange, onMarginSettingsChange, addNotification]);
 };
