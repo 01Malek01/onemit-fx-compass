@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useReducer, useMemo } from 'react';
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from './AuthContext';
@@ -85,7 +84,7 @@ const validateNotificationType = (type: string | null): NotificationType => {
   if (type === 'success' || type === 'error' || type === 'info' || type === 'warning') {
     return type;
   }
-  return 'info'; // Default fallback
+  return 'info';
 };
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -93,15 +92,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [showToasts, setShowToasts] = useState(false);
   const { user } = useAuth();
 
-  // Calculate unread count
+  // Calculate unread count using useMemo for better performance
   const unreadCount = useMemo(() => {
     return notifications.filter(notification => !notification.read).length;
   }, [notifications]);
 
-  // Load notifications from Supabase on mount
+  // Load notifications from Supabase on mount and setup real-time subscription
   useEffect(() => {
     if (!user) return;
 
+    // Load initial notifications
     const loadNotifications = async () => {
       try {
         const { data, error } = await supabase
@@ -117,13 +117,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
 
         if (data) {
-          // Convert Supabase data to our Notification type
           const parsedNotifications: Notification[] = data.map(n => ({
             id: n.id,
             title: n.title,
             description: n.description || undefined,
             type: validateNotificationType(n.type),
-            timestamp: new Date(n.timestamp || n.created_at),
+            timestamp: new Date(n.timestamp),
             read: Boolean(n.read),
             user_id: n.user_id
           }));
@@ -137,7 +136,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     loadNotifications();
 
-    // Subscribe to realtime notifications
+    // Subscribe to real-time updates
     const channel = supabase
       .channel('notifications')
       .on(
@@ -150,13 +149,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // Create a properly typed notification from the Supabase payload
             const newNotification: Notification = {
               id: payload.new.id,
               title: payload.new.title,
               description: payload.new.description || undefined,
               type: validateNotificationType(payload.new.type),
-              timestamp: new Date(payload.new.timestamp || payload.new.created_at),
+              timestamp: new Date(payload.new.timestamp),
               read: Boolean(payload.new.read),
               user_id: payload.new.user_id
             };
@@ -310,8 +308,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  // Context value
-  const value = {
+  // Context value with memoized unreadCount
+  const value = useMemo(() => ({
     notifications,
     unreadCount,
     addNotification,
@@ -321,7 +319,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     clearAll,
     showToasts,
     setShowToasts
-  };
+  }), [notifications, unreadCount, showToasts]);
 
   return (
     <NotificationContext.Provider value={value}>
