@@ -1,8 +1,9 @@
+
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { VertoFXRates } from '@/services/api';
 import { loadVertoFxRates, getTimeUntilNextAttempt, isVertoFxRateLimited } from '@/utils/rates/vertoRateLoader';
 import { logger } from '@/utils/logUtils';
-import { addNotification } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface VertoFxRefresherProps {
   setVertoFxRates: (rates: VertoFXRates) => void;
@@ -20,6 +21,9 @@ export const useVertoFxRefresher = ({
   setVertoFxRates,
   vertoFxRates
 }: VertoFxRefresherProps) => {
+  // Get the notification context functions
+  const { addNotification } = useNotifications();
+  
   // State for tracking next refresh countdown
   const [nextRefreshIn, setNextRefreshIn] = useState(DEFAULT_REFRESH_INTERVAL);
   
@@ -138,7 +142,7 @@ export const useVertoFxRefresher = ({
       // Update the countdown based on rate limits
       updateNextRefreshTime();
     }
-  }, [setVertoFxRates, updateNextRefreshTime]);
+  }, [setVertoFxRates, updateNextRefreshTime, addNotification]);
   
   // Set up countdown timer and auto-refresh - use a ref to track if mounted
   const isMountedRef = useRef(true);

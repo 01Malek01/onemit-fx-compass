@@ -4,7 +4,6 @@ import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
 import { toast } from "sonner";
 import { cacheWithExpiration } from '@/utils/cacheUtils';
 import { logger } from '@/utils/logUtils';
-import { useNotifications } from '@/contexts/NotificationContext';
 
 // Type for currency rates
 export type CurrencyRates = Record<string, number>;
