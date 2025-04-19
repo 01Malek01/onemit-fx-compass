@@ -1,7 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect, useReducer, useMemo } from 'react';
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from './AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logUtils';
 
 // Define notification types
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';
@@ -87,85 +88,199 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return notifications.filter(notification => !notification.read).length;
   }, [notifications]);
 
-  // Load notifications from localStorage on mount
+  // Load notifications from Supabase on mount
   useEffect(() => {
     if (!user) return;
-    
-    try {
-      const storedNotifications = localStorage.getItem(`notifications-${user.id}`);
-      
-      if (storedNotifications) {
-        const parsedNotifications = JSON.parse(storedNotifications).map((n: any) => ({
-          ...n,
-          timestamp: new Date(n.timestamp)
-        }));
-        
-        dispatch({ type: 'INITIALIZE', payload: parsedNotifications });
+
+    const loadNotifications = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false })
+          .limit(20);
+
+        if (error) {
+          logger.error('Failed to load notifications from Supabase:', error);
+          return;
+        }
+
+        if (data) {
+          const parsedNotifications = data.map(n => ({
+            ...n,
+            timestamp: new Date(n.timestamp)
+          }));
+          dispatch({ type: 'INITIALIZE', payload: parsedNotifications });
+        }
+      } catch (error) {
+        logger.error('Error loading notifications:', error);
       }
-    } catch (error) {
-      console.error('Failed to load notifications from localStorage:', error);
-    }
+    };
+
+    loadNotifications();
+
+    // Subscribe to realtime notifications
+    const channel = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newNotification = {
+              ...payload.new,
+              timestamp: new Date(payload.new.timestamp)
+            };
+            dispatch({ type: 'ADD_NOTIFICATION', payload: newNotification });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  // Save notifications to localStorage when they change
-  useEffect(() => {
-    if (!user) return;
-    
-    try {
-      localStorage.setItem(`notifications-${user.id}`, JSON.stringify(notifications));
-    } catch (error) {
-      console.error('Failed to save notifications to localStorage:', error);
-    }
-  }, [notifications, user]);
-
   // Add a new notification
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-    const newNotification = {
-      ...notification,
-      id: generateId(),
-      timestamp: new Date(),
-      read: false
-    };
-    
-    dispatch({ type: 'ADD_NOTIFICATION', payload: newNotification });
-    
-    // Also show as toast if enabled
-    if (showToasts) {
-      switch (notification.type) {
-        case 'success':
-          sonnerToast.success(notification.title, { description: notification.description });
-          break;
-        case 'error':
-          sonnerToast.error(notification.title, { description: notification.description });
-          break;
-        case 'warning':
-          sonnerToast.warning(notification.title, { description: notification.description });
-          break;
-        case 'info':
-        default:
-          sonnerToast.info(notification.title, { description: notification.description });
+  const addNotification = async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    if (!user) {
+      logger.warn('Cannot add notification: No user logged in');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert([
+          {
+            user_id: user.id,
+            title: notification.title,
+            description: notification.description,
+            type: notification.type
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('Failed to save notification to Supabase:', error);
+        return;
       }
+
+      // Show as toast if enabled
+      if (showToasts) {
+        switch (notification.type) {
+          case 'success':
+            sonnerToast.success(notification.title, { description: notification.description });
+            break;
+          case 'error':
+            sonnerToast.error(notification.title, { description: notification.description });
+            break;
+          case 'warning':
+            sonnerToast.warning(notification.title, { description: notification.description });
+            break;
+          case 'info':
+          default:
+            sonnerToast.info(notification.title, { description: notification.description });
+        }
+      }
+    } catch (error) {
+      logger.error('Error adding notification:', error);
     }
   };
 
   // Mark a notification as read
-  const markAsRead = (id: string) => {
-    dispatch({ type: 'MARK_READ', payload: id });
+  const markAsRead = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        logger.error('Failed to mark notification as read:', error);
+        return;
+      }
+
+      dispatch({ type: 'MARK_READ', payload: id });
+    } catch (error) {
+      logger.error('Error marking notification as read:', error);
+    }
   };
 
   // Mark all notifications as read
-  const markAllAsRead = () => {
-    dispatch({ type: 'MARK_ALL_READ' });
+  const markAllAsRead = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) {
+        logger.error('Failed to mark all notifications as read:', error);
+        return;
+      }
+
+      dispatch({ type: 'MARK_ALL_READ' });
+    } catch (error) {
+      logger.error('Error marking all notifications as read:', error);
+    }
   };
 
   // Remove a notification
-  const removeNotification = (id: string) => {
-    dispatch({ type: 'REMOVE', payload: id });
+  const removeNotification = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        logger.error('Failed to delete notification:', error);
+        return;
+      }
+
+      dispatch({ type: 'REMOVE', payload: id });
+    } catch (error) {
+      logger.error('Error removing notification:', error);
+    }
   };
 
   // Clear all notifications
-  const clearAll = () => {
-    dispatch({ type: 'CLEAR_ALL' });
+  const clearAll = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) {
+        logger.error('Failed to clear all notifications:', error);
+        return;
+      }
+
+      dispatch({ type: 'CLEAR_ALL' });
+    } catch (error) {
+      logger.error('Error clearing all notifications:', error);
+    }
   };
 
   // Context value
