@@ -1,7 +1,6 @@
 import { fetchExchangeRates } from './currency-rates-service';
 import { getAllNgnRates, VertoFxRate } from './vertofx';
 import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
-import { toast } from "sonner";
 import { cacheWithExpiration } from '@/utils/cacheUtils';
 import { logger } from '@/utils/logUtils';
 
@@ -65,18 +64,6 @@ export const DEFAULT_VERTOFX_RATES: VertoFXRates = {
 
 // In-memory cache for VertoFX rates to use if API calls fail
 let cachedVertoFxRates: VertoFXRates = { ...DEFAULT_VERTOFX_RATES };
-
-// Define the response type for VertoFX API
-interface VertoFXApiResponse {
-  success: boolean;
-  rate: number;
-  rateAfterSpread?: number;
-  reversedRate: number;
-  unitSpread?: number;
-  provider?: string;
-  rateType?: string;
-  overnightPercentChange?: number;
-}
 
 // Fetch VertoFX rates - optimized with smarter caching
 export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
@@ -148,11 +135,6 @@ export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error("[API] Error fetching VertoFX rates:", errorMessage);
-    
-    // Only show toast when not silent refresh
-    if (!cacheWithExpiration.get(VERTOFX_RATES_CACHE_KEY)) {
-      toast.warning("Using default VertoFX rates - couldn't connect to provider");
-    }
     
     return { ...DEFAULT_VERTOFX_RATES };
   }
