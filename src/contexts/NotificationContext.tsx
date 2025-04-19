@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useReducer, useMemo } from 'react';
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from './AuthContext';
@@ -14,6 +15,7 @@ export interface Notification {
   type: NotificationType;
   timestamp: Date;
   read: boolean;
+  user_id?: string; // Added user_id as optional
 }
 
 // Define context state
@@ -78,6 +80,14 @@ const generateId = (): string => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 };
 
+// Helper function to convert Supabase notification type to our NotificationType
+const validateNotificationType = (type: string | null): NotificationType => {
+  if (type === 'success' || type === 'error' || type === 'info' || type === 'warning') {
+    return type;
+  }
+  return 'info'; // Default fallback
+};
+
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, dispatch] = useReducer(notificationsReducer, []);
   const [showToasts, setShowToasts] = useState(false);
@@ -107,10 +117,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
 
         if (data) {
-          const parsedNotifications = data.map(n => ({
-            ...n,
-            timestamp: new Date(n.timestamp)
+          // Convert Supabase data to our Notification type
+          const parsedNotifications: Notification[] = data.map(n => ({
+            id: n.id,
+            title: n.title,
+            description: n.description || undefined,
+            type: validateNotificationType(n.type),
+            timestamp: new Date(n.timestamp || n.created_at),
+            read: Boolean(n.read),
+            user_id: n.user_id
           }));
+          
           dispatch({ type: 'INITIALIZE', payload: parsedNotifications });
         }
       } catch (error) {
@@ -133,10 +150,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const newNotification = {
-              ...payload.new,
-              timestamp: new Date(payload.new.timestamp)
+            // Create a properly typed notification from the Supabase payload
+            const newNotification: Notification = {
+              id: payload.new.id,
+              title: payload.new.title,
+              description: payload.new.description || undefined,
+              type: validateNotificationType(payload.new.type),
+              timestamp: new Date(payload.new.timestamp || payload.new.created_at),
+              read: Boolean(payload.new.read),
+              user_id: payload.new.user_id
             };
+            
             dispatch({ type: 'ADD_NOTIFICATION', payload: newNotification });
           }
         }
@@ -156,6 +180,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     try {
+      // Ensure notification type is valid
+      const validType = validateNotificationType(notification.type);
+      
       const { data, error } = await supabase
         .from('notifications')
         .insert([
@@ -163,7 +190,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             user_id: user.id,
             title: notification.title,
             description: notification.description,
-            type: notification.type
+            type: validType
           }
         ])
         .select()
@@ -176,7 +203,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       // Show as toast if enabled
       if (showToasts) {
-        switch (notification.type) {
+        switch (validType) {
           case 'success':
             sonnerToast.success(notification.title, { description: notification.description });
             break;
