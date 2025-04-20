@@ -116,3 +116,41 @@ export const getBybitP2PRate = async (
     };
   }
 };
+
+/**
+ * Fetches the latest ticker data for a given symbol from Bybit
+ */
+export const fetchLatestTicker = async (symbol: string = "BTCUSDT") => {
+  logger.debug(`[BybitAPI] Fetching latest ticker for ${symbol}`);
+  
+  try {
+    // Call our Supabase Edge Function for the ticker data
+    const { data, error } = await supabase.functions.invoke('bybit-ticker', {
+      body: { symbol }
+    });
+    
+    if (error) {
+      logger.error("[BybitAPI] Edge function error fetching ticker:", error);
+      return null;
+    }
+    
+    logger.debug(`[BybitAPI] Received ticker data for ${symbol}:`, data);
+    
+    // Return the processed ticker data
+    return {
+      symbol,
+      price: data?.price || null,
+      timestamp: new Date().toISOString(),
+      success: !!data?.price
+    };
+  } catch (error: any) {
+    logger.error(`[BybitAPI] Error fetching ticker for ${symbol}:`, error);
+    return {
+      symbol,
+      price: null,
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: error?.message || "Unknown error"
+    };
+  }
+};

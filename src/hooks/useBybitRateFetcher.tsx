@@ -6,13 +6,20 @@ import { storeTickerData } from '@/services/bybit/bybit-storage';
 import { logger } from '@/utils/logUtils';
 import { useNotifications } from '@/contexts/notifications/NotificationContext';
 
-export const useBybitRateFetcher = () => {
+interface UseBybitRateFetcherProps {
+  setUsdtNgnRate?: (rate: number) => void;
+  setLastUpdated?: (date: Date | null) => void;
+  setIsLoading?: (loading: boolean) => void;
+}
+
+export const useBybitRateFetcher = (props?: UseBybitRateFetcherProps) => {
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { addNotification } = useNotifications();
 
   const fetchBybitRates = async () => {
-    setIsLoading(true);
+    const internalSetIsLoading = props?.setIsLoading || setIsLoading;
+    internalSetIsLoading(true);
     
     try {
       logger.info("Fetching latest ticker data from Bybit API");
@@ -26,7 +33,16 @@ export const useBybitRateFetcher = () => {
         await storeTickerData(data);
         
         // Update the last fetch time
-        setLastFetchTime(new Date());
+        const now = new Date();
+        setLastFetchTime(now);
+        if (props?.setLastUpdated) {
+          props.setLastUpdated(now);
+        }
+
+        // Update USDT/NGN rate if setter provided
+        if (props?.setUsdtNgnRate) {
+          props.setUsdtNgnRate(Number(data.price));
+        }
 
         // Show a success toast
         toast.success('Bybit rates updated successfully');
@@ -56,12 +72,18 @@ export const useBybitRateFetcher = () => {
       
       return null;
     } finally {
-      setIsLoading(false);
+      internalSetIsLoading(false);
     }
   };
 
+  // For backward compatibility with existing code
+  const refreshBybitRate = fetchBybitRates;
+  const fetchBybitRate = fetchBybitRates;
+
   return {
     fetchBybitRates,
+    fetchBybitRate,
+    refreshBybitRate,
     lastFetchTime,
     isLoading
   };
