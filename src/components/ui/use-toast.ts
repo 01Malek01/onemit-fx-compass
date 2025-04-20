@@ -1,5 +1,4 @@
 
-// Re-export from our new implementation
-import { useToast, toast } from "@/hooks/use-toast";
-
+// Re-export from radix directly to avoid circular dependencies
+import { useToast, toast } from "@radix-ui/react-toast";
 export { useToast, toast };

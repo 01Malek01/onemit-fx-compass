@@ -1,9 +1,14 @@
 
-// src/hooks/use-toast.ts
-import { useToast as useShadcnToast } from "@/components/ui/use-toast";
+import { useToast as useShadcnToast } from "@radix-ui/react-toast";
+import { toast as sonnerToast } from "sonner";
 
-// Re-export the toast function from sonner
-export { toast } from 'sonner';
+export function useToast() {
+  const { toast, dismiss } = useShadcnToast();
+  return {
+    toast,
+    dismiss
+  };
+}
 
-// Re-export the useToast hook from shadcn UI with a different name to avoid circular references
-export const useToast = useShadcnToast;
+// Re-export sonner's toast for direct usage
+export { sonnerToast as toast };

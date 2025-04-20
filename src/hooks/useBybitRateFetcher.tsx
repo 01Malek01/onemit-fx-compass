@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { fetchLatestTicker } from '@/services/bybit/bybit-api';
@@ -26,35 +25,34 @@ export const useBybitRateFetcher = (props?: UseBybitRateFetcherProps) => {
       
       const data = await fetchLatestTicker('BTCUSDT');
       
-      if (data && data.price) {
+      if (data && data.success && data.price) {
         logger.info(`Successfully fetched Bybit rate: ${data.price}`);
         
-        // Store the data in localStorage
-        await storeTickerData(data);
+        await storeTickerData({
+          symbol: data.symbol,
+          price: data.price,
+          timestamp: data.timestamp
+        });
         
-        // Update the last fetch time
         const now = new Date();
         setLastFetchTime(now);
         if (props?.setLastUpdated) {
           props.setLastUpdated(now);
         }
 
-        // Update USDT/NGN rate if setter provided
         if (props?.setUsdtNgnRate) {
           props.setUsdtNgnRate(Number(data.price));
         }
 
-        // Show a success toast
         toast.success('Bybit rates updated successfully');
         
-        // Add a notification
         addNotification({
           title: 'Bybit rates updated',
           description: `BTC/USDT: ${Number(data.price).toLocaleString()}`,
           type: 'success'
         });
         
-        return data;
+        return data.price;
       } else {
         throw new Error('Invalid response format or no price data');
       }
@@ -63,7 +61,6 @@ export const useBybitRateFetcher = (props?: UseBybitRateFetcherProps) => {
       
       toast.error('Failed to fetch Bybit rates');
       
-      // Add an error notification
       addNotification({
         title: 'Failed to fetch Bybit rates',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -76,7 +73,6 @@ export const useBybitRateFetcher = (props?: UseBybitRateFetcherProps) => {
     }
   };
 
-  // For backward compatibility with existing code
   const refreshBybitRate = fetchBybitRates;
   const fetchBybitRate = fetchBybitRates;
 
