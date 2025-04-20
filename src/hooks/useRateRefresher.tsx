@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
@@ -22,17 +23,22 @@ export const useRateRefresher = ({
   refreshBybitRate,
   calculateAllCostPrices
 }: RateRefresherProps) => {
+  // Reference to store timer
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [nextRefreshIn, setNextRefreshIn] = useState(60);
+  // Add state for tracking next refresh
+  const [nextRefreshIn, setNextRefreshIn] = useState(60); // 60 seconds
 
+  // Handle manual Bybit rate refresh
   const handleBybitRateRefresh = useCallback(async () => {
     logger.debug("RateRefresher: Manually refreshing Bybit rate");
     const success = await refreshBybitRate();
 
     if (success) {
       logger.debug("RateRefresher: Manual refresh was successful");
+      // Ensure we have a valid rate before recalculating
       if (usdtNgnRate && usdtNgnRate > 0) {
+        // After refreshing the rate, recalculate with current margins
         calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
       }
       return true;
@@ -42,11 +48,14 @@ export const useRateRefresher = ({
     }
   }, [refreshBybitRate, calculateAllCostPrices, usdMargin, otherCurrenciesMargin, usdtNgnRate]);
 
+  // Handle refresh button click
   const handleRefresh = async () => {
     logger.debug("RateRefresher: Handling refresh button click");
     const success = await handleBybitRateRefresh();
 
+    // Only save historical data if refresh was successful
     if (success) {
+      // Save historical data after refresh with source="refresh"
       try {
         if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(costPrices).length > 0) {
           await saveHistoricalRates(
@@ -65,17 +74,22 @@ export const useRateRefresher = ({
     }
   };
 
+  // Function to handle the actual refresh
   const performRefresh = async () => {
     logger.debug("RateRefresher: Performing auto-refresh");
     try {
+      // For auto-refresh, use a different approach - don't show toast notifications
+      // We'll directly fetch the rate without notification
       const success = await refreshBybitRate();
 
       if (success) {
         logger.debug("RateRefresher: Auto-refresh successful");
+        // Ensure we have a valid rate before recalculating
         if (usdtNgnRate && usdtNgnRate > 0) {
           calculateAllCostPrices(usdMargin, otherCurrenciesMargin);
         }
 
+        // Save historical data only if we have valid rates
         if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(costPrices).length > 0) {
           await saveHistoricalRates(
             usdtNgnRate,
@@ -92,23 +106,26 @@ export const useRateRefresher = ({
     }
   };
 
+  // Setup countdown timer and auto-refresh
   useEffect(() => {
+    // Update countdown every second
     const countdownInterval = setInterval(() => {
       setNextRefreshIn(prev => {
         if (prev <= 1) {
-          performRefresh();
-          return 60;
+          performRefresh(); // Trigger refresh when countdown reaches 0
+          return 60; // Reset to 60 seconds
         }
         return prev - 1;
       });
     }, 1000);
 
+    // Initial refresh
     performRefresh();
 
     return () => {
       clearInterval(countdownInterval);
     };
-  }, [usdMargin, otherCurrenciesMargin, performRefresh]);
+  }, [usdMargin, otherCurrenciesMargin]);
 
   return {
     handleRefresh,

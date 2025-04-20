@@ -1,16 +1,16 @@
+
 import React, { useState, KeyboardEvent, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, RefreshCw, AlertCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { logger } from '@/utils/logUtils';
 
 interface CurrencyInputProps {
   label: string;
   value: number | null;
   onChange: (value: number) => void;
-  onSubmit: (value: number) => void;
+  onSubmit: (value: number) => void; // Update type to accept a value parameter
   isLoading: boolean;
   autoFocus?: boolean;
 }
@@ -27,7 +27,8 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
-  logger.debug("CurrencyInput rendered with value:", value);
+  // Debug logging
+  console.log("CurrencyInput rendered with value:", value);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
@@ -44,7 +45,7 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     const numValue = parseFloat(inputValue);
     if (!isNaN(numValue) && numValue > 0) {
       onChange(numValue);
-      onSubmit(numValue);
+      onSubmit(numValue); // Pass the numValue to onSubmit
       showSavedIndicator();
     } else {
       setIsError(true);
@@ -56,16 +57,18 @@ const CurrencyInput: React.FC<CurrencyInputProps> = ({
     setTimeout(() => setIsSaved(false), 2000);
   };
 
+  // Update the input value when the prop changes (e.g. from database load)
   useEffect(() => {
-    logger.debug("CurrencyInput: Received prop value:", value);
+    console.log("CurrencyInput: Received prop value:", value);
     if (value !== null && value !== undefined) {
       const valueString = value.toString();
+      // Only update if the values are different to prevent cursor jumping
       if (valueString !== inputValue) {
-        logger.debug("CurrencyInput: Updating input value from props:", value);
+        console.log("CurrencyInput: Updating input value from props:", value);
         setInputValue(valueString);
       }
     }
-  }, [value, inputValue]);
+  }, [value]);
 
   return (
     <Card className="fx-card relative overflow-hidden">

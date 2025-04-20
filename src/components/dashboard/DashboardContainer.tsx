@@ -10,12 +10,15 @@ import LiveRateDisplay from '@/components/dashboard/LiveRateDisplay';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+// Lazy load non-critical sections for faster initial render
 const CostPriceSection = lazy(() => import('@/components/dashboard/CostPriceSection'));
 const MarketComparisonSection = lazy(() => import('@/components/dashboard/MarketComparisonSection'));
 
+// Simple placeholder components for lazy-loaded components
 const CostPricePlaceholder = () => <div className="animate-pulse h-64 w-full bg-muted/20 rounded-md"></div>;
 const MarketPlaceholder = () => <div className="animate-pulse h-80 w-full bg-muted/20 rounded-md"></div>;
 
+// Lazy loaded analytics component
 const AnalyticsPlaceholder = () => (
   <Card className="fx-card relative overflow-hidden mt-8">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent" aria-hidden="true" />
@@ -57,19 +60,20 @@ const DashboardContainer = () => {
     setVertoFxRates
   } = useDashboardState();
 
+  // State for real-time indicator - keep this active longer for better visual feedback
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
+  // Optimized effect to track changes and show real-time indicator when data changes
   useEffect(() => {
-    let timer: NodeJS.Timeout;
     if (usdtNgnRate) {
       setIsRealtimeActive(true);
-      timer = setTimeout(() => setIsRealtimeActive(false), 3000);
+      // Keep the real-time indicator active for 3 seconds
+      const timer = setTimeout(() => setIsRealtimeActive(false), 3000);
+      return () => clearTimeout(timer);
     }
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
   }, [usdtNgnRate]);
 
+  // Show simple loading state if no rate is available yet
   if (usdtNgnRate === null) {
     return <DashboardSkeleton />;
   }
@@ -147,6 +151,7 @@ const DashboardContainer = () => {
 
       <Separator className="my-8 opacity-30" />
 
+      {/* Only render analytics placeholder after core content is loaded */}
       <Suspense fallback={null}>
         <AnalyticsPlaceholder />
       </Suspense>

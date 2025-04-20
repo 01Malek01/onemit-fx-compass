@@ -1,10 +1,10 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowDown, ArrowUp, TrendingDown, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import CurrencyFlag from './CurrencyFlag';
-import { logger } from '@/utils/logUtils';
 
 interface CurrencyCardProps {
   currencyCode: string;
@@ -24,6 +24,7 @@ const CurrencyCard: React.FC<CurrencyCardProps> = ({
   useEffect(() => {
     if (valueRef.current && previousValue !== undefined && previousValue !== ngnValue) {
       valueRef.current.classList.remove('animate-count');
+      // Force reflow
       void valueRef.current.offsetWidth;
       valueRef.current.classList.add('animate-count');
     }
