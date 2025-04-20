@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card } from '@/components/ui/card';
@@ -9,30 +8,36 @@ import { toast } from 'sonner';
 import { Eye, EyeOff, LogIn, Mail, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ParallaxBackground from '@/components/ParallaxBackground';
-import { useIsMobile } from '@/hooks/use-mobile';
+
+interface AuthFormState {
+  email: string;
+  password: string;
+  showPassword: boolean;
+}
+
+interface AuthError {
+  message: string;
+}
 
 export default function Auth() {
-  const {
-    signIn,
-    isLoading: authLoading
-  } = useAuth();
+  const { signIn, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [formState, setFormState] = useState<AuthFormState>({
+    email: '',
+    password: '',
+    showPassword: false
+  });
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const {
-        error
-      } = await signIn(email, password);
+      const { error } = await signIn(formState.email, formState.password);
       if (error) {
         console.error('Authentication error:', error);
-        toast.error(error.message || 'Authentication failed');
+        toast.error((error as AuthError).message || 'Authentication failed');
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Unexpected error:', err);
       toast.error('An unexpected error occurred');
     } finally {
@@ -41,7 +46,7 @@ export default function Auth() {
   };
   
   const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+    setFormState(prev => ({ ...prev, showPassword: !prev.showPassword }));
   };
   
   return (
@@ -82,8 +87,8 @@ export default function Auth() {
                       type="email" 
                       placeholder="name@example.com" 
                       className="pl-10 py-6 bg-secondary/50 border-white/[0.05] focus-visible:ring-[#0062FF] text-lg" 
-                      value={email} 
-                      onChange={e => setEmail(e.target.value)} 
+                      value={formState.email} 
+                      onChange={e => setFormState(prev => ({ ...prev, email: e.target.value }))} 
                       required 
                     />
                   </div>
@@ -97,10 +102,10 @@ export default function Auth() {
                     <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground/70" />
                     <Input 
                       id="password" 
-                      type={showPassword ? "text" : "password"} 
+                      type={formState.showPassword ? "text" : "password"} 
                       className="pl-10 pr-10 py-6 bg-secondary/50 border-white/[0.05] focus-visible:ring-[#0062FF] text-lg" 
-                      value={password} 
-                      onChange={e => setPassword(e.target.value)} 
+                      value={formState.password} 
+                      onChange={e => setFormState(prev => ({ ...prev, password: e.target.value }))} 
                       required 
                     />
                     <button 
@@ -108,7 +113,7 @@ export default function Auth() {
                       onClick={togglePasswordVisibility} 
                       className="absolute right-3 top-3.5 text-muted-foreground/70 hover:text-foreground/90 transition-colors"
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      {formState.showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
