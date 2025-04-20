@@ -1,9 +1,23 @@
-
 /**
  * Debug utilities for development and testing
  */
 
-// Flag to control debug behavior based on environment
+interface TimeableFunction<T> {
+  (): Promise<T> | T;
+}
+
+interface DebugTools {
+  devLog: (message: string, ...args: unknown[]) => void;
+  simulateDelay: (ms?: number) => Promise<void>;
+  inspect: <T>(value: T, depth?: number) => T;
+  timeFunction: <T>(fn: TimeableFunction<T>, label?: string) => Promise<T>;
+  conditionalBreak: (condition: boolean, message?: string) => void;
+  countCalls: (label?: string) => number;
+  resetCounter: (label?: string) => void;
+  group: (label: string, fn: () => void) => void;
+  safeAccess: <T, K extends keyof T>(obj: T | null | undefined, key: K) => T[K] | undefined;
+}
+
 const isDevEnvironment = import.meta.env.DEV;
 
 /**
@@ -117,8 +131,7 @@ export function safeAccess<T, K extends keyof T>(obj: T | null | undefined, key:
   return obj?.[key];
 }
 
-// Export utilities as default object for convenient importing
-export default {
+const debugTools: DebugTools = {
   devLog,
   simulateDelay,
   inspect,
@@ -129,3 +142,5 @@ export default {
   group,
   safeAccess
 };
+
+export default debugTools;
