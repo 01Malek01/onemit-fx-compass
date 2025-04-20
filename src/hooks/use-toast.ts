@@ -65,8 +65,7 @@ export const useToast = () => {
   
   return {
     toast,
-    dismiss: sonnerToast.dismiss,
-    toasts: [] // Empty array for backward compatibility
+    dismiss: sonnerToast.dismiss
   };
 };
 

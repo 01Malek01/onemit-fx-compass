@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useCallback } from 'react';
 import { useRateState } from './useRateState';
 import { useCostPriceCalculator } from './useCostPriceCalculator';
@@ -34,7 +35,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   ] = useRateState();
 
   // Ensure vertoFxRates always has required properties 
-  const setVertoFxRates = useCallback((rates: VertoFXRates | Record<string, { buy: number; sell: number }>) => {
+  const setVertoFxRates = useCallback((rates: VertoFXRates) => {
     // Ensure the rates object has the required properties
     const safeRates: VertoFXRates = {
       USD: rates?.USD || DEFAULT_VERTOFX_RATES.USD,
