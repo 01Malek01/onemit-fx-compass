@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useReducer, useMemo } from 'react';
 import { toast as sonnerToast } from "sonner";
 import { useAuth } from './AuthContext';
@@ -101,6 +102,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (!user) return;
 
+    logger.info("Setting up notifications system for user:", user.id);
+
     // Load initial notifications
     const loadNotifications = async () => {
       try {
@@ -117,6 +120,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
 
         if (data) {
+          logger.info(`Loaded ${data.length} notifications from database`);
           const parsedNotifications: Notification[] = data.map(n => ({
             id: n.id,
             title: n.title,
@@ -136,19 +140,23 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     loadNotifications();
 
-    // Subscribe to real-time updates
+    // Set up dedicated channel for real-time notification updates
+    logger.info("Setting up real-time notification subscription");
     const channel = supabase
-      .channel('notifications')
+      .channel('public:notifications')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
+          logger.debug('Real-time notification received:', payload);
+          
+          try {
+            // Create a new notification object from the payload
             const newNotification: Notification = {
               id: payload.new.id,
               title: payload.new.title,
@@ -159,16 +167,43 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               user_id: payload.new.user_id
             };
             
+            logger.info(`Real-time notification received: ${newNotification.title}`);
+            
+            // Immediately update the UI with the new notification
             dispatch({ type: 'ADD_NOTIFICATION', payload: newNotification });
+
+            // If toast display is enabled, also show a toast
+            if (showToasts) {
+              switch (newNotification.type) {
+                case 'success':
+                  sonnerToast.success(newNotification.title, { description: newNotification.description });
+                  break;
+                case 'error':
+                  sonnerToast.error(newNotification.title, { description: newNotification.description });
+                  break;
+                case 'warning':
+                  sonnerToast.warning(newNotification.title, { description: newNotification.description });
+                  break;
+                case 'info':
+                default:
+                  sonnerToast.info(newNotification.title, { description: newNotification.description });
+              }
+            }
+          } catch (error) {
+            logger.error('Error processing real-time notification:', error);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        logger.info(`Notification channel subscription status: ${status}`);
+      });
 
+    // Clean up subscription on unmount
     return () => {
+      logger.info("Cleaning up notification channel subscription");
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, showToasts]);
 
   // Add a new notification
   const addNotification = async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
@@ -178,6 +213,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     try {
+      logger.info(`Adding new notification: ${notification.title}`);
+      
       // Ensure notification type is valid
       const validType = validateNotificationType(notification.type);
       
@@ -198,6 +235,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         logger.error('Failed to save notification to Supabase:', error);
         return;
       }
+
+      // The real-time subscription will handle adding this to state
+      logger.info('Notification added to database successfully');
 
       // Show as toast if enabled
       if (showToasts) {
@@ -308,7 +348,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  // Context value with memoized unreadCount
+  // Context value with memoized properties
   const value = useMemo(() => ({
     notifications,
     unreadCount,
