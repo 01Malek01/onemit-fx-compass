@@ -48,13 +48,10 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   
   const { 
     refreshVertoFxRates, 
-    nextRefreshIn: vertoFxNextRefreshIn, 
-    isRefreshing: vertoFxIsRefreshing,
-    lastUpdated: vertoFxLastUpdated
-  } = useVertoFxRefresher({
-    vertoFxRates,
-    setVertoFxRates
-  });
+    nextRefreshIn,
+    isLoading: vertoFxIsRefreshing,
+    lastRefreshTime: vertoFxLastUpdated
+  } = useVertoFxRefresher();
   
   // Derive additional states based on available data
   const vertoFxIsLoading = isLoading;
@@ -82,14 +79,17 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   const handleManualRefresh = useCallback(async (): Promise<boolean> => {
     setIsManuallyRefreshing(true);
     try {
-      // Always pass true to force a refresh when manually triggered
-      const success = await refreshVertoFxRates(true);
-      if (success) {
+      // Call refreshVertoFxRates without parameters
+      const rates = await refreshVertoFxRates();
+      if (rates && rates.length > 0) {
+        // Update the VertoFX rates
+        setVertoFxRates(rates);
         toast("Market comparison rates have been updated");
+        return true;
       } else {
         toast.error("Failed to refresh rates. Please try again later");
+        return false;
       }
-      return success;
     } catch (error) {
       logger.error("Error refreshing rates:", error);
       toast.error("An unexpected error occurred while refreshing rates");
@@ -97,7 +97,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
     } finally {
       setIsManuallyRefreshing(false);
     }
-  }, [refreshVertoFxRates]);
+  }, [refreshVertoFxRates, setVertoFxRates]);
 
   return (
     <div className="relative overflow-hidden">
@@ -163,7 +163,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
               </div>
               
               <RefreshCountdown 
-                nextRefreshIn={vertoFxNextRefreshIn} 
+                nextRefreshIn={nextRefreshIn} 
                 isRefreshing={vertoFxIsRefreshing || isManuallyRefreshing}
               />
             </div>
