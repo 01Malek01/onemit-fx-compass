@@ -13,11 +13,6 @@ interface MarketComparisonPanelProps {
   isLoading: boolean;
 }
 
-interface CurrencyRate {
-  buy: number;
-  sell: number;
-}
-
 const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   currencies,
   oneremitRatesFn,

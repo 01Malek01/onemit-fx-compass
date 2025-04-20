@@ -7,21 +7,6 @@ enum LogLevel {
   NONE = 4
 }
 
-interface LogMessage {
-  message: string;
-  count: number;
-  lastLogged: number;
-}
-
-interface Logger {
-  debug: (message: string, ...data: unknown[]) => void;
-  info: (message: string, ...data: unknown[]) => void;
-  warn: (message: string, ...data: unknown[]) => void;
-  error: (message: string, ...data: unknown[]) => void;
-  group: (key: string, message: string, callback: () => void) => void;
-  setLevel: (level: LogLevel) => void;
-}
-
 // Current log level setting - can be changed dynamically
 let currentLogLevel = process.env.NODE_ENV === 'production' ? LogLevel.WARN : LogLevel.DEBUG;
 
@@ -37,7 +22,7 @@ const groupCache = new Set<string>();
 /**
  * Logger with filtering and grouping capabilities
  */
-export const logger: Logger = {
+export const logger = {
   debug: (message: string, ...data: any[]) => {
     if (currentLogLevel <= LogLevel.DEBUG) {
       logWithDeduplication('debug', message, data);
@@ -100,7 +85,7 @@ function logWithDeduplication(method: 'log' | 'info' | 'debug', message: string,
 /**
  * Apply console filters to clean up the console in production
  */
-export const applyConsoleFilters = (): void => {
+export const applyConsoleFilters = () => {
   // In production, limit console output
   if (process.env.NODE_ENV === 'production') {
     const originalConsoleLog = console.log;
