@@ -1,20 +1,32 @@
+
 import React from 'react';
-import { VertoFXRates, VertoFxRate } from '@/services/vertofx';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 
-interface MarketComparisonSectionProps {
+// Define the VertoFXRates type if it's not imported
+export type VertoFXRates = Record<string, { buy: number; sell: number }>;
+export type VertoFxRate = { buy: number; sell: number };
+
+export interface MarketComparisonSectionProps {
   vertoFxRates: VertoFXRates | null;
-  currentRate: number | null;
+  currentRate?: number | null;
   isLoading: boolean;
+  currencies?: string[];
+  oneremitRatesFn?: (currencyCode: string) => { buy: number; sell: number };
+  setVertoFxRates?: (rates: VertoFXRates) => void;
+  usingDefaults?: boolean;
 }
 
 const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
   vertoFxRates,
-  currentRate,
-  isLoading
+  currentRate = null,
+  isLoading,
+  currencies = ['USD'],
+  oneremitRatesFn,
+  setVertoFxRates,
+  usingDefaults = false
 }) => {
   const { toast } = useToast();
 
@@ -22,7 +34,7 @@ const MarketComparisonSection: React.FC<MarketComparisonSectionProps> = ({
     // Ensure rates is properly typed and has the required properties
     if (!rates || typeof rates !== 'object') return null;
 
-    const rateValue = typeof rates.USD === 'number' ? rates.USD : 0;
+    const rateValue = rates.USD?.buy || 0;
     const showHigherRate = rateValue > (currentRate || 0);
 
     return (

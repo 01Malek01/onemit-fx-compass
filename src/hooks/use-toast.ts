@@ -1,12 +1,15 @@
 
-import { useToast as useShadcnToast } from "@radix-ui/react-toast";
+// Import from our local implementation, not from radix
+import { useToast as useShadcnToast } from "@/components/ui/use-toast";
 import { toast as sonnerToast } from "sonner";
 
 export function useToast() {
-  const { toast, dismiss } = useShadcnToast();
+  // Get toast functions from our implementation
+  const { toast, dismiss, toasts } = useShadcnToast();
   return {
     toast,
-    dismiss
+    dismiss,
+    toasts
   };
 }
 
