@@ -1,75 +1,94 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logUtils';
 
 /**
- * Utility function to test if real-time functionality is working
- * This can be called from the browser console to diagnose issues
+ * Utility to debug Supabase real-time channels 
+ * Call window.supabaseDebug() in browser console to use
  */
-export const testRealtimeConnection = () => {
-  // Create a test channel
-  const channel = supabase
-    .channel('test-connection')
-    .on('system', { event: 'test' }, (payload) => {
-      logger.info('Received test system message:', payload);
-    })
-    .subscribe((status) => {
-      logger.info(`Test channel status: ${status}`);
-      
-      if (status === 'SUBSCRIBED') {
-        // Test is successful if we reach this point
-        logger.info('✅ Supabase real-time connection test SUCCESS');
-        logger.info('Channel is correctly subscribed to Supabase real-time');
-        
-        // Clean up after test
-        setTimeout(() => {
-          supabase.removeChannel(channel);
-        }, 2000);
-        
-        return true;
-      } else if (status === 'CHANNEL_ERROR') {
-        logger.error('❌ Supabase real-time connection test FAILED');
-        logger.error('Could not establish a connection to Supabase real-time');
-        return false;
+export const setupSupabaseDebugger = () => {
+  if (typeof window === 'undefined') return;
+
+  (window as any).supabaseDebug = {
+    listChannels: () => {
+      const channels = (supabase as any)._channels;
+      if (!channels || channels.length === 0) {
+        console.log('No active Supabase channels found');
+        return 'No active Supabase channels found';
       }
       
-      return false;
-    });
-};
-
-/**
- * Test function to manually insert a USDT/NGN rate to trigger real-time updates
- * This can be called from the browser console to simulate a refresh from another user
- */
-export const testInsertRate = async (rate: number = 1595.75) => {
-  try {
-    logger.info(`Inserting test USDT/NGN rate: ${rate}`);
+      const channelInfo = channels.map((channel: any) => ({
+        name: channel.topic,
+        status: channel.status,
+        params: channel.params
+      }));
+      
+      console.table(channelInfo);
+      return channelInfo;
+    },
     
-    const { data, error } = await supabase
-      .from('usdt_ngn_rates')
-      .insert([{ 
-        rate: Number(rate),
-        source: 'test',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }]);
+    sendTestNotification: async (userId: string, type = 'info') => {
+      try {
+        if (!userId) {
+          console.error('No user ID provided');
+          return 'Error: No user ID provided';
+        }
+        
+        const { data, error } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            title: `Test ${type} notification`,
+            description: `This is a test notification with type: ${type} (sent at ${new Date().toLocaleTimeString()})`,
+            type,
+            read: false
+          })
+          .select();
+          
+        if (error) {
+          console.error('Error sending test notification:', error);
+          return `Error: ${error.message}`;
+        }
+        
+        console.log('Test notification sent successfully:', data[0]);
+        return `Success! Notification sent at ${new Date().toLocaleTimeString()}`;
+      } catch (error) {
+        console.error('Unexpected error:', error);
+        return `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+    },
     
-    if (error) {
-      logger.error('Error inserting test rate:', error);
-      return false;
+    getNotificationsCount: async (userId: string) => {
+      try {
+        if (!userId) {
+          console.error('No user ID provided');
+          return 'Error: No user ID provided';
+        }
+        
+        const { count, error } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId);
+          
+        if (error) {
+          console.error('Error counting notifications:', error);
+          return `Error: ${error.message}`;
+        }
+        
+        console.log(`User has ${count} notifications`);
+        return count;
+      } catch (error) {
+        console.error('Unexpected error:', error);
+        return `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
     }
-    
-    logger.info('✅ Test rate inserted successfully, real-time update should trigger');
-    return true;
-  } catch (error) {
-    logger.error('Error testing real-time update:', error);
-    return false;
-  }
+  };
+  
+  logger.info('Supabase debugger attached to window.supabaseDebug');
+  console.log('Supabase debugger available! Use window.supabaseDebug to access debugging utilities');
 };
 
-// Export functions to make them available in browser console
-if (typeof window !== 'undefined') {
-  // @ts-expect-error - Intentionally adding to window for testing
-  window.testRealtimeConnection = testRealtimeConnection;
-  // @ts-expect-error - Intentionally adding to window for testing
-  window.testInsertRate = testInsertRate;
-} 
+// Set up the debugger if in development mode
+if (process.env.NODE_ENV !== 'production') {
+  setupSupabaseDebugger();
+}

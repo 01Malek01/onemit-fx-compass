@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/utils/logUtils';
-import { useNotifications } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/notifications/NotificationContext';
 
 /**
  * Hook to subscribe to real-time updates for USDT/NGN rates and margin settings

@@ -1,96 +1,68 @@
 
-import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
-import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { fetchLatestTicker } from '@/services/bybit/bybit-api';
+import { storeTickerData } from '@/services/bybit/bybit-storage';
 import { logger } from '@/utils/logUtils';
-import { useNotifications } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/notifications/NotificationContext';
 
-interface BybitRateFetcherProps {
-  setUsdtNgnRate: (rate: number) => void;
-  setLastUpdated: (date: Date | null) => void;
-  setIsLoading: (loading: boolean) => void;
-}
-
-export const useBybitRateFetcher = ({
-  setUsdtNgnRate,
-  setLastUpdated,
-  setIsLoading
-}: BybitRateFetcherProps) => {
+export const useBybitRateFetcher = () => {
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { addNotification } = useNotifications();
-  
-  const fetchBybitRate = async (): Promise<number | null> => {
-    try {
-      logger.debug("Fetching Bybit P2P rate with improved retry logic");
-      const { rate, error } = await fetchBybitRateWithRetry(3, 2000); // Increased retries to 3
-      
-      if (!rate || rate <= 0) {
-        logger.warn(`Failed to get valid Bybit rate: ${error || "Unknown error"}`);
-        return null;
-      }
-      
-      logger.info("Bybit P2P rate fetched successfully:", rate);
-      
-      return rate;
-    } catch (error) {
-      logger.error("Error in fetchBybitRate:", error);
-      return null;
-    }
-  };
 
-  const refreshBybitRate = async (): Promise<boolean> => {
+  const fetchBybitRates = async () => {
     setIsLoading(true);
     
     try {
-      const bybitRate = await fetchBybitRate();
+      logger.info("Fetching latest ticker data from Bybit API");
       
-      if (bybitRate && bybitRate > 0) {
-        logger.info("Refreshed Bybit USDT/NGN rate:", bybitRate);
+      const data = await fetchLatestTicker('BTCUSDT');
+      
+      if (data && data.price) {
+        logger.info(`Successfully fetched Bybit rate: ${data.price}`);
         
-        // Update local state
-        setUsdtNgnRate(bybitRate);
-        setLastUpdated(new Date());
+        // Store the data in localStorage
+        await storeTickerData(data);
         
-        // Important: Save the rate to the database with explicit source value
-        // This creates a new INSERT that will trigger real-time updates
-        const saveSuccess = await saveUsdtNgnRate(bybitRate, 'bybit', false);
+        // Update the last fetch time
+        setLastFetchTime(new Date());
+
+        // Show a success toast
+        toast.success('Bybit rates updated successfully');
         
-        if (!saveSuccess) {
-          logger.error("Failed to save the rate to database for real-time sync");
-        }
-        
-        // Show notification for the user who initiated the refresh
+        // Add a notification
         addNotification({
-          title: "USDT/NGN rate updated from Bybit",
-          description: "The new rate will sync with all connected users",
-          type: "success"
+          title: 'Bybit rates updated',
+          description: `BTC/USDT: ${Number(data.price).toLocaleString()}`,
+          type: 'success'
         });
         
-        return true;
+        return data;
       } else {
-        logger.warn("Could not refresh Bybit rate");
-        
-        addNotification({
-          title: "Failed to update USDT/NGN rate from Bybit",
-          description: "Using last saved rate instead",
-          type: "error"
-        });
-        
-        return false;
+        throw new Error('Invalid response format or no price data');
       }
     } catch (error) {
-      logger.error("Error refreshing Bybit rate:", error);
+      logger.error('Error fetching Bybit rates:', error);
+      
+      toast.error('Failed to fetch Bybit rates');
+      
+      // Add an error notification
       addNotification({
-        title: "Failed to update USDT/NGN rate",
-        description: "Check your network connection and try again",
-        type: "error"
+        title: 'Failed to fetch Bybit rates',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        type: 'error'
       });
-      return false;
+      
+      return null;
     } finally {
       setIsLoading(false);
     }
   };
 
   return {
-    fetchBybitRate,
-    refreshBybitRate
+    fetchBybitRates,
+    lastFetchTime,
+    isLoading
   };
 };

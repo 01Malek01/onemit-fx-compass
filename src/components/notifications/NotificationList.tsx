@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { useNotifications, Notification } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/notifications/NotificationContext';
+import { Notification } from '@/contexts/notifications/types';
 import { Button } from "@/components/ui/button";
 import { CheckCheck, Trash2, BellOff } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
