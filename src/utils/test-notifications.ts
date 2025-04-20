@@ -3,50 +3,47 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from './logUtils';
 
 /**
- * Utility function to test sending a notification via Supabase
- * Can be called from the browser console: window.sendTestNotification()
+ * Utility function to test real-time notifications
+ * This can be called from the browser console to test if notifications work in real-time
  */
-export const sendTestNotification = async (userId: string, options?: {
-  title?: string; 
-  description?: string;
-  type?: 'success' | 'error' | 'info' | 'warning';
-}) => {
+export const testNotification = async (type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
   try {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    
     if (!userId) {
-      console.error('[Test] No user ID provided');
-      return 'Error: No user ID provided';
+      logger.error('❌ Cannot test notifications: No user is logged in');
+      return false;
     }
-
-    const notification = {
-      user_id: userId,
-      title: options?.title || 'Test Notification',
-      description: options?.description || 'This is a test notification to verify real-time updates',
-      type: options?.type || 'info',
-      read: false
-    };
-
-    logger.info('[Test] Sending test notification:', notification);
+    
+    logger.info(`Creating test ${type} notification for user ${userId}`);
     
     const { data, error } = await supabase
       .from('notifications')
-      .insert(notification)
-      .select()
-      .single();
-
+      .insert([{ 
+        user_id: userId,
+        title: `Test ${type} notification`,
+        description: `This is a test ${type} notification sent at ${new Date().toLocaleTimeString()}`,
+        type: type,
+        read: false
+      }]);
+    
     if (error) {
-      console.error('[Test] Error sending test notification:', error);
-      return `Error: ${error.message}`;
+      logger.error('❌ Error creating test notification:', error);
+      return false;
     }
-
-    logger.info('[Test] Test notification sent successfully:', data);
-    return `Success! Notification ID: ${data.id} sent at ${new Date().toLocaleTimeString()}`;
+    
+    logger.info('✅ Test notification created successfully!');
+    logger.info('If real-time is working correctly, you should see this notification without refreshing.');
+    return true;
   } catch (error) {
-    console.error('[Test] Unexpected error:', error);
-    return `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    logger.error('❌ Error testing notifications:', error);
+    return false;
   }
 };
 
-// Export to window for testing in browser console
+// Export function to make it available in browser console
 if (typeof window !== 'undefined') {
-  (window as any).sendTestNotification = sendTestNotification;
-}
+  // @ts-expect-error - Intentionally adding to window for testing
+  window.testNotification = testNotification;
+} 

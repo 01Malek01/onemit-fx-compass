@@ -1,10 +1,11 @@
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute, AuthRoute } from "./components/auth/ProtectedRoute";
-import { NotificationProvider } from "./contexts/notifications/NotificationContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 const App = () => (
   <TooltipProvider>

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Bell } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { useNotifications } from '@/contexts/notifications/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { Button } from "@/components/ui/button";
 import { 
   Popover, 

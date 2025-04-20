@@ -5,12 +5,14 @@
 
 // Re-export types
 export type { 
+  P2PTrader,
   P2PMarketSummary,
-  BybitP2PResponse
-} from './bybit/bybit-api';
+  BybitP2PResponse,
+  BybitRequestParams
+} from './bybit/types';
 
 // Re-export API functions
-export { getBybitP2PRate, fetchLatestTicker } from './bybit/bybit-api';
+export { getBybitP2PRate } from './bybit/bybit-api';
 
 // Re-export storage functions
 export { saveBybitRate } from './bybit/bybit-storage';

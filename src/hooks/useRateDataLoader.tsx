@@ -54,14 +54,11 @@ export const useRateDataLoader = ({
   });
   
   // Use the Bybit rate fetcher hook with mobile optimization
-  const bybitHook = useBybitRateFetcher({
+  const { fetchBybitRate, refreshBybitRate } = useBybitRateFetcher({
     setUsdtNgnRate,
     setLastUpdated,
     setIsLoading
   });
-  
-  // Extract methods from bybitHook for compatibility with existing code
-  const { fetchBybitRates, refreshBybitRate } = bybitHook;
   
   // Use the rates loader hook with mobile awareness
   const { loadAllData } = useRatesLoader({
@@ -71,7 +68,7 @@ export const useRateDataLoader = ({
     setLastUpdated,
     setIsLoading,
     calculateAllCostPrices,
-    fetchBybitRate: fetchBybitRates,
+    fetchBybitRate,
     isMobile
   });
 

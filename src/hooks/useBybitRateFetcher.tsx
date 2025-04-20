@@ -1,86 +1,96 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { fetchLatestTicker } from '@/services/bybit/bybit-api';
-import { storeTickerData } from '@/services/bybit/bybit-storage';
-import { logger } from '@/utils/logUtils';
-import { useNotifications } from '@/contexts/notifications/NotificationContext';
 
-interface UseBybitRateFetcherProps {
-  setUsdtNgnRate?: (rate: number) => void;
-  setLastUpdated?: (date: Date | null) => void;
-  setIsLoading?: (loading: boolean) => void;
+import { fetchBybitRateWithRetry } from '@/services/bybit/bybit-utils';
+import { saveUsdtNgnRate } from '@/services/usdt-ngn-service';
+import { logger } from '@/utils/logUtils';
+import { useNotifications } from '@/contexts/NotificationContext';
+
+interface BybitRateFetcherProps {
+  setUsdtNgnRate: (rate: number) => void;
+  setLastUpdated: (date: Date | null) => void;
+  setIsLoading: (loading: boolean) => void;
 }
 
-export const useBybitRateFetcher = (props?: UseBybitRateFetcherProps) => {
-  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+export const useBybitRateFetcher = ({
+  setUsdtNgnRate,
+  setLastUpdated,
+  setIsLoading
+}: BybitRateFetcherProps) => {
   const { addNotification } = useNotifications();
-
-  const fetchBybitRates = async () => {
-    const internalSetIsLoading = props?.setIsLoading || setIsLoading;
-    internalSetIsLoading(true);
-    
+  
+  const fetchBybitRate = async (): Promise<number | null> => {
     try {
-      logger.info("Fetching latest ticker data from Bybit API");
+      logger.debug("Fetching Bybit P2P rate with improved retry logic");
+      const { rate, error } = await fetchBybitRateWithRetry(3, 2000); // Increased retries to 3
       
-      const data = await fetchLatestTicker('BTCUSDT');
-      
-      if (data && data.success && data.price) {
-        logger.info(`Successfully fetched Bybit rate: ${data.price}`);
-        
-        await storeTickerData({
-          symbol: data.symbol,
-          price: data.price,
-          timestamp: data.timestamp
-        });
-        
-        const now = new Date();
-        setLastFetchTime(now);
-        if (props?.setLastUpdated) {
-          props.setLastUpdated(now);
-        }
-
-        if (props?.setUsdtNgnRate) {
-          props.setUsdtNgnRate(Number(data.price));
-        }
-
-        toast.success('Bybit rates updated successfully');
-        
-        addNotification({
-          title: 'Bybit rates updated',
-          description: `BTC/USDT: ${Number(data.price).toLocaleString()}`,
-          type: 'success'
-        });
-        
-        return data.price;
-      } else {
-        throw new Error('Invalid response format or no price data');
+      if (!rate || rate <= 0) {
+        logger.warn(`Failed to get valid Bybit rate: ${error || "Unknown error"}`);
+        return null;
       }
+      
+      logger.info("Bybit P2P rate fetched successfully:", rate);
+      
+      return rate;
     } catch (error) {
-      logger.error('Error fetching Bybit rates:', error);
-      
-      toast.error('Failed to fetch Bybit rates');
-      
-      addNotification({
-        title: 'Failed to fetch Bybit rates',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        type: 'error'
-      });
-      
+      logger.error("Error in fetchBybitRate:", error);
       return null;
-    } finally {
-      internalSetIsLoading(false);
     }
   };
 
-  const refreshBybitRate = fetchBybitRates;
-  const fetchBybitRate = fetchBybitRates;
+  const refreshBybitRate = async (): Promise<boolean> => {
+    setIsLoading(true);
+    
+    try {
+      const bybitRate = await fetchBybitRate();
+      
+      if (bybitRate && bybitRate > 0) {
+        logger.info("Refreshed Bybit USDT/NGN rate:", bybitRate);
+        
+        // Update local state
+        setUsdtNgnRate(bybitRate);
+        setLastUpdated(new Date());
+        
+        // Important: Save the rate to the database with explicit source value
+        // This creates a new INSERT that will trigger real-time updates
+        const saveSuccess = await saveUsdtNgnRate(bybitRate, 'bybit', false);
+        
+        if (!saveSuccess) {
+          logger.error("Failed to save the rate to database for real-time sync");
+        }
+        
+        // Show notification for the user who initiated the refresh
+        addNotification({
+          title: "USDT/NGN rate updated from Bybit",
+          description: "The new rate will sync with all connected users",
+          type: "success"
+        });
+        
+        return true;
+      } else {
+        logger.warn("Could not refresh Bybit rate");
+        
+        addNotification({
+          title: "Failed to update USDT/NGN rate from Bybit",
+          description: "Using last saved rate instead",
+          type: "error"
+        });
+        
+        return false;
+      }
+    } catch (error) {
+      logger.error("Error refreshing Bybit rate:", error);
+      addNotification({
+        title: "Failed to update USDT/NGN rate",
+        description: "Check your network connection and try again",
+        type: "error"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
-    fetchBybitRates,
     fetchBybitRate,
-    refreshBybitRate,
-    lastFetchTime,
-    isLoading
+    refreshBybitRate
   };
 };

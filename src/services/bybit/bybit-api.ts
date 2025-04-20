@@ -1,87 +1,118 @@
 
+import { supabase } from '@/integrations/supabase/client';
+import type { BybitP2PResponse, BybitRequestParams } from './types';
 import { logger } from '@/utils/logUtils';
 
-interface TickerResponse {
-  symbol: string;
-  price: number;
-  timestamp: string;
-  success: boolean;
-  error?: any;
-}
+/**
+ * Calls the Bybit P2P API through our Supabase Edge Function proxy
+ * to avoid CORS issues and protect API credentials
+ */
+export const getBybitP2PRate = async (
+  currencyId: string = "NGN",
+  tokenId: string = "USDT",
+  verifiedOnly: boolean = true
+): Promise<BybitP2PResponse | null> => {
+  logger.debug("[BybitAPI] Initiating request for", tokenId, "to", currencyId);
 
-// Add the P2P market response type
-export interface P2PMarketSummary {
-  total_traders: number;
-  price_range: {
-    min: number;
-    max: number;
-    avg: number;
-  };
-}
-
-export interface BybitP2PResponse {
-  success: boolean;
-  market_summary: P2PMarketSummary;
-  error?: string;
-}
-
-export const fetchLatestTicker = async (symbol: string = 'BTCUSDT'): Promise<TickerResponse> => {
   try {
-    logger.info(`[BybitAPI] Fetching latest ticker for ${symbol}`);
+    logger.debug("[BybitAPI] Calling Supabase Edge Function proxy");
     
-    // Simulate API response for now
-    const response = {
-      symbol,
-      price: 45000, // Example fixed price
-      timestamp: new Date().toISOString(),
-      success: true
-    };
-    
-    return response;
-  } catch (error) {
-    logger.error('[BybitAPI] Error fetching ticker:', error);
-    return {
-      symbol,
-      price: 0,
-      timestamp: new Date().toISOString(),
-      success: false,
-      error
-    };
-  }
-};
-
-// Add the missing getBybitP2PRate function that's imported elsewhere
-export const getBybitP2PRate = async (): Promise<BybitP2PResponse> => {
-  try {
-    logger.info('[BybitAPI] Fetching P2P market rate for USDT/NGN');
-    
-    // Simulate P2P market response for now
-    const response: BybitP2PResponse = {
-      success: true,
-      market_summary: {
-        total_traders: 25,
-        price_range: {
-          min: 1550,
-          max: 1600,
-          avg: 1575
-        }
+    // Call our Supabase Edge Function instead of directly calling the Bybit API
+    const { data, error } = await supabase.functions.invoke('bybit-proxy', {
+      body: {
+        currencyId,
+        tokenId,
+        verifiedOnly
       }
-    };
+    });
     
-    return response;
-  } catch (error) {
-    logger.error('[BybitAPI] Error fetching P2P rate:', error);
+    if (error) {
+      logger.error("[BybitAPI] Edge function error:", error);
+      return {
+        traders: [],
+        market_summary: {
+          total_traders: 0,
+          price_range: {
+            min: 0,
+            max: 0,
+            average: 0,
+            median: 0,
+            mode: 0,
+          },
+        },
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: `Edge function error: ${error.message || "Unknown error"}`
+      };
+    }
+    
+    logger.debug("[BybitAPI] Received response from Edge Function:", data);
+    
+    // The Edge Function returns the data in the same format we expect
+    if (data && data.success && data.market_summary && data.traders) {
+      return data as BybitP2PResponse;
+    }
+    
+    // Handle unsuccessful responses from the Edge Function
     return {
-      success: false,
+      traders: [],
       market_summary: {
         total_traders: 0,
         price_range: {
           min: 0,
           max: 0,
-          avg: 0
-        }
+          average: 0,
+          median: 0,
+          mode: 0,
+        },
       },
-      error: error instanceof Error ? error.message : String(error)
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: data?.error || "Invalid response from Edge Function"
+    };
+  } catch (error: any) {
+    logger.error("❌ Error fetching Bybit P2P rate:", error);
+    logger.error("[BybitAPI] Error details:", {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data
+    });
+    
+    // Determine if it's a network error, timeout, or other issue
+    let errorMessage = "Unknown error occurred";
+    
+    if (error.code === "ECONNABORTED") {
+      errorMessage = "Request timed out";
+    } else if (error.code === "ERR_NETWORK") {
+      errorMessage = "Network error - check your internet connection";
+    } else if (error.response) {
+      // The request was made and the server responded with a status code
+      errorMessage = `Server responded with error ${error.response.status}: ${error.response.statusText}`;
+    } else if (error.request) {
+      // The request was made but no response was received
+      errorMessage = "No response received from server";
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      errorMessage = error.message || "Error setting up request";
+    }
+    
+    return {
+      traders: [],
+      market_summary: {
+        total_traders: 0,
+        price_range: {
+          min: 0,
+          max: 0,
+          average: 0,
+          median: 0,
+          mode: 0,
+        },
+      },
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: errorMessage
     };
   }
 };

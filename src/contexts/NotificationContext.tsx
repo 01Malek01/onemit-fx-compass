@@ -1,19 +1,96 @@
 
 import React, { createContext, useContext, useState, useEffect, useReducer, useMemo } from 'react';
 import { toast as sonnerToast } from "sonner";
-import { useAuth } from '../AuthContext';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logUtils';
-import { notificationsReducer } from './notificationReducer';
-import { validateNotificationType, generateId } from './utils';
-import type { Notification, NotificationContextState, NotificationType } from './types';
+
+// Define notification types
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+
+export interface Notification {
+  id: string;
+  title: string;
+  description?: string;
+  type: NotificationType;
+  timestamp: Date;
+  read: boolean;
+  user_id?: string; // Added user_id as optional
+}
+
+// Define context state
+interface NotificationContextState {
+  notifications: Notification[];
+  unreadCount: number;
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  removeNotification: (id: string) => void;
+  clearAll: () => void;
+  showToasts: boolean;
+  setShowToasts: (show: boolean) => void;
+}
 
 // Create the context
 const NotificationContext = createContext<NotificationContextState | undefined>(undefined);
 
+// Actions for reducer
+type NotificationAction = 
+  | { type: 'ADD_NOTIFICATION'; payload: Notification }
+  | { type: 'MARK_READ'; payload: string }
+  | { type: 'MARK_ALL_READ' }
+  | { type: 'REMOVE'; payload: string }
+  | { type: 'CLEAR_ALL' }
+  | { type: 'INITIALIZE'; payload: Notification[] };
+
+// Notifications reducer
+const notificationsReducer = (state: Notification[], action: NotificationAction): Notification[] => {
+  switch (action.type) {
+    case 'ADD_NOTIFICATION':
+      // Limit to 20 notifications, removing oldest if needed
+      const newState = [action.payload, ...state];
+      return newState.slice(0, 20);
+    
+    case 'MARK_READ':
+      return state.map(notification => 
+        notification.id === action.payload 
+          ? { ...notification, read: true } 
+          : notification
+      );
+    
+    case 'MARK_ALL_READ':
+      return state.map(notification => ({ ...notification, read: true }));
+    
+    case 'REMOVE':
+      return state.filter(notification => notification.id !== action.payload);
+    
+    case 'CLEAR_ALL':
+      return [];
+    
+    case 'INITIALIZE':
+      return action.payload;
+    
+    default:
+      return state;
+  }
+};
+
+// Generate a unique ID for notifications
+const generateId = (): string => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+};
+
+// Helper function to convert Supabase notification type to our NotificationType
+const validateNotificationType = (type: string | null): NotificationType => {
+  if (type === 'success' || type === 'error' || type === 'info' || type === 'warning') {
+    return type;
+  }
+  return 'info';
+};
+
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, dispatch] = useReducer(notificationsReducer, []);
-  const [showToasts, setShowToasts] = useState(true); // Default to true for better UX
+  const [showToasts, setShowToasts] = useState(false);
   const { user } = useAuth();
 
   // Calculate unread count using useMemo for better performance
@@ -25,11 +102,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     if (!user) return;
 
+    logger.info("Setting up notifications system for user:", user.id);
+
     // Load initial notifications
     const loadNotifications = async () => {
       try {
-        logger.info("Loading notifications from database");
-        
         const { data, error } = await supabase
           .from('notifications')
           .select('*')
@@ -63,12 +140,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     loadNotifications();
 
-    // Set up real-time notification subscription with unique channel name
-    const channelName = `notifications-${user.id}`;
-    logger.info(`Setting up real-time notification subscription with channel: ${channelName}`);
-    
+    // Set up dedicated channel for real-time notification updates
+    logger.info("Setting up real-time notification subscription");
     const channel = supabase
-      .channel(channelName)
+      .channel('public:notifications')
       .on(
         'postgres_changes',
         {
@@ -81,29 +156,23 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           logger.debug('Real-time notification received:', payload);
           
           try {
-            if (!payload.new || typeof payload.new !== 'object') {
-              logger.warn("Invalid payload received for notification:", payload);
-              return;
-            }
-            
-            const newData = payload.new as Record<string, any>;
-            
+            // Create a new notification object from the payload
             const newNotification: Notification = {
-              id: newData.id,
-              title: newData.title,
-              description: newData.description || undefined,
-              type: validateNotificationType(newData.type),
-              timestamp: new Date(newData.timestamp),
-              read: Boolean(newData.read),
-              user_id: newData.user_id
+              id: payload.new.id,
+              title: payload.new.title,
+              description: payload.new.description || undefined,
+              type: validateNotificationType(payload.new.type),
+              timestamp: new Date(payload.new.timestamp),
+              read: Boolean(payload.new.read),
+              user_id: payload.new.user_id
             };
             
             logger.info(`Real-time notification received: ${newNotification.title}`);
             
-            // Update state with the new notification - this should trigger re-render of badge
+            // Immediately update the UI with the new notification
             dispatch({ type: 'ADD_NOTIFICATION', payload: newNotification });
 
-            // Show toast if enabled
+            // If toast display is enabled, also show a toast
             if (showToasts) {
               switch (newNotification.type) {
                 case 'success':
@@ -127,35 +196,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       )
       .subscribe((status) => {
         logger.info(`Notification channel subscription status: ${status}`);
-        
-        if (status === 'SUBSCRIBED') {
-          logger.info('✅ Real-time notifications successfully enabled');
-        } else if (status === 'CHANNEL_ERROR') {
-          logger.error('❌ Failed to enable real-time notifications');
-        }
       });
 
-    // Add a test method to the window for debugging
-    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-      (window as any).testNotification = (type: NotificationType = 'info') => {
-        addNotification({
-          title: `Test ${type} notification`,
-          description: 'This is a test notification to verify real-time updates work',
-          type
-        });
-        return 'Test notification sent! Check if it appears without refresh.';
-      };
-    }
-
-    // Cleanup function
+    // Clean up subscription on unmount
     return () => {
-      logger.info("Cleaning up notification subscription");
+      logger.info("Cleaning up notification channel subscription");
       supabase.removeChannel(channel);
-      
-      // Remove test method
-      if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
-        delete (window as any).testNotification;
-      }
     };
   }, [user, showToasts]);
 
@@ -174,12 +220,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       
       const { data, error } = await supabase
         .from('notifications')
-        .insert([{
-          user_id: user.id,
-          title: notification.title,
-          description: notification.description,
-          type: validType
-        }])
+        .insert([
+          {
+            user_id: user.id,
+            title: notification.title,
+            description: notification.description,
+            type: validType
+          }
+        ])
         .select()
         .single();
 
@@ -188,13 +236,32 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return;
       }
 
-      logger.info('Notification added to database successfully with ID:', data.id);
+      // The real-time subscription will handle adding this to state
+      logger.info('Notification added to database successfully');
+
+      // Show as toast if enabled
+      if (showToasts) {
+        switch (validType) {
+          case 'success':
+            sonnerToast.success(notification.title, { description: notification.description });
+            break;
+          case 'error':
+            sonnerToast.error(notification.title, { description: notification.description });
+            break;
+          case 'warning':
+            sonnerToast.warning(notification.title, { description: notification.description });
+            break;
+          case 'info':
+          default:
+            sonnerToast.info(notification.title, { description: notification.description });
+        }
+      }
     } catch (error) {
       logger.error('Error adding notification:', error);
     }
   };
 
-  // CRUD operations for notifications
+  // Mark a notification as read
   const markAsRead = async (id: string) => {
     if (!user) return;
 
@@ -216,6 +283,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  // Mark all notifications as read
   const markAllAsRead = async () => {
     if (!user) return;
 
@@ -237,6 +305,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  // Remove a notification
   const removeNotification = async (id: string) => {
     if (!user) return;
 
@@ -258,6 +327,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  // Clear all notifications
   const clearAll = async () => {
     if (!user) return;
 

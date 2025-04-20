@@ -6,7 +6,7 @@ import './index.css';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NotificationProvider } from './contexts/notifications/NotificationContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // Import our logging utility
 import { applyConsoleFilters } from './utils/logUtils';
