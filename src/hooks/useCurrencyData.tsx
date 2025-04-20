@@ -1,13 +1,15 @@
+
 import { useEffect, useRef, useCallback } from 'react';
 import { useRateState } from './useRateState';
 import { useCostPriceCalculator } from './useCostPriceCalculator';
 import { useRateDataLoader } from './useRateDataLoader';
-import { VertoFXRates } from '@/services/vertofx';
+import { VertoFXRates as ApiVertoFXRates } from '@/services/api';
 
+// Use the specific type from API instead of the one from vertofx
 export interface CurrencyDataState {
   usdtNgnRate: number | null;
   fxRates: Record<string, number>;
-  vertoFxRates: VertoFXRates;
+  vertoFxRates: ApiVertoFXRates;
   costPrices: Record<string, number>;
   previousCostPrices: Record<string, number>;
   lastUpdated: Date | null;
@@ -20,10 +22,10 @@ export interface CurrencyDataActions {
   refreshBybitRate: () => Promise<boolean>;
   setUsdtNgnRate: (rate: number) => void;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
-  setVertoFxRates: (rates: VertoFXRates) => void;
+  setVertoFxRates: (rates: ApiVertoFXRates) => void;
 }
 
-const DEFAULT_VERTOFX_RATES: VertoFXRates = {
+const DEFAULT_VERTOFX_RATES: ApiVertoFXRates = {
   USD: { buy: 0, sell: 0 },
   EUR: { buy: 0, sell: 0 },
   GBP: { buy: 0, sell: 0 },
@@ -38,8 +40,8 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     { setUsdtNgnRate, setFxRates, setVertoFxRates: originalSetVertoFxRates, setCostPrices, setPreviousCostPrices, setLastUpdated, setIsLoading }
   ] = useRateState();
 
-  const setVertoFxRates = useCallback((rates: VertoFXRates) => {
-    const safeRates: VertoFXRates = {
+  const setVertoFxRates = useCallback((rates: ApiVertoFXRates) => {
+    const safeRates: ApiVertoFXRates = {
       USD: rates?.USD || DEFAULT_VERTOFX_RATES.USD,
       EUR: rates?.EUR || DEFAULT_VERTOFX_RATES.EUR,
       GBP: rates?.GBP || DEFAULT_VERTOFX_RATES.GBP,
@@ -68,8 +70,10 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     usdtNgnRate
   });
 
+  // Fix the return type to match the expected boolean
   const updateUsdtRate = useCallback(async (rate: number): Promise<boolean> => {
     const result = await originalUpdateUsdtRate(rate);
+    // Convert the number result to a boolean
     return !!result;
   }, [originalUpdateUsdtRate]);
 

@@ -14,8 +14,14 @@ export interface VertoFxRate {
   percent_change?: number;
 }
 
-// Define and export VertoFXRates for use across the application
-export type VertoFXRates = Record<string, { buy: number; sell: number }>;
+// Define and export VertoFXRates to match the API service definition
+export type VertoFXRates = {
+  USD: { buy: number; sell: number };
+  EUR: { buy: number; sell: number };
+  GBP: { buy: number; sell: number };
+  CAD: { buy: number; sell: number };
+  [key: string]: { buy: number; sell: number };
+};
 
 // Cache key for VertoFX rates
 const VERTOFX_CACHE_KEY = 'vertofx_rates_cache';
