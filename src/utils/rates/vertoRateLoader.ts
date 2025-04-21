@@ -10,13 +10,16 @@ const VERTOFX_RATE_LIMIT_KEY = 'vertofx_rate_limit_reset';
 
 // Local cache for last successful rate data
 let lastSuccessfulVertoFxRates: VertoFXRates = {
-  USD: { buy: 1635, sell: 1600 },
-  EUR: { buy: 1870, sell: 1805 },
-  GBP: { buy: 2150, sell: 2080 },
-  CAD: { buy: 1190, sell: 1140 }
+  USD: { buy: 0, sell: 0 },
+  EUR: { buy: 0, sell: 0 },
+  GBP: { buy: 0, sell: 0 },
+  CAD: { buy: 0, sell: 0 }
 };
 let lastApiAttemptTimestamp: number = 0;
 let lastApiSuccess: boolean = false;
+
+// Change the cooldown time from 30 seconds to 10 minutes (600 seconds)
+const REFRESH_COOLDOWN_TIME = 600; // 10 minutes in seconds
 
 /**
  * Check if the VertoFX API is currently rate limited
@@ -90,11 +93,10 @@ export const getTimeUntilNextAttempt = (): number => {
     }
   }
 
-  // Then check cooldown
+  // Then check cooldown - changed from 30 to 600 seconds
   const lastAttempt = getLastApiAttemptTimestamp();
-  const cooldownTime = 30; // 30 seconds cooldown
   const timeSinceLastAttempt = Math.floor((Date.now() - lastAttempt) / 1000);
-  const timeUntilNextAttempt = cooldownTime - timeSinceLastAttempt;
+  const timeUntilNextAttempt = REFRESH_COOLDOWN_TIME - timeSinceLastAttempt;
 
   return Math.max(timeUntilNextAttempt, 0);
 };
@@ -108,10 +110,22 @@ export const loadVertoFxRates = async (
   forceRefresh: boolean = false
 ): Promise<VertoFXRates> => {
   try {
-    if (isVertoFxRateLimited() && !forceRefresh) {
+    // On first load, bypass the cooldown check
+    const isFirstLoad = lastApiAttemptTimestamp === 0;
+    const lastAttemptTime = getLastApiAttemptTimestamp();
+    const shouldCallApi = isFirstLoad || forceRefresh || (Date.now() - lastAttemptTime > REFRESH_COOLDOWN_TIME * 1000);
+
+    if (!shouldCallApi && !isFirstLoad) {
+      const timeUntilNextAttempt = Math.ceil((REFRESH_COOLDOWN_TIME * 1000 - (Date.now() - lastAttemptTime)) / 1000);
+      logger.debug(`[vertoRateLoader] Rate limiting active, next attempt in ${timeUntilNextAttempt}s`);
+      throw new Error('Too soon to refresh');
+    }
+
+    if (isVertoFxRateLimited() && !forceRefresh && !isFirstLoad) {
       throw new Error('Rate limited by VertoFX API');
     }
 
+    logger.debug("[vertoRateLoader] Fetching fresh VertoFX rates");
     const vertoRates = await raceWithTimeout(
       fetchVertoFXRates(),
       isMobile ? 3000 : 10000,
@@ -119,6 +133,8 @@ export const loadVertoFxRates = async (
     );
 
     if (vertoRates && Object.values(vertoRates).some(rate => rate.buy > 0 || rate.sell > 0)) {
+      lastSuccessfulVertoFxRates = vertoRates; // Update last successful rates
+      lastApiSuccess = true;
       setVertoFxRates(vertoRates);
       setLastApiAttemptTimestamp(Date.now());
       return vertoRates;
@@ -142,12 +158,11 @@ export const getLastSuccessfulVertoFxRates = (): VertoFXRates => {
  * Reset the last successful VertoFX rates
  */
 export const resetLastSuccessfulVertoFxRates = (): void => {
-  // Don't completely empty, just reset to defaults
   lastSuccessfulVertoFxRates = {
-    USD: { buy: 1635, sell: 1600 },
-    EUR: { buy: 1870, sell: 1805 },
-    GBP: { buy: 2150, sell: 2080 },
-    CAD: { buy: 1190, sell: 1140 }
+    USD: { buy: 0, sell: 0 },
+    EUR: { buy: 0, sell: 0 },
+    GBP: { buy: 0, sell: 0 },
+    CAD: { buy: 0, sell: 0 }
   };
 };
 
