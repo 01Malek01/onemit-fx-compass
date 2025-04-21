@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useRateState } from './useRateState';
 import { useCostPriceCalculator } from './useCostPriceCalculator';
 import { useRateDataLoader } from './useRateDataLoader';
-import { VertoFXRates, DEFAULT_VERTOFX_RATES } from '@/services/api';
+import { VertoFXRates } from '@/services/api';
 
 export interface CurrencyDataState {
   usdtNgnRate: number | null;
@@ -26,21 +26,21 @@ export interface CurrencyDataActions {
 const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   // Use a single initialization flag for better performance
   const initialized = useRef(false);
-  
+
   // Use our state management hook with default initial values
   const [
     { usdtNgnRate, fxRates, vertoFxRates, costPrices, previousCostPrices, lastUpdated, isLoading },
     { setUsdtNgnRate, setFxRates, setVertoFxRates: originalSetVertoFxRates, setCostPrices, setPreviousCostPrices, setLastUpdated, setIsLoading }
   ] = useRateState();
 
-  // Ensure vertoFxRates always has required properties 
+  // Wrap setVertoFxRates to ensure required properties
   const setVertoFxRates = useCallback((rates: VertoFXRates | Record<string, { buy: number; sell: number }>) => {
     // Ensure the rates object has the required properties
     const safeRates: VertoFXRates = {
-      USD: rates?.USD || DEFAULT_VERTOFX_RATES.USD,
-      EUR: rates?.EUR || DEFAULT_VERTOFX_RATES.EUR,
-      GBP: rates?.GBP || DEFAULT_VERTOFX_RATES.GBP,
-      CAD: rates?.CAD || DEFAULT_VERTOFX_RATES.CAD,
+      USD: rates?.USD || { buy: 0, sell: 0 },
+      EUR: rates?.EUR || { buy: 0, sell: 0 },
+      GBP: rates?.GBP || { buy: 0, sell: 0 },
+      CAD: rates?.CAD || { buy: 0, sell: 0 },
       ...rates
     };
     originalSetVertoFxRates(safeRates);
@@ -55,7 +55,7 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
     costPrices
   });
 
-  // Use data loading hook - modified to use our wrapped setVertoFxRates
+  // Use data loading hook with our wrapped setVertoFxRates
   const { loadAllData, updateUsdtRate, refreshBybitRate } = useRateDataLoader({
     setUsdtNgnRate,
     setFxRates,
@@ -70,40 +70,35 @@ const useCurrencyData = (): [CurrencyDataState, CurrencyDataActions] => {
   // Initialize data on mount with optimized single attempt
   useEffect(() => {
     if (initialized.current) return;
-    
+
     const initialize = async () => {
       try {
         console.log("[useCurrencyData] Initializing data");
-        initialized.current = true; // Set flag immediately to prevent double initialization
+        initialized.current = true;
         await loadAllData();
       } catch (error) {
         console.error("[useCurrencyData] Initialization failed:", error);
       }
     };
-    
-    // Start initialization without waiting
+
     initialize();
-    
-    return () => {
-      // No cleanup needed
-    };
   }, [loadAllData]);
 
   return [
-    { 
-      usdtNgnRate, 
-      fxRates, 
-      vertoFxRates, 
-      costPrices, 
-      previousCostPrices, 
-      lastUpdated, 
-      isLoading 
+    {
+      usdtNgnRate,
+      fxRates,
+      vertoFxRates,
+      costPrices,
+      previousCostPrices,
+      lastUpdated,
+      isLoading
     },
-    { 
-      loadAllData, 
-      updateUsdtRate, 
+    {
+      loadAllData,
+      updateUsdtRate,
       refreshBybitRate,
-      setUsdtNgnRate, 
+      setUsdtNgnRate,
       calculateAllCostPrices,
       setVertoFxRates
     }

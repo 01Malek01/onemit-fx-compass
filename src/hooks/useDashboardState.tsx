@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
-import { CurrencyRates, VertoFXRates, DEFAULT_VERTOFX_RATES } from '@/services/api';
+import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { useRateRefresher } from '@/hooks/useRateRefresher';
 import { useMarginManager } from '@/hooks/useMarginManager';
 import { useOneremitRates } from '@/hooks/useOneremitRates';
+import { toast } from 'sonner';
 
 export const useDashboardState = () => {
   // Use our custom hook for currency data
@@ -16,20 +17,20 @@ export const useDashboardState = () => {
 
   // Ensure vertoFxRates has the required properties
   const vertoFxRates: VertoFXRates = {
-    USD: rawVertoFxRates?.USD || DEFAULT_VERTOFX_RATES.USD,
-    EUR: rawVertoFxRates?.EUR || DEFAULT_VERTOFX_RATES.EUR,
-    GBP: rawVertoFxRates?.GBP || DEFAULT_VERTOFX_RATES.GBP,
-    CAD: rawVertoFxRates?.CAD || DEFAULT_VERTOFX_RATES.CAD,
+    USD: rawVertoFxRates?.USD || { buy: 0, sell: 0 },
+    EUR: rawVertoFxRates?.EUR || { buy: 0, sell: 0 },
+    GBP: rawVertoFxRates?.GBP || { buy: 0, sell: 0 },
+    CAD: rawVertoFxRates?.CAD || { buy: 0, sell: 0 },
     ...rawVertoFxRates
   };
 
   // Create a wrapper for setVertoFxRates that ensures required properties
   const setVertoFxRates = useCallback((rates: VertoFXRates) => {
     const safeRates: VertoFXRates = {
-      USD: rates?.USD || DEFAULT_VERTOFX_RATES.USD,
-      EUR: rates?.EUR || DEFAULT_VERTOFX_RATES.EUR,
-      GBP: rates?.GBP || DEFAULT_VERTOFX_RATES.GBP,
-      CAD: rates?.CAD || DEFAULT_VERTOFX_RATES.CAD,
+      USD: rates?.USD || { buy: 0, sell: 0 },
+      EUR: rates?.EUR || { buy: 0, sell: 0 },
+      GBP: rates?.GBP || { buy: 0, sell: 0 },
+      CAD: rates?.CAD || { buy: 0, sell: 0 },
       ...rates
     };
     setRawVertoFxRates(safeRates);
@@ -84,27 +85,26 @@ export const useDashboardState = () => {
     onMarginSettingsChange: handleRealtimeMarginUpdate
   });
 
-  // Load initial data - make sure this runs only once and correctly loads the data
+  // Modify the initial data loading effect
   useEffect(() => {
-    // Use a more concise log for initialization
+    console.log("DashboardContainer: Running initial data loading effect");
     const initialize = async () => {
       try {
-        // Load all currency data including Bybit rate
+        // Load all currency data including VertoFX rates
         await loadAllData();
 
-        // Fetch margin settings from database
+        // Fetch margin settings
         const settings = await fetchMarginSettings();
         if (settings) {
           setUsdMargin(settings.usd_margin);
           setOtherCurrenciesMargin(settings.other_currencies_margin);
-
-          // Calculate cost prices with the loaded margins
           calculateAllCostPrices(settings.usd_margin, settings.other_currencies_margin);
-        } else {
-          console.warn("No margin settings found, using defaults");
         }
       } catch (error) {
-        console.error("Error during dashboard initialization:", error);
+        console.error("Error during initialization:", error);
+        toast.error("Failed to load market data", {
+          description: "Please refresh the page or try again later"
+        });
       }
     };
 

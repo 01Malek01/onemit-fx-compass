@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
@@ -11,6 +10,7 @@ interface RateRefresherProps {
   costPrices: CurrencyRates;
   fxRates: CurrencyRates;
   refreshBybitRate: () => Promise<boolean>;
+  refreshVertoFXRates: () => Promise<boolean>;
   calculateAllCostPrices: (usdMargin: number, otherCurrenciesMargin: number) => void;
 }
 
@@ -21,6 +21,7 @@ export const useRateRefresher = ({
   costPrices,
   fxRates,
   refreshBybitRate,
+  refreshVertoFXRates,
   calculateAllCostPrices
 }: RateRefresherProps) => {
   // Reference to store timer
@@ -51,26 +52,34 @@ export const useRateRefresher = ({
   // Handle refresh button click
   const handleRefresh = async () => {
     logger.debug("RateRefresher: Handling refresh button click");
-    const success = await handleBybitRateRefresh();
 
-    // Only save historical data if refresh was successful
-    if (success) {
-      // Save historical data after refresh with source="refresh"
-      try {
-        if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(costPrices).length > 0) {
-          await saveHistoricalRates(
-            usdtNgnRate,
-            usdMargin,
-            otherCurrenciesMargin,
-            fxRates,
-            costPrices,
-            'refresh'
-          );
-          logger.debug("Historical data saved after refresh");
+    try {
+      // Refresh both Bybit and VertoFX rates concurrently
+      const [bybitSuccess, vertoSuccess] = await Promise.all([
+        handleBybitRateRefresh(),
+        refreshVertoFXRates() // Make sure this function exists and is passed as a prop
+      ]);
+
+      // Only save historical data if both refreshes were successful
+      if (bybitSuccess) {
+        try {
+          if (usdtNgnRate && usdtNgnRate > 0 && Object.keys(costPrices).length > 0) {
+            await saveHistoricalRates(
+              usdtNgnRate,
+              usdMargin,
+              otherCurrenciesMargin,
+              fxRates,
+              costPrices,
+              'refresh'
+            );
+            logger.debug("Historical data saved after refresh");
+          }
+        } catch (error) {
+          logger.error("Error saving historical data after refresh:", error);
         }
-      } catch (error) {
-        logger.error("Error saving historical data after refresh:", error);
       }
+    } catch (error) {
+      logger.error("Error during refresh:", error);
     }
   };
 
@@ -108,6 +117,9 @@ export const useRateRefresher = ({
 
   // Setup countdown timer and auto-refresh
   useEffect(() => {
+    // Perform initial refresh immediately
+    performRefresh();
+
     // Update countdown every second
     const countdownInterval = setInterval(() => {
       setNextRefreshIn(prev => {
@@ -118,9 +130,6 @@ export const useRateRefresher = ({
         return prev - 1;
       });
     }, 1000);
-
-    // Initial refresh
-    performRefresh();
 
     return () => {
       clearInterval(countdownInterval);

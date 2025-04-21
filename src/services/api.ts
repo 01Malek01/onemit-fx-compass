@@ -41,7 +41,7 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
     logger.debug("[API] Using cached FX rates");
     return cachedRates;
   }
-  
+
   const supportedCurrencies = ['USD', 'EUR', 'GBP', 'CAD'];
   try {
     const rates = await fetchExchangeRates(supportedCurrencies);
@@ -54,88 +54,44 @@ export const fetchFxRates = async (): Promise<CurrencyRates> => {
   }
 };
 
-// Default VertoFX rates to use as fallback
-export const DEFAULT_VERTOFX_RATES: VertoFXRates = {
-  USD: { buy: 1635, sell: 1600 },
-  EUR: { buy: 1870, sell: 1805 },
-  GBP: { buy: 2150, sell: 2080 },
-  CAD: { buy: 1190, sell: 1140 }
-};
-
-// In-memory cache for VertoFX rates to use if API calls fail
-let cachedVertoFxRates: VertoFXRates = { ...DEFAULT_VERTOFX_RATES };
-
 // Fetch VertoFX rates - optimized with smarter caching
 export const fetchVertoFXRates = async (): Promise<VertoFXRates> => {
-  // Check cache first for faster responses
-  const cachedRates = cacheWithExpiration.get(VERTOFX_RATES_CACHE_KEY);
-  if (cachedRates) {
-    logger.debug("[API] Using cached VertoFX rates");
-    return cachedRates;
-  }
-  
   try {
     logger.debug("[API] Fetching live VertoFX rates...");
-    
-    // Add a shorter 5 second timeout (reduced from 10s)
-    const timeoutPromise = new Promise<Record<string, VertoFxRate>>((_resolve, reject) => {
-      setTimeout(() => reject(new Error("VertoFX API request timed out")), 5000);
-    });
-    
-    // Race between the API call and the timeout
-    const vertoRates = await Promise.race([getAllNgnRates(), timeoutPromise]);
-    
-    // Convert the API response format to our app's expected format
-    const formattedRates: VertoFXRates = { ...DEFAULT_VERTOFX_RATES };
-    
+
+    const vertoRates = await getAllNgnRates();
+
+    // Initialize with empty rates
+    const formattedRates: VertoFXRates = {
+      USD: { buy: 0, sell: 0 },
+      EUR: { buy: 0, sell: 0 },
+      GBP: { buy: 0, sell: 0 },
+      CAD: { buy: 0, sell: 0 }
+    };
+
     // Process rates
     for (const currency of ['USD', 'EUR', 'GBP', 'CAD']) {
-      // Process NGN-XXX rates (NGN to foreign currency - this is our "buy" rate)
       const ngnToForeignKey = `NGN-${currency}`;
-      if (vertoRates[ngnToForeignKey]) {
-        // Convert the inverse rate to the actual rate in NGN
-        if (vertoRates[ngnToForeignKey].rate > 0) {
-          formattedRates[currency].buy = 1 / vertoRates[ngnToForeignKey].rate;
-        }
-      }
-      
-      // Process XXX-NGN rates (foreign currency to NGN - this is our "sell" rate)
       const foreignToNgnKey = `${currency}-NGN`;
+
+      if (vertoRates[ngnToForeignKey] && vertoRates[ngnToForeignKey].rate > 0) {
+        formattedRates[currency].buy = 1 / vertoRates[ngnToForeignKey].rate;
+      }
+
       if (vertoRates[foreignToNgnKey]) {
         formattedRates[currency].sell = vertoRates[foreignToNgnKey].rate;
       }
     }
-    
-    // Verify we have valid rates before updating the cache
-    const hasValidRates = Object.values(formattedRates).some(rate => 
-      (rate.buy > 0 || rate.sell > 0)
-    );
-    
-    if (hasValidRates) {
-      // Update the cache with new valid rates
-      cachedVertoFxRates = { ...formattedRates };
-      
-      // Cache in the browser for 5 minutes
+
+    if (Object.values(formattedRates).some(rate => rate.buy > 0 || rate.sell > 0)) {
       cacheWithExpiration.set(VERTOFX_RATES_CACHE_KEY, formattedRates, 5 * 60 * 1000);
-      
-      // Save historical VertoFX rates to database in background
-      Promise.resolve().then(async () => {
-        try {
-          await saveVertoFxHistoricalRates(vertoRates);
-        } catch (error) {
-          logger.error("[API] Error saving historical VertoFX rates:", error);
-        }
-      });
-      
+      await saveVertoFxHistoricalRates(vertoRates);
       return formattedRates;
-    } else {
-      logger.warn("[API] No valid rates found in API response, using default rates");
-      return { ...DEFAULT_VERTOFX_RATES };
     }
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error("[API] Error fetching VertoFX rates:", errorMessage);
-    
-    return { ...DEFAULT_VERTOFX_RATES };
+
+    throw new Error('No valid rates received from API');
+  } catch (error) {
+    logger.error("[API] Error fetching VertoFX rates:", error);
+    throw error;
   }
 };
