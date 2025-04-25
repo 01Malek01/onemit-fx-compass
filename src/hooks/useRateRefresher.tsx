@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
 import { CurrencyRates } from '@/services/api';
@@ -57,7 +58,7 @@ export const useRateRefresher = ({
       // Refresh both Bybit and VertoFX rates concurrently
       const [bybitSuccess, vertoSuccess] = await Promise.all([
         handleBybitRateRefresh(),
-        refreshVertoFXRates() // Make sure this function exists and is passed as a prop
+        refreshVertoFXRates()
       ]);
 
       // Only save historical data if both refreshes were successful

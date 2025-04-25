@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
@@ -6,7 +7,9 @@ import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { useRateRefresher } from '@/hooks/useRateRefresher';
 import { useMarginManager } from '@/hooks/useMarginManager';
 import { useOneremitRates } from '@/hooks/useOneremitRates';
+import { useVertoFxRefresher } from '@/hooks/useVertoFxRefresher';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logUtils';
 
 export const useDashboardState = () => {
   // Use our custom hook for currency data
@@ -36,12 +39,19 @@ export const useDashboardState = () => {
     setRawVertoFxRates(safeRates);
   }, [setRawVertoFxRates]);
 
+  // Use our VertoFX refresher hook
+  const { refreshVertoFxRates } = useVertoFxRefresher({
+    vertoFxRates,
+    setVertoFxRates
+  });
+
   // Use our rate refresher hook with countdown
   const { handleRefresh, handleBybitRateRefresh, nextRefreshIn } = useRateRefresher({
     usdtNgnRate,
     costPrices,
     fxRates,
     refreshBybitRate,
+    refreshVertoFXRates: refreshVertoFxRates,
     calculateAllCostPrices,
     usdMargin: 2.5, // Default value, will be updated in useEffect
     otherCurrenciesMargin: 3.0 // Default value, will be updated in useEffect
@@ -87,7 +97,7 @@ export const useDashboardState = () => {
 
   // Modify the initial data loading effect
   useEffect(() => {
-    console.log("DashboardContainer: Running initial data loading effect");
+    logger.debug("DashboardContainer: Running initial data loading effect");
     const initialize = async () => {
       try {
         // Load all currency data including VertoFX rates
@@ -135,5 +145,6 @@ export const useDashboardState = () => {
     fxRates,
     nextRefreshIn,
     setVertoFxRates,
+    refreshVertoFxRates
   };
 };

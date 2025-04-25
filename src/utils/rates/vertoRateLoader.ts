@@ -1,3 +1,4 @@
+
 import { VertoFXRates, fetchVertoFXRates } from '@/services/api';
 import { cacheWithExpiration } from '../cacheUtils';
 import { raceWithTimeout } from '../apiUtils';
@@ -118,11 +119,13 @@ export const loadVertoFxRates = async (
     if (!shouldCallApi && !isFirstLoad) {
       const timeUntilNextAttempt = Math.ceil((REFRESH_COOLDOWN_TIME * 1000 - (Date.now() - lastAttemptTime)) / 1000);
       logger.debug(`[vertoRateLoader] Rate limiting active, next attempt in ${timeUntilNextAttempt}s`);
-      throw new Error('Too soon to refresh');
+      // Return last successful rates instead of throwing an error
+      return { ...lastSuccessfulVertoFxRates };
     }
 
     if (isVertoFxRateLimited() && !forceRefresh && !isFirstLoad) {
-      throw new Error('Rate limited by VertoFX API');
+      // Return last successful rates instead of throwing an error
+      return { ...lastSuccessfulVertoFxRates };
     }
 
     logger.debug("[vertoRateLoader] Fetching fresh VertoFX rates");
@@ -132,18 +135,29 @@ export const loadVertoFxRates = async (
       "VertoFX rates request timed out"
     );
 
-    if (vertoRates && Object.values(vertoRates).some(rate => rate.buy > 0 || rate.sell > 0)) {
-      lastSuccessfulVertoFxRates = vertoRates; // Update last successful rates
+    // Ensure we have default values for required properties
+    const safeRates: VertoFXRates = {
+      USD: { buy: 0, sell: 0 },
+      EUR: { buy: 0, sell: 0 },
+      GBP: { buy: 0, sell: 0 },
+      CAD: { buy: 0, sell: 0 },
+      ...vertoRates
+    };
+
+    if (safeRates && Object.values(safeRates).some(rate => rate.buy > 0 || rate.sell > 0)) {
+      lastSuccessfulVertoFxRates = safeRates; // Update last successful rates
       lastApiSuccess = true;
-      setVertoFxRates(vertoRates);
+      setVertoFxRates(safeRates);
       setLastApiAttemptTimestamp(Date.now());
-      return vertoRates;
+      return safeRates;
     }
 
-    throw new Error('No valid rates received');
+    // If we get here, we didn't get valid rates, return last successful rates
+    return { ...lastSuccessfulVertoFxRates };
   } catch (error) {
     logger.error("[vertoRateLoader] Error fetching market comparison rates:", error);
-    throw error;
+    // Return last successful rates on error, instead of throwing
+    return { ...lastSuccessfulVertoFxRates };
   }
 };
 
