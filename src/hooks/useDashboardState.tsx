@@ -38,13 +38,13 @@ export const useDashboardState = () => {
     setRawVertoFxRates(safeRates);
   }, [setRawVertoFxRates]);
 
-  // Use our VertoFX refresher hook
+  // Use our VertoFX refresher hook with proper typing
   const { refreshVertoFxRates } = useVertoFxRefresher({
     vertoFxRates,
     setVertoFxRates
   });
 
-  // Use our rate refresher hook with countdown
+  // Use our rate refresher hook with countdown and proper VertoFX integration
   const { handleRefresh, handleBybitRateRefresh, nextRefreshIn } = useRateRefresher({
     usdtNgnRate,
     costPrices,
