@@ -1,7 +1,6 @@
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { saveHistoricalRates } from '@/services/historical-rates-service';
-import { CurrencyRates } from '@/services/api';
+import { CurrencyRates, VertoFXRates } from '@/services/api';
 import { logger } from '@/utils/logUtils';
 
 interface RateRefresherProps {

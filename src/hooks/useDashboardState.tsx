@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
