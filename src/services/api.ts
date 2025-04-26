@@ -1,11 +1,8 @@
-
 import { fetchExchangeRates } from './currency-rates-service';
 import { getAllNgnRates, VertoFxRate } from './vertofx';
 import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
 import { cacheWithExpiration } from '@/utils/cacheUtils';
 import { logger } from '@/utils/logUtils';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 // Type for currency rates
 export type CurrencyRates = Record<string, number>;
@@ -19,38 +16,19 @@ export interface VertoFXRates {
   [key: string]: { buy: number; sell: number };
 }
 
-// Global variable to store current cost prices for fast access
+// Global variable to store current cost prices for the API endpoint
 let currentCostPrices: CurrencyRates = {};
 
 // Cache keys
 const FX_RATES_CACHE_KEY = 'fx_rates_cache';
 const VERTOFX_RATES_CACHE_KEY = 'formatted_vertofx_rates';
 
-// Update current cost prices and persist to Supabase
-export const updateCurrentCostPrices = async (costPrices: CurrencyRates) => {
-  try {
-    // Update in-memory prices
-    currentCostPrices = { ...costPrices };
-    
-    // Persist to Supabase
-    const { error } = await supabase
-      .from('cost_prices')
-      .upsert({ 
-        id: 1,
-        prices: costPrices,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
-    
-    if (error) {
-      logger.error("[API] Error saving cost prices to Supabase:", error);
-      toast.error("Failed to save cost prices");
-    }
-  } catch (err) {
-    logger.error("[API] Failed to save cost prices to Supabase:", err);
-  }
+// Update current cost prices (called by the cost price calculator)
+export const updateCurrentCostPrices = (costPrices: CurrencyRates) => {
+  currentCostPrices = { ...costPrices };
 };
 
-// Get current cost prices
+// Get current cost prices (used by the API endpoint)
 export const getCurrentCostPrices = (): CurrencyRates => {
   return { ...currentCostPrices };
 };

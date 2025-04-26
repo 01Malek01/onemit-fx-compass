@@ -9,24 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      cost_prices: {
-        Row: {
-          id: number
-          prices: Json
-          updated_at: string | null
-        }
-        Insert: {
-          id: number
-          prices?: Json
-          updated_at?: string | null
-        }
-        Update: {
-          id?: number
-          prices?: Json
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       currency_rates: {
         Row: {
           created_at: string | null

@@ -22,15 +22,10 @@ export interface RateStateActions {
 }
 
 export const useRateState = (): [RateState, RateStateActions] => {
-  // State variables with properly typed initial values
-  const [usdtNgnRate, setUsdtNgnRate] = useState<number | null>(null);
+  // State variables
+  const [usdtNgnRate, setUsdtNgnRate] = useState<number | null>(null); // Changed from 0 to null
   const [fxRates, setFxRates] = useState<CurrencyRates>({});
-  const [vertoFxRates, setVertoFxRates] = useState<VertoFXRates>({
-    USD: { buy: 0, sell: 0 },
-    EUR: { buy: 0, sell: 0 },
-    GBP: { buy: 0, sell: 0 },
-    CAD: { buy: 0, sell: 0 }
-  });
+  const [vertoFxRates, setVertoFxRates] = useState<VertoFXRates>({});
   const [costPrices, setCostPrices] = useState<CurrencyRates>({});
   const [previousCostPrices, setPreviousCostPrices] = useState<CurrencyRates>({});
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);

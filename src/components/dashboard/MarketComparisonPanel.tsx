@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ComparisonTable from '@/components/ComparisonTable';
 import { VertoFXRates } from '@/services/api';
@@ -21,13 +20,9 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   isLoading
 }) => {
   // Ensure vertoFxRates is never undefined by providing default values
-  const safeVertoRates: VertoFXRates = {
-    USD: vertoFxRates?.USD || { buy: 0, sell: 0 },
-    EUR: vertoFxRates?.EUR || { buy: 0, sell: 0 },
-    GBP: vertoFxRates?.GBP || { buy: 0, sell: 0 },
-    CAD: vertoFxRates?.CAD || { buy: 0, sell: 0 },
-    ...vertoFxRates
-  };
+  const safeVertoRates: VertoFXRates = vertoFxRates && Object.keys(vertoFxRates).length > 0
+    ? vertoFxRates
+    : {};
 
   // Check if we have valid VertoFX rates (any rate > 0)
   const hasVertoRates = Object.values(safeVertoRates).some(rate =>
