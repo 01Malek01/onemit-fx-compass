@@ -38,7 +38,7 @@ export const updateCurrentCostPrices = async (costPrices: CurrencyRates) => {
       .upsert({ 
         id: 1,
         prices: costPrices,
-        updated_at: new Date()
+        updated_at: new Date().toISOString()
       }, { onConflict: 'id' });
     
     if (error) {
