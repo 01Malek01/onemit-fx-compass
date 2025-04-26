@@ -1,10 +1,11 @@
+
 import { fetchExchangeRates } from './currency-rates-service';
 import { getAllNgnRates, VertoFxRate } from './vertofx';
 import { saveVertoFxHistoricalRates } from './vertofx-historical-service';
 import { cacheWithExpiration } from '@/utils/cacheUtils';
 import { logger } from '@/utils/logUtils';
-import { supabase } from '@/utils/supabaseUtils';
-import { toast } from 'react-toastify';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Type for currency rates
 export type CurrencyRates = Record<string, number>;
