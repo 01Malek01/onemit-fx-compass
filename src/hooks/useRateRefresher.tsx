@@ -27,8 +27,8 @@ export const useRateRefresher = ({
   // Reference to store timer
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Add state for tracking next refresh
-  const [nextRefreshIn, setNextRefreshIn] = useState(60); // 60 seconds
+  // Update initial countdown to 10 minutes (600 seconds)
+  const [nextRefreshIn, setNextRefreshIn] = useState(600);
 
   // Handle manual Bybit rate refresh
   const handleBybitRateRefresh = useCallback(async () => {
@@ -125,7 +125,7 @@ export const useRateRefresher = ({
       setNextRefreshIn(prev => {
         if (prev <= 1) {
           performRefresh(); // Trigger refresh when countdown reaches 0
-          return 60; // Reset to 60 seconds
+          return 600; // Reset to 600 seconds (10 minutes)
         }
         return prev - 1;
       });

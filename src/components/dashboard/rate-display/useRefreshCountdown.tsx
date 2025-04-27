@@ -6,15 +6,15 @@ interface UseRefreshCountdownProps {
 }
 
 export const useRefreshCountdown = ({ lastUpdated }: UseRefreshCountdownProps) => {
-  const [nextRefreshIn, setNextRefreshIn] = useState<number>(60);
+  const [nextRefreshIn, setNextRefreshIn] = useState<number>(600); // Initialize with 600 seconds
   
   useEffect(() => {
-    setNextRefreshIn(60);
+    setNextRefreshIn(600); // Reset to 600 seconds when lastUpdated changes
     
     const timer = setInterval(() => {
       setNextRefreshIn(prev => {
         if (prev <= 1) {
-          return 60;
+          return 600; // Reset to 600 seconds
         }
         return prev - 1;
       });

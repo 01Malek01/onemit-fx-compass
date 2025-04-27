@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Clock, AlertOctagon } from 'lucide-react';
 import { isVertoFxRateLimited } from '@/utils/rates/vertoRateLoader';
@@ -14,7 +15,7 @@ const RefreshCountdown: React.FC<RefreshCountdownProps> = ({
   // Check if we're rate limited
   const isRateLimited = isVertoFxRateLimited();
   
-  // Format the countdown text
+  // Enhanced format countdown for minutes and seconds
   const formatCountdown = (seconds: number): string => {
     if (seconds < 60) {
       return `${seconds}s`;
