@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import useCurrencyData from '@/hooks/useCurrencyData';
 import { fetchMarginSettings } from '@/services/margin-settings-service';
@@ -7,6 +8,7 @@ import { useRateRefresher } from '@/hooks/useRateRefresher';
 import { useMarginManager } from '@/hooks/useMarginManager';
 import { useOneremitRates } from '@/hooks/useOneremitRates';
 import { toast } from 'sonner';
+import { useVertoFxRefresher } from '@/hooks/useVertoFxRefresher';
 
 export const useDashboardState = () => {
   // Use our custom hook for currency data
@@ -36,6 +38,15 @@ export const useDashboardState = () => {
     setRawVertoFxRates(safeRates);
   }, [setRawVertoFxRates]);
 
+  // Use VertoFX refresher
+  const { 
+    refreshVertoFxRates,
+    nextRefreshIn: vertoNextRefreshIn
+  } = useVertoFxRefresher({
+    vertoFxRates,
+    setVertoFxRates
+  });
+
   // Use our rate refresher hook with countdown
   const { handleRefresh, handleBybitRateRefresh, nextRefreshIn } = useRateRefresher({
     usdtNgnRate,
@@ -43,6 +54,7 @@ export const useDashboardState = () => {
     fxRates,
     refreshBybitRate,
     calculateAllCostPrices,
+    refreshVertoFXRates: refreshVertoFxRates, // Add the missing property
     usdMargin: 2.5, // Default value, will be updated in useEffect
     otherCurrenciesMargin: 3.0 // Default value, will be updated in useEffect
   });

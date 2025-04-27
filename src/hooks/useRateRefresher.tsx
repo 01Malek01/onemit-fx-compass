@@ -57,7 +57,7 @@ export const useRateRefresher = ({
       // Refresh both Bybit and VertoFX rates concurrently
       const [bybitSuccess, vertoSuccess] = await Promise.all([
         handleBybitRateRefresh(),
-        refreshVertoFXRates() // Make sure this function exists and is passed as a prop
+        refreshVertoFXRates() // Now this is properly passed in
       ]);
 
       // Only save historical data if both refreshes were successful

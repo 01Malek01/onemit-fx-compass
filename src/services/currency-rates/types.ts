@@ -23,3 +23,12 @@ export interface CurrencyRateResponse {
     last_updated_at: string;
   };
 }
+
+// Interface for VertoFX rates
+export interface VertoFXRates {
+  USD: { buy: number; sell: number };
+  EUR: { buy: number; sell: number };
+  GBP: { buy: number; sell: number };
+  CAD: { buy: number; sell: number };
+  [key: string]: { buy: number; sell: number };
+}
