@@ -15,7 +15,7 @@ export const formatCurrencyPair = (base: string, quote: string): string => {
   return `${base}/${quote}`;
 };
 
-// Calculate USD cost price based on new formula: USD/NGN = USDT/NGN × (1 + USD_margin)
+// Calculate USD cost price based on formula: USD/NGN = USDT/NGN × (1 + USD_margin)
 export const calculateUsdPrice = (
   usdtNgnRate: number,
   usdMargin: number
@@ -29,21 +29,20 @@ export const calculateUsdPrice = (
   return usdtNgnRate * (1 + marginDecimal);
 };
 
-// Calculate EUR, GBP, CAD cost price based on new formula:
-// TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
+// Calculate EUR, GBP, CAD cost price based on simplified formula:
+// TARGET/NGN = USDT/NGN ÷ (TARGET/USD) × (1 + target_margin)
 export const calculateOtherCurrencyPrice = (
   usdtNgnRate: number,
   currencyFxRate: number, // This is TARGET/USD from API
-  otherCurrenciesMargin: number,
-  usdtToUsdFee: number = 0.001 // 0.10% as decimal
+  otherCurrenciesMargin: number
 ): number => {
   if (!usdtNgnRate || !currencyFxRate) return 0;
   
   // Convert margin from percentage to decimal (e.g., 3% -> 0.03)
   const marginDecimal = otherCurrenciesMargin / 100;
   
-  // Apply formula: TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
-  return (usdtNgnRate * (1 - usdtToUsdFee)) / currencyFxRate * (1 + marginDecimal);
+  // Apply simplified formula: TARGET/NGN = USDT/NGN ÷ (TARGET/USD) × (1 + target_margin)
+  return (usdtNgnRate / currencyFxRate) * (1 + marginDecimal);
 };
 
 // Apply margin to cost price - keeping this for backward compatibility

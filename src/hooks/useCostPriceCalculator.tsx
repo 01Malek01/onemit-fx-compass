@@ -7,9 +7,6 @@ import {
 } from '@/utils/currencyUtils';
 import { logger } from '@/utils/logUtils';
 
-// Updated fee constant with correct value (0.10%)
-const USDT_TO_USD_FEE = 0.001; // 0.10% as decimal
-
 export interface CostPriceCalculatorProps {
   usdtNgnRate: number | null;
   fxRates: CurrencyRates;
@@ -50,15 +47,14 @@ export const useCostPriceCalculator = ({
     newCostPrices.USD = calculateUsdPrice(usdtNgnRate, usdMargin);
     
     // Calculate other currencies using formula:
-    // TARGET/NGN = (USDT/NGN × (1 - usdt_to_usd_fee)) ÷ (TARGET/USD) × (1 + target_margin)
+    // TARGET/NGN = USDT/NGN ÷ (TARGET/USD) × (1 + target_margin)
     for (const [currency, rate] of Object.entries(fxRates)) {
       if (currency === "USD") continue;
       
       newCostPrices[currency] = calculateOtherCurrencyPrice(
         usdtNgnRate,
         rate,
-        otherCurrenciesMargin,
-        USDT_TO_USD_FEE
+        otherCurrenciesMargin
       );
     }
     
@@ -75,3 +71,4 @@ export const useCostPriceCalculator = ({
 
   return { calculateAllCostPrices };
 };
+
