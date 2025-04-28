@@ -30,7 +30,8 @@ export const calculateUsdPrice = (
 };
 
 // Calculate EUR, GBP, CAD cost price based on simplified formula:
-// TARGET/NGN = USDT/NGN ÷ (TARGET/USD) × (1 + target_margin)
+// TARGET/NGN = USDT/NGN ÷ (USD/TARGET) × (1 + target_margin)
+// The API returns rates as TARGET/USD, so we need to invert them to get USD/TARGET
 export const calculateOtherCurrencyPrice = (
   usdtNgnRate: number,
   currencyFxRate: number, // This is TARGET/USD from API
@@ -41,8 +42,11 @@ export const calculateOtherCurrencyPrice = (
   // Convert margin from percentage to decimal (e.g., 3% -> 0.03)
   const marginDecimal = otherCurrenciesMargin / 100;
   
-  // Apply simplified formula: TARGET/NGN = USDT/NGN ÷ (TARGET/USD) × (1 + target_margin)
-  return (usdtNgnRate / currencyFxRate) * (1 + marginDecimal);
+  // Convert TARGET/USD to USD/TARGET by inverting the rate
+  const usdToTargetRate = 1 / currencyFxRate;
+  
+  // Apply simplified formula: TARGET/NGN = USDT/NGN × (USD/TARGET) × (1 + target_margin)
+  return usdtNgnRate * usdToTargetRate * (1 + marginDecimal);
 };
 
 // Apply margin to cost price - keeping this for backward compatibility

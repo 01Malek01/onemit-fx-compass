@@ -47,7 +47,8 @@ export const useCostPriceCalculator = ({
     newCostPrices.USD = calculateUsdPrice(usdtNgnRate, usdMargin);
     
     // Calculate other currencies using formula:
-    // TARGET/NGN = USDT/NGN ÷ (TARGET/USD) × (1 + target_margin)
+    // TARGET/NGN = USDT/NGN × (USD/TARGET) × (1 + target_margin)
+    // Note: The API returns rates as TARGET/USD, so we invert them in calculateOtherCurrencyPrice
     for (const [currency, rate] of Object.entries(fxRates)) {
       if (currency === "USD") continue;
       
@@ -71,4 +72,3 @@ export const useCostPriceCalculator = ({
 
   return { calculateAllCostPrices };
 };
-
