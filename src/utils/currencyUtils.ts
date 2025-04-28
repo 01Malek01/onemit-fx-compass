@@ -1,3 +1,4 @@
+
 // Currency formatting and calculation utilities
 
 // Format currency values
@@ -29,8 +30,8 @@ export const calculateUsdPrice = (
   return usdtNgnRate * (1 + marginDecimal);
 };
 
-// Calculate EUR, GBP, CAD cost price based on simplified formula:
-// TARGET/NGN = USDT/NGN ÷ (USD/TARGET) × (1 + target_margin)
+// Calculate other currency cost prices (EUR, GBP, CAD) using formula:
+// TARGET/NGN = USDT/NGN × (USD/TARGET) × (1 + target_margin)
 // The API returns rates as TARGET/USD, so we need to invert them to get USD/TARGET
 export const calculateOtherCurrencyPrice = (
   usdtNgnRate: number,
@@ -45,7 +46,7 @@ export const calculateOtherCurrencyPrice = (
   // Convert TARGET/USD to USD/TARGET by inverting the rate
   const usdToTargetRate = 1 / currencyFxRate;
   
-  // Apply simplified formula: TARGET/NGN = USDT/NGN × (USD/TARGET) × (1 + target_margin)
+  // Apply formula: TARGET/NGN = USDT/NGN × (USD/TARGET) × (1 + target_margin)
   return usdtNgnRate * usdToTargetRate * (1 + marginDecimal);
 };
 
