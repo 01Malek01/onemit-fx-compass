@@ -4,6 +4,7 @@
  */
 
 import { logger } from './debug-tools';
+import React from 'react';
 
 interface PackageInfo {
   name: string;
