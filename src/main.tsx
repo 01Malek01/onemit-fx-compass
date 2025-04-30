@@ -10,6 +10,16 @@ import { NotificationProvider } from './contexts/NotificationContext';
 
 // Import our logging utility
 import { applyConsoleFilters } from './utils/logUtils';
+// Import Vite helpers
+import { initViteEnvironment, checkViteSetup } from './utils/vite-helpers';
+
+// Initialize Vite environment checks
+initViteEnvironment();
+
+// Check Vite setup
+if (import.meta.env.DEV) {
+  checkViteSetup();
+}
 
 // Apply console filters in production
 applyConsoleFilters();
