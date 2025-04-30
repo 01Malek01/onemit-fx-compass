@@ -10,6 +10,13 @@ import { NotificationProvider } from './contexts/NotificationContext';
 
 // Import our logging utility
 import { applyConsoleFilters } from './utils/logUtils';
+import { checkViteEnv, logger } from './utils/debug-tools';
+
+// Check Vite environment in development mode
+if (import.meta.env.DEV) {
+  checkViteEnv();
+  logger.info('Application starting in development mode');
+}
 
 // Apply console filters in production
 applyConsoleFilters();
