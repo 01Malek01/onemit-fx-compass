@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ['plankton-app-gd57a.ondigitalocean.app'] //added this    
   },
   plugins: [
     react(),
