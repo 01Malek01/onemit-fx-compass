@@ -76,7 +76,7 @@ serve(async (req) => {
       payment: [],
       side: "0",
       size: "10",
-      page: "3",
+      page: "1",
       rows: "10", 
       amount: "",
       canTrade: true,
