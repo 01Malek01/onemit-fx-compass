@@ -63,30 +63,6 @@ export type Database = {
         }
         Relationships: []
       }
-      historical_rates_backup: {
-        Row: {
-          currency_code: string | null
-          date: string | null
-          id: string | null
-          rate: number | null
-          usdt_ngn_rate: number | null
-        }
-        Insert: {
-          currency_code?: string | null
-          date?: string | null
-          id?: string | null
-          rate?: number | null
-          usdt_ngn_rate?: number | null
-        }
-        Update: {
-          currency_code?: string | null
-          date?: string | null
-          id?: string | null
-          rate?: number | null
-          usdt_ngn_rate?: number | null
-        }
-        Relationships: []
-      }
       margin_settings: {
         Row: {
           created_at: string | null
@@ -203,10 +179,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      aggregate_historical_rates_daily: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never

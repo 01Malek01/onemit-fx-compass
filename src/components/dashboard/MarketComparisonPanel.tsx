@@ -1,11 +1,9 @@
-
-import React from 'react';
-import ComparisonTable from '@/components/ComparisonTable';
-import { VertoFXRates } from '@/services/currency-rates/types';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, WifiOff, Info, AlertCircle, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import React from "react";
+import ComparisonTable from "@/components/ComparisonTable";
+import { VertoFXRates } from "@/services/currency-rates/types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, WifiOff, AlertCircle, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MarketComparisonPanelProps {
   currencies: string[];
@@ -18,7 +16,7 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
   currencies,
   oneremitRatesFn,
   vertoFxRates,
-  isLoading
+  isLoading,
 }) => {
   // Ensure vertoFxRates is never undefined by providing default values
   const safeVertoRates: VertoFXRates = {
@@ -26,33 +24,56 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
     EUR: vertoFxRates?.EUR || { buy: 0, sell: 0 },
     GBP: vertoFxRates?.GBP || { buy: 0, sell: 0 },
     CAD: vertoFxRates?.CAD || { buy: 0, sell: 0 },
-    ...vertoFxRates
+    ...vertoFxRates,
   };
 
   // Check if we have valid VertoFX rates (any rate > 0)
-  const hasVertoRates = Object.values(safeVertoRates).some(rate =>
-    (rate?.buy > 0 || rate?.sell > 0)
+  const hasVertoRates = Object.values(safeVertoRates).some(
+    (rate) => rate?.buy > 0 || rate?.sell > 0
   );
 
   // Check if we're using defaults by comparing with our DEFAULT_VERTOFX_RATES
-  const isUsingDefaults = currencies.every(currency =>
-    safeVertoRates[currency]?.buy === 0 &&
-    safeVertoRates[currency]?.sell === 0
+  const isUsingDefaults = currencies.every(
+    (currency) =>
+      safeVertoRates[currency]?.buy === 0 &&
+      safeVertoRates[currency]?.sell === 0
   );
 
   // Count how many currencies have valid buy rates
-  const validBuyRateCount = Object.values(safeVertoRates).filter(rate => rate?.buy > 0).length;
-  const validSellRateCount = Object.values(safeVertoRates).filter(rate => rate?.sell > 0).length;
+  const validBuyRateCount = Object.values(safeVertoRates).filter(
+    (rate) => rate?.buy > 0
+  ).length;
+  const validSellRateCount = Object.values(safeVertoRates).filter(
+    (rate) => rate?.sell > 0
+  ).length;
 
   // Determine if we're using cached rates or have partial data
   const usingCachedRates = !hasVertoRates && !isLoading;
-  const hasPartialData = hasVertoRates && (validBuyRateCount < currencies.length || validSellRateCount < currencies.length);
+  const hasPartialData =
+    hasVertoRates &&
+    (validBuyRateCount < currencies.length ||
+      validSellRateCount < currencies.length);
 
   return (
     <div className="space-y-6">
       {/* Status alerts */}
       <div className="space-y-2.5">
-        {isUsingDefaults && (
+        {/* instead of showing the red error when the data is actually just loading, show a loading indicator */}
+        {isLoading && isUsingDefaults && (
+          <Alert className="border-none bg-gradient-to-r from-blue-950/60 to-blue-900/40 text-blue-100 shadow-lg shadow-blue-950/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-900/60 p-1.5 rounded-md">
+                <RefreshCw className="h-4 w-4 text-blue-300 animate-spin" />
+              </div>
+              <AlertDescription className="text-blue-100 font-medium">
+                Fetching latest market rates...
+              </AlertDescription>
+            </div>
+          </Alert>
+        )}
+
+        {/* show the red error when the data is actually invalid or the request has failed */}
+        {!isLoading && isUsingDefaults && (
           <Alert className="border-none bg-gradient-to-r from-red-950/60 to-red-900/40 text-red-100 shadow-lg shadow-red-950/20 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="bg-red-900/60 p-1.5 rounded-md">
@@ -103,12 +124,22 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
 
           // Use the rates from our safe object, or default values if currency not found
           const defaultRate = {
-            buy: currency === 'USD' ? 1635 :
-              currency === 'EUR' ? 1870 :
-                currency === 'GBP' ? 2150 : 1190,
-            sell: currency === 'USD' ? 1600 :
-              currency === 'EUR' ? 1805 :
-                currency === 'GBP' ? 2080 : 1140
+            buy:
+              currency === "USD"
+                ? 1635
+                : currency === "EUR"
+                ? 1870
+                : currency === "GBP"
+                ? 2150
+                : 1190,
+            sell:
+              currency === "USD"
+                ? 1600
+                : currency === "EUR"
+                ? 1805
+                : currency === "GBP"
+                ? 2080
+                : 1140,
           };
 
           const vertoRates = safeVertoRates[currency] || defaultRate;
@@ -137,17 +168,23 @@ const MarketComparisonPanel: React.FC<MarketComparisonPanelProps> = ({
 
       {/* Additional information for default rates */}
       {isUsingDefaults && (
-        <div className="mt-6 animate-fade-in transition-all duration-300" style={{ animationDelay: '300ms' }}>
+        <div
+          className="mt-6 animate-fade-in transition-all duration-300"
+          style={{ animationDelay: "300ms" }}
+        >
           <div className="rounded-lg border border-gray-800 bg-gray-900/30 p-4 backdrop-blur-sm">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 bg-blue-900/60 p-2 rounded-md flex-shrink-0">
                 <RefreshCw className="h-4 w-4 text-blue-300" />
               </div>
               <div>
-                <h3 className="text-blue-100 font-medium text-sm mb-1.5">Try refreshing market data</h3>
+                <h3 className="text-blue-100 font-medium text-sm mb-1.5">
+                  Try refreshing market data
+                </h3>
                 <p className="text-xs text-blue-200/80 leading-relaxed">
-                  Default rates shown are estimates based on typical market spreads and may not reflect
-                  current conditions. Click the refresh button to reconnect to the market data API.
+                  Default rates shown are estimates based on typical market
+                  spreads and may not reflect current conditions. Click the
+                  refresh button to reconnect to the market data API.
                 </p>
               </div>
             </div>

@@ -1,7 +1,6 @@
-
-import { supabase } from '@/integrations/supabase/client';
-import type { BybitP2PResponse, BybitRequestParams } from './types';
-import { logger } from '@/utils/logUtils';
+import { supabase } from "@/integrations/supabase/client";
+import type { BybitP2PResponse, BybitRequestParams } from "./types";
+import { logger } from "@/utils/logUtils";
 
 /**
  * Calls the Bybit P2P API through our Supabase Edge Function proxy
@@ -16,16 +15,17 @@ export const getBybitP2PRate = async (
 
   try {
     logger.debug("[BybitAPI] Calling Supabase Edge Function proxy");
-    
+
     // Call our Supabase Edge Function instead of directly calling the Bybit API
-    const { data, error } = await supabase.functions.invoke('bybit-proxy', {
+    const { data, error } = await supabase.functions.invoke("bybit-proxy", {
       body: {
         currencyId,
         tokenId,
-        verifiedOnly
-      }
+        verifiedOnly,
+        page: 1,
+      },
     });
-    
+
     if (error) {
       logger.error("[BybitAPI] Edge function error:", error);
       return {
@@ -42,17 +42,17 @@ export const getBybitP2PRate = async (
         },
         timestamp: new Date().toISOString(),
         success: false,
-        error: `Edge function error: ${error.message || "Unknown error"}`
+        error: `Edge function error: ${error.message || "Unknown error"}`,
       };
     }
-    
+
     logger.debug("[BybitAPI] Received response from Edge Function:", data);
-    
+
     // The Edge Function returns the data in the same format we expect
     if (data && data.success && data.market_summary && data.traders) {
       return data as BybitP2PResponse;
     }
-    
+
     // Handle unsuccessful responses from the Edge Function
     return {
       traders: [],
@@ -68,7 +68,7 @@ export const getBybitP2PRate = async (
       },
       timestamp: new Date().toISOString(),
       success: false,
-      error: data?.error || "Invalid response from Edge Function"
+      error: data?.error || "Invalid response from Edge Function",
     };
   } catch (error: any) {
     logger.error("❌ Error fetching Bybit P2P rate:", error);
@@ -77,12 +77,12 @@ export const getBybitP2PRate = async (
       code: error.code,
       status: error.response?.status,
       statusText: error.response?.statusText,
-      responseData: error.response?.data
+      responseData: error.response?.data,
     });
-    
+
     // Determine if it's a network error, timeout, or other issue
     let errorMessage = "Unknown error occurred";
-    
+
     if (error.code === "ECONNABORTED") {
       errorMessage = "Request timed out";
     } else if (error.code === "ERR_NETWORK") {
@@ -97,7 +97,7 @@ export const getBybitP2PRate = async (
       // Something happened in setting up the request that triggered an Error
       errorMessage = error.message || "Error setting up request";
     }
-    
+
     return {
       traders: [],
       market_summary: {
@@ -112,7 +112,7 @@ export const getBybitP2PRate = async (
       },
       timestamp: new Date().toISOString(),
       success: false,
-      error: errorMessage
+      error: errorMessage,
     };
   }
 };

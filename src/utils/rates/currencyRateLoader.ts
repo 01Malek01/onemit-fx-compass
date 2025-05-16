@@ -1,9 +1,11 @@
-
 import { toast } from "sonner";
-import { CurrencyRates, fetchFxRates } from '@/services/api';
-import { fetchCurrencyRates, saveCurrencyRates } from '@/services/currency-rates';
-import { cacheWithExpiration } from '../cacheUtils';
-import { raceWithTimeout } from '../apiUtils';
+import { CurrencyRates, fetchFxRates } from "@/services/api";
+import {
+  fetchCurrencyRates,
+  saveCurrencyRates,
+} from "@/services/currency-rates";
+import { cacheWithExpiration } from "../cacheUtils";
+import { raceWithTimeout } from "../apiUtils";
 
 // Local cache for last successful rate data
 let lastSuccessfulFxRates: CurrencyRates = {};
@@ -14,51 +16,53 @@ let lastSuccessfulFxRates: CurrencyRates = {};
 export const loadCurrencyRates = async (
   isMobile: boolean = false
 ): Promise<CurrencyRates> => {
-  const supportedCurrencies = ['USD', 'EUR', 'GBP', 'CAD']; 
-  
+  const supportedCurrencies = ["USD", "EUR", "GBP", "CAD"];
+
   // Check memory cache first for ultra-fast loading on mobile
   if (isMobile) {
-    const cachedRates = cacheWithExpiration.get('fxRates');
+    const cachedRates = cacheWithExpiration.get("fxRates");
     if (cachedRates) {
-      console.log("[currencyRateLoader] Using in-memory cached FX rates for instant mobile loading");
+      console.log(
+        "[currencyRateLoader] Using in-memory cached FX rates for instant mobile loading"
+      );
       return cachedRates;
     }
   }
-  
+
   try {
     // Use a much shorter timeout for mobile - 2 seconds max wait
     const apiTimeout = isMobile ? 2000 : 5000;
-    
+
     // Fetch from API with timeout
     const apiRates = await raceWithTimeout(
       fetchFxRates(),
       apiTimeout,
       "Currency rates API request timed out"
     );
-    
+
     // Process the rates
     const rates = { ...apiRates, USD: 1.0 };
-    
+
     // Update memory cache
     cacheWithExpiration.set(
-      'fxRates', 
-      rates, 
+      "fxRates",
+      rates,
       isMobile ? 600000 : 300000 // 10min mobile, 5min desktop
-    ); 
-    
+    );
+
     // Save to database for persistence - skip on mobile to improve performance
     if (!isMobile) {
-      saveCurrencyRates(rates).catch(err => {
+      saveCurrencyRates(rates).catch((err) => {
         console.error("[currencyRateLoader] Failed to save rates to DB:", err);
       });
     }
-    
+
     // Update our last successful rates cache
     lastSuccessfulFxRates = { ...rates };
     return rates;
   } catch (error) {
     console.error("[currencyRateLoader] Error fetching rates from API:", error);
-    
+
     // Fallback: Get rates from database if API fails
     try {
       const dbRates = await fetchCurrencyRates();
@@ -67,9 +71,12 @@ export const loadCurrencyRates = async (
         return rates;
       }
     } catch (dbError) {
-      console.error("[currencyRateLoader] Failed to fetch rates from DB:", dbError);
+      console.error(
+        "[currencyRateLoader] Failed to fetch rates from DB:",
+        dbError
+      );
     }
-    
+
     // Use last successful rates or defaults
     if (Object.keys(lastSuccessfulFxRates).length > 0) {
       return { ...lastSuccessfulFxRates };

@@ -1,19 +1,16 @@
-
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CurrencyRates } from './api';
-import { Database } from '@/integrations/supabase/types';
-import { logger } from '@/utils/logUtils';
+import { CurrencyRates } from "./api";
+import { Database } from "@/integrations/supabase/types";
 
 // Interface that matches our Supabase historical_rates table schema
 export interface HistoricalRate {
   id?: string;
   timestamp?: string;
-  date?: string; // This matches the database schema
+  date?: string;
   usdt_ngn_rate: number;
-  currency_code?: string; // Added to match DB schema
-  rate?: number; // Added to match DB schema
-  // Additional fields for our application logic
+  currency_code?: string;
+  rate?: number;
   margin_usd: number;
   margin_others: number;
   eur_usd?: number;
@@ -29,8 +26,6 @@ export interface HistoricalRate {
 
 /**
  * Save a complete snapshot of rates and cost prices
- * Use daily aggregation to prevent database growth
- * 
  * @param usdtNgnRate Current USDT/NGN rate
  * @param usdMargin USD margin percentage
  * @param otherCurrenciesMargin Other currencies margin percentage
@@ -45,109 +40,102 @@ export const saveHistoricalRates = async (
   otherCurrenciesMargin: number,
   fxRates: CurrencyRates,
   costPrices: CurrencyRates,
-  source: string = 'manual'
+  source: string = "manual"
 ): Promise<boolean> => {
   try {
-    logger.debug("[historical-rates] Saving historical rates snapshot");
-    
-    // Validate input values
+    console.log("[historical-rates] Saving historical rates snapshot");
+
     if (!usdtNgnRate || usdtNgnRate <= 0) {
-      logger.warn("[historical-rates] Invalid USDT/NGN rate for historical data:", usdtNgnRate);
+      console.warn(
+        "[historical-rates] Invalid USDT/NGN rate for historical data:",
+        usdtNgnRate
+      );
       return false;
     }
 
     if (!costPrices || Object.keys(costPrices).length === 0) {
-      logger.warn("[historical-rates] No cost prices available for historical data");
+      console.warn(
+        "[historical-rates] No cost prices available for historical data"
+      );
       return false;
     }
 
-    // Get the current date in YYYY-MM-DD format (UTC)
-    const today = new Date().toISOString().split('T')[0];
-    const timestamp = new Date().toISOString();
-    
-    // Check if we already have entries for today for each currency
-    const insertPromises: Promise<any>[] = [];
-    const currencies = ['USD', 'EUR', 'GBP', 'CAD'];
+    // Check if there's already an entry in the last 6 hours
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
 
-    for (const currencyCode of currencies) {
-      if (!costPrices[currencyCode]) continue;
-      
-      // First check if we already have an entry for this currency today
-      const { data: existingEntries, error: queryError } = await supabase
-        .from('historical_rates')
-        .select('id')
-        .eq('currency_code', currencyCode)
-        .gte('date', today)
-        .lt('date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString());
-      
-      if (queryError) {
-        logger.error(`[historical-rates] Error checking for existing entries for ${currencyCode}:`, queryError);
-        continue;
-      }
-      
-      if (existingEntries && existingEntries.length > 0) {
-        // Update the existing entry instead of creating a new one
-        logger.debug(`[historical-rates] Updating existing entry for ${currencyCode} today`);
-        
-        insertPromises.push(
-          new Promise((resolve, reject) => {
-            supabase
-              .from('historical_rates')
-              .update({
-                rate: costPrices[currencyCode],
-                usdt_ngn_rate: usdtNgnRate,
-                date: timestamp
-              })
-              .eq('id', existingEntries[0].id)
-              .then(result => {
-                if (result.error) {
-                  reject(result.error);
-                } else {
-                  resolve(result);
-                }
-              })
-          })
-        );
-      } else {
-        // Insert a new entry
-        logger.debug(`[historical-rates] Creating new entry for ${currencyCode} today`);
-        
-        insertPromises.push(
-          new Promise((resolve, reject) => {
-            supabase
-              .from('historical_rates')
-              .insert({
-                currency_code: currencyCode,
-                rate: costPrices[currencyCode],
-                usdt_ngn_rate: usdtNgnRate,
-                date: timestamp
-              })
-              .then(result => {
-                if (result.error) {
-                  reject(result.error);
-                } else {
-                  resolve(result);
-                }
-              })
-          })
-        );
-      }
+    const { data: recentRecords, error: checkError } = await supabase
+      .from("historical_rates")
+      .select("id, date")
+      .gte("date", sixHoursAgo)
+      .limit(1);
+
+    if (checkError) {
+      console.error(
+        "[historical-rates] Error checking recent entries:",
+        checkError
+      );
+      toast.error("Error checking for recent historical rates");
+      return false;
     }
 
-    // Wait for all operations to complete
-    const results = await Promise.all(insertPromises);
-    const errors = results.filter(result => result.error);
+    if (recentRecords && recentRecords.length > 0) {
+      console.info(
+        "[historical-rates] Recent historical rates already exist. Skipping insert."
+      );
+      return false;
+    }
 
-    if (errors.length > 0) {
-      logger.error("[historical-rates] Errors saving historical data:", errors);
+    const insertPromises: Promise<any>[] = [];
+    const timestamp = new Date().toISOString();
+
+    // Save USD data
+    insertPromises.push(
+      supabase.from("historical_rates").insert({
+        currency_code: "USD",
+        rate: costPrices.USD,
+        usdt_ngn_rate: usdtNgnRate,
+        margin_usd: usdMargin,
+        margin_others: otherCurrenciesMargin,
+        source,
+        date: timestamp,
+      })
+    );
+
+    // Save other currencies data
+    const otherCurrencies = ["EUR", "GBP", "CAD"];
+    otherCurrencies.forEach((currencyCode) => {
+      const rate = costPrices[currencyCode];
+      if (rate) {
+        insertPromises.push(
+          supabase.from("historical_rates").insert({
+            currency_code: currencyCode,
+            rate,
+            usdt_ngn_rate: usdtNgnRate,
+            margin_usd: usdMargin,
+            margin_others: otherCurrenciesMargin,
+            source,
+            date: timestamp,
+          })
+        );
+      }
+    });
+
+    const results = await Promise.all(insertPromises);
+    const insertErrors = results.filter((res) => res.error);
+
+    if (insertErrors.length > 0) {
+      console.error(
+        "[historical-rates] Errors saving historical data:",
+        insertErrors
+      );
       toast.error("Failed to save some historical rate data");
       return false;
     }
-    
-    logger.debug("[historical-rates] Historical rate data saved successfully");
+
+    console.log("[historical-rates] Historical rate data saved successfully");
     return true;
   } catch (error) {
-    logger.error("[historical-rates] Error in saveHistoricalRates:", error);
+    console.error("[historical-rates] Error in saveHistoricalRates:", error);
     toast.error("Failed to save historical rate data");
     return false;
   }
@@ -158,51 +146,27 @@ export const fetchHistoricalRates = async (
   limit: number = 30
 ): Promise<HistoricalRate[]> => {
   try {
-    logger.debug(`Fetching historical rates, limit: ${limit}`);
-    
+    console.log(`Fetching historical rates, limit: ${limit}`);
+
     const { data, error } = await supabase
-      .from('historical_rates')
-      .select('*')
-      .order('date', { ascending: false })
+      .from("historical_rates")
+      .select("*")
+      .order("date", { ascending: false })
       .limit(limit);
-    
+
     if (error) {
-      logger.error(`Supabase error fetching historical rates:`, error);
+      console.error(`Supabase error fetching historical rates:`, error);
       throw error;
     }
-    
-    logger.debug(`Fetched ${data?.length || 0} historical rates`);
-    
-    // Convert the raw data to our application's HistoricalRate type
-    // We need to explicitly cast because the DB schema and our application schema are different
-    const historicalRates: HistoricalRate[] = (data as unknown) as HistoricalRate[];
+
+    console.log(`Fetched ${data?.length || 0} historical rates`);
+
+    const historicalRates: HistoricalRate[] =
+      data as unknown as HistoricalRate[];
     return historicalRates;
   } catch (error) {
-    logger.error(`Error fetching historical rates:`, error);
+    console.error(`Error fetching historical rates:`, error);
     toast.error(`Failed to fetch historical data`);
     return [];
-  }
-};
-
-/**
- * Run the aggregation function on-demand
- * This can be used to manually trigger the aggregation process
- */
-export const runDailyAggregation = async (): Promise<boolean> => {
-  try {
-    logger.info("[historical-rates] Running manual aggregation of historical rates");
-    
-    const { error } = await supabase.rpc('aggregate_historical_rates_daily');
-    
-    if (error) {
-      logger.error("[historical-rates] Error running aggregation function:", error);
-      return false;
-    }
-    
-    logger.info("[historical-rates] Manual aggregation completed successfully");
-    return true;
-  } catch (error) {
-    logger.error("[historical-rates] Error in runDailyAggregation:", error);
-    return false;
   }
 };
