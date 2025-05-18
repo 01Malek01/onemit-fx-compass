@@ -1,11 +1,11 @@
-
-import { CurrencyRates } from '@/services/api';
-import { updateCurrentCostPrices } from '@/services/api';
-import { 
+import { CurrencyRates } from "@/services/api";
+import { updateCurrentCostPrices } from "@/services/api";
+import {
   calculateUsdPrice,
-  calculateOtherCurrencyPrice
-} from '@/utils/currencyUtils';
-import { logger } from '@/utils/logUtils';
+  calculateOtherCurrencyPrice,
+} from "@/utils/currencyUtils";
+import { logger } from "@/utils/logUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface CostPriceCalculatorProps {
   usdtNgnRate: number | null;
@@ -15,59 +15,110 @@ export interface CostPriceCalculatorProps {
   costPrices: CurrencyRates;
 }
 
+// ✅ Helper function to compare prices
+const havePricesChanged = (
+  newPrices: CurrencyRates,
+  oldPrices: CurrencyRates
+): boolean => {
+  return (
+    newPrices.USD !== oldPrices.USD ||
+    newPrices.EUR !== oldPrices.EUR ||
+    newPrices.GBP !== oldPrices.GBP ||
+    newPrices.CAD !== oldPrices.CAD
+  );
+};
+
 export const useCostPriceCalculator = ({
   usdtNgnRate,
   fxRates,
   setCostPrices,
   setPreviousCostPrices,
-  costPrices
+  costPrices,
 }: CostPriceCalculatorProps) => {
-  
-  const calculateAllCostPrices = (usdMargin: number, otherCurrenciesMargin: number) => {
-    // Enhanced validation - guard clause to prevent calculations with invalid rate
+  // ✅ Function to save prices to Supabase
+  const saveCostPricesToSupabase = async (prices: CurrencyRates) => {
+    const { error } = await supabase.from("fx_prices").upsert(
+      {
+        id: 1,
+        usd_price: prices.USD,
+        gbp_price: prices.GBP,
+        eur_price: prices.EUR,
+        cad_price: prices.CAD,
+        updated_at: new Date(),
+      },
+      { onConflict: "id" } // ensures updating the same row
+    );
+
+    if (error) {
+      console.error(
+        "❌ Failed to save cost prices to Supabase:",
+        error.message
+      );
+    } else {
+      console.log("✅ Cost prices saved to Supabase.");
+    }
+  };
+
+  const calculateAllCostPrices = (
+    usdMargin: number,
+    otherCurrenciesMargin: number
+  ) => {
+    console.log("📥 calculateAllCostPrices called with:", {
+      usdtNgnRate,
+      fxRates,
+      usdMargin,
+      otherCurrenciesMargin,
+    });
+
     if (!usdtNgnRate || isNaN(Number(usdtNgnRate)) || usdtNgnRate <= 0) {
-      logger.warn("Skipping cost price calculation due to invalid USDT/NGN rate:", usdtNgnRate);
+      logger.warn(
+        "Skipping cost price calculation due to invalid USDT/NGN rate:",
+        usdtNgnRate
+      );
       return;
     }
-    
-    // Only log once at the beginning with all parameters
-    logger.debug("Calculating cost prices with margins:", { usdMargin, otherCurrenciesMargin });
-    
+
     if (Object.keys(fxRates).length === 0) {
       logger.warn("No FX rates available for calculations");
       return;
     }
-    
-    // Store previous cost prices for comparison
-    setPreviousCostPrices({ ...costPrices });
-    
-    const newCostPrices: CurrencyRates = {};
-    
-    // Calculate USD price using formula: USD/NGN = USDT/NGN × (1 + USD_margin)
-    newCostPrices.USD = calculateUsdPrice(usdtNgnRate, usdMargin);
-    
-    // Calculate other currencies using formula:
-    // TARGET/NGN = USDT/NGN × (USD/TARGET) × (1 + target_margin)
-    // Note: The API returns rates as TARGET/USD, so we invert them in calculateOtherCurrencyPrice
-    for (const [currency, rate] of Object.entries(fxRates)) {
-      if (currency === "USD") continue;
-      
-      newCostPrices[currency] = calculateOtherCurrencyPrice(
+
+    const newCostPrices: CurrencyRates = {
+      USD: calculateUsdPrice(usdtNgnRate, usdMargin),
+      EUR: calculateOtherCurrencyPrice(
         usdtNgnRate,
-        rate,
+        fxRates.EUR,
         otherCurrenciesMargin
-      );
+      ),
+      GBP: calculateOtherCurrencyPrice(
+        usdtNgnRate,
+        fxRates.GBP,
+        otherCurrenciesMargin
+      ),
+      CAD: calculateOtherCurrencyPrice(
+        usdtNgnRate,
+        fxRates.CAD,
+        otherCurrenciesMargin
+      ),
+    };
+
+    if (process.env.NODE_ENV !== "production") {
+      logger.debug("🧮 Calculated new cost prices:", newCostPrices);
     }
-    
-    // Log results once at the end
-    if (process.env.NODE_ENV !== 'production') {
-      logger.debug("All cost prices calculated:", newCostPrices);
-    }
-    
+
+    const pricesChanged = havePricesChanged(newCostPrices, costPrices);
+
+    // ✅ Store old prices and update new ones in state
+    setPreviousCostPrices({ ...costPrices });
     setCostPrices(newCostPrices);
-    
-    // Update global cost prices for API access
     updateCurrentCostPrices(newCostPrices);
+
+    if (pricesChanged) {
+      console.log("✅ Prices changed. Saving to Supabase...");
+      saveCostPricesToSupabase(newCostPrices);
+    } else {
+      console.log("🟡 No changes in cost prices. Skipping DB update.");
+    }
   };
 
   return { calculateAllCostPrices };

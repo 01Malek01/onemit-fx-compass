@@ -44,6 +44,7 @@ export const fetchCurrencyRates = async (): Promise<CurrencyRates> => {
     ) {
       // At this point, we've verified rates exists and is an object
       const rates = response.data.rates as Record<string, number>;
+      console.log("Fetched rates:", rates);
       return rates;
     }
 
